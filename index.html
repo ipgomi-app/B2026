@@ -90,6 +90,11 @@ body{
 .step-head{margin-bottom:20px}
 .step-kicker{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
 .step-head h2{font-size:23px;font-weight:700;letter-spacing:-.02em;margin-top:7px}
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.head-row h2{margin-top:7px}
+.intro-btn{flex:0 0 auto;font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;background:linear-gradient(180deg,rgba(92,132,230,.16),rgba(92,132,230,.06));color:var(--accent-2);border:1px solid rgba(92,132,230,.38);box-shadow:var(--sh-sm),var(--hl);cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.intro-btn:active{transform:scale(.97)}
+.intro-btn:hover{background:linear-gradient(180deg,rgba(92,132,230,.24),rgba(92,132,230,.1))}
 .step-head p{font-size:13px;color:var(--muted);margin-top:4px}
 
 /* fields */
@@ -349,7 +354,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <section class="step show" data-step="0">
       <div class="step-head">
         <div class="step-kicker mono">STEP 1 / 2</div>
-        <h2>운영 정보</h2>
+        <div class="head-row">
+          <h2>운영 정보</h2>
+          <button class="intro-btn" id="btnEngIntro" onclick="shareEngIntro()">📄 소개서</button>
+        </div>
         <p>현재 창고 현황 및 운영현황을 입력해주세요.</p>
       </div>
       <div class="field">
@@ -860,6 +868,40 @@ function validateStep(){
 function toast(msg){
   const t=$("#toast"); t.textContent=msg; t.classList.add("show");
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+/* ----- 로지스올 회사소개서 PDF 전달 (네이티브 공유시트 → 카톡 등) ----- */
+const ENG_INTRO_PDF  = "logisall_intro.pdf";        // 앱과 같은 폴더에 위치
+const ENG_INTRO_NAME = "2026_로지스올_회사소개서.pdf";  // 수신자에게 보일 파일명
+async function shareEngIntro(){
+  let blob;
+  try{
+    const res = await fetch(ENG_INTRO_PDF);
+    if(!res.ok) throw new Error("not found");
+    blob = await res.blob();
+  }catch(e){
+    window.open(ENG_INTRO_PDF, "_blank");
+    toast("소개서를 새 창에서 엽니다");
+    return;
+  }
+  const file = new File([blob], ENG_INTRO_NAME, {type:"application/pdf"});
+  // 파일 공유 지원(모바일 등) → 네이티브 공유시트에서 카카오톡 선택
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({ files:[file], title:"로지스올 회사소개서", text:"로지스올 회사소개서입니다." });
+    }catch(e){
+      if(e && e.name === "AbortError") return;
+      toast("공유를 완료하지 못했습니다");
+    }
+    return;
+  }
+  // 파일 공유 미지원(PC 등) → PDF 다운로드 폴백
+  const dl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = dl; a.download = ENG_INTRO_NAME;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(dl), 4000);
+  toast("소개서 PDF를 내려받았습니다");
 }
 
 const TEMP_LABEL={ambient:"상온",chilled:"냉장 0~10℃",frozen:"냉동 -20℃↓",hot:"항온/고온",clean:"클린/방폭"};

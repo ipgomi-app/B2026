@@ -1,8 +1,8 @@
 {
-  "name": "ENG · TSPG 부산권역 (네이비)",
+  "name": "ENG",
   "short_name": "ENG",
-  "description": "TSPG · LOGISALL ENGINEERING 부산권역 현장 솔루션 제안 도구",
-  "start_url": "tspg_field_proposal_app.html",
+  "description": "현장 제안 도구",
+  "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
