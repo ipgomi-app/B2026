@@ -622,16 +622,8 @@ const CONFIG = {
   CELLS_PER_FTE: 700,          // 자동화 셀 N개당 인력 1명 대체(규모-인건 절감 연동 상한)
   RENT_PER_PYEONG_MONTH: 35000,// 평당 월 임대료(원) — 지역따라 조정
 
-  // ★ CAPEX = 고정비 + 변동비×셀수 + 온도가산
-  //   실제 견적 근거: 다미온푸드 원가계산서(재료82%·노무7%·관리비8.5%·이윤2%) 구조 반영
-  //   고정비: 셔틀 본체·리프트·WCS·컨베이어·안전설비·설치비 → 규모 무관 필수 항목
-  //   변동비: 셔틀랙 구조물·WMS 라이선스 → 셀 수에 비례
-  //   온도가산: 저온자재·결로방지·제상·히터 → 냉동/냉장에만 추가
-  CAPEX_FIXED_MAN: 19000,      // 고정비(만원 = 약 1.9억): 셔틀1대·리프트2대·WCS·컨베이어·설치
-  CAPEX_VAR_CELL_MAN: 45,      // 셀당 변동비(만원): 랙 구조물(40만)+WMS라이선스(5만) ← 견적서 역산
-  CAPEX_FROZEN_ADD_MAN: 30000, // 냉동 가산(만원 = 3억): 저온자재·결로·제상장치
-  CAPEX_CHILLED_ADD_MAN: 15000,// 냉장 가산(만원 = 1.5억)
-  CAPEX_HOT_ADD_MAN: 5000,     // 항온/고온 가산(만원 = 0.5억)
+  // ★ CAPEX는 아래 [QUOTES]·[CAPEX] 섹션의 항목별 단가 모델로 산출한다.
+  //   (구 공식 `고정비 + 셀당단가 × 셀수 + 온도가산`은 실제 견적서 구조와 맞지 않아 폐기)
 
   BUILD_RATIO: 0.55,           // 가용 셀 대비 실제 자동창고 구축 비율(상한)
   DEFAULT_AVG_STORE_DAYS: 15,  // 평균 보관일수 폴백값(물동량→보관수요 환산) — STEP1에서 직접 입력, 미입력 시에만 사용
@@ -782,6 +774,426 @@ const STATE = {
 };
 
 /* ============================================================
+   [QUOTES] 실제 견적서 DB — CAPEX 단가의 유일한 근거
+   ------------------------------------------------------------
+   ★ 견적서 추가 시 이 배열에 넣고, CAPEX.MODELS의 계수를 재역산한다.
+   ★ 금액은 모두 '원' 단위, VAT 별도.
+   ★ CAPEX.selfCheck() / CAPEX.backtest() 로 재현 오차를 확인할 것.
+   ============================================================ */
+const QUOTES = [
+  {
+    id:"LAE26-0529-Y1", model:"4way",
+    project:"대한냉동 자동창고 구축공사", vendor:"로지스올엔지니어링㈜", date:"2026-05-29",
+    temp:"frozen", contract:800000000, total:800171380,
+    overhead:[["기업 이윤 (일반 관리비 외)",0.15]],
+    spec:{ bay:22, deep:15, tier:2, minusCells:124, cells:536,
+           loadW:1200, loadL:1200, loadH:1800, loadKg:1000, installH:5.8, term:"계약 후 12개월" },
+    items:[
+      {g:"기구설비",n:"4-Way Shuttle 본체",s:"기구&제어",u:"Set",q:2,p:53900000},
+      {g:"기구설비",n:"4-Way Shuttle 지상 제어반",s:"Touch Panel 포함",u:"Set",q:1,p:5170000},
+      {g:"기구설비",n:"Lifter",s:"2단 / 2,170mmST / 설치높이 5.8m",u:"Set",q:1,p:50600000},
+      {g:"기구설비",n:"Conveyor",s:"Chain Type",u:"Set",q:4,p:3740000},
+      {g:"기구설비",n:"Conveyor",s:"Chain Type (Rack내 설치)",u:"Set",q:2,p:4290000},
+      {g:"기구설비",n:"Size Checker",s:"Over Size Check",u:"Set",q:1,p:1100000},
+      {g:"기구설비",n:"Loading Guide",s:"-",u:"Set",q:1,p:1100000},
+      {g:"기구설비",n:"입/출고 설비_제어",s:"Main & OP Panel, 전장품, 센서 외",u:"Lot",q:1,p:55000000},
+      {g:"랙·구조",n:"Storage Rack 설비",s:"Post, Rail Beam, Bracing, Bracket, 점검계단 외",u:"Cells",q:536,p:423500},
+      {g:"랙·구조",n:"주행통로 Structure",s:"주행Rail, 통로발판, Bracket, 안전난간 외",u:"EA",q:108,p:224400},
+      {g:"정보시스템",n:"창고운영 정보시스템(WCS)",s:"Server, S/W개발비",u:"Lot",q:1,p:66000000},
+      {g:"정보시스템",n:"현장용 PC",s:"-",u:"Set",q:1,p:4290000},
+      {g:"정보시스템",n:"Barcode Scanner",s:"-",u:"Set",q:1,p:3410000},
+      {g:"정보시스템",n:"Barcode Printer",s:"-",u:"Set",q:1,p:1760000},
+      {g:"부대비용",n:"포장비, 운반비 및 장비비",s:"포장비, 운반비, 고소작업차, 지게차, 크레인 외",u:"Lot",q:1,p:15400000},
+      {g:"부대비용",n:"설치, 시운전 & 교육",s:"기구, 제어 및 정보시스템",u:"Lot",q:1,p:103400000},
+      {g:"부대비용",n:"자율안전인증(KCS)",s:"컨베이어 설비 일체",u:"Lot",q:1,p:6000000}
+    ]
+  },
+  {
+    id:"YP-1CAMPUS", model:"4way",
+    project:"영풍 1캠퍼스 물류창고 구축공사", vendor:"로지스올엔지니어링㈜", date:"2026",
+    temp:"ambient", contract:2090000000, total:2090763940,
+    overhead:[["일반 관리비",0.10],["기업 이윤",0.05]],
+    spec:{ bay:21, deep:54, tier:4, minusCells:280, cells:4256,
+           loadW:1200, loadL:1200, loadH:1800, loadKg:600, installH:6.65 },
+    items:[
+      {g:"기구설비",n:"4-Way Shuttle 본체",s:"기구&제어",u:"Set",q:3,p:53900000},
+      {g:"기구설비",n:"4-Way Shuttle 지상 제어반",s:"Touch Panel 포함",u:"Set",q:1,p:5170000},
+      {g:"기구설비",n:"Lifter",s:"3단 / 3,440mmST / 설치높이 6.65m",u:"Set",q:2,p:66000000},
+      {g:"기구설비",n:"Conveyor",s:"Chain Type",u:"Set",q:10,p:3740000},
+      {g:"기구설비",n:"Conveyor",s:"Chain Type (Rack내 설치)",u:"Set",q:8,p:4290000},
+      {g:"기구설비",n:"Size Checker",s:"Over Size Check",u:"Set",q:1,p:1100000},
+      {g:"기구설비",n:"Loading Guide",s:"-",u:"Set",q:2,p:1100000},
+      {g:"기구설비",n:"입/출고 설비_제어",s:"Main & OP Panel, 전장품, 센서 외",u:"Lot",q:1,p:137500000},
+      {g:"랙·구조",n:"Storage Rack 설비",s:"Post, Rail Beam, Bracing, Bracket, 점검계단 외",u:"Cells",q:4256,p:168300},
+      {g:"랙·구조",n:"주행통로 Structure",s:"주행Rail, 통로발판, Bracket, 안전난간 외",u:"EA",q:532,p:224400},
+      {g:"정보시스템",n:"창고운영 정보시스템(WCS)",s:"Server, S/W개발비",u:"Lot",q:1,p:113500000},
+      {g:"정보시스템",n:"현장용 PC",s:"-",u:"Set",q:2,p:4290000},
+      {g:"정보시스템",n:"Barcode Scanner",s:"-",u:"Set",q:2,p:3410000},
+      {g:"부대비용",n:"포장비, 운반비 및 장비비",s:"포장비, 운반비, 고소작업차, 지게차, 크레인 외",u:"Lot",q:1,p:53900000},
+      {g:"부대비용",n:"설치, 시운전 & 교육",s:"기구, 제어 및 정보시스템",u:"Lot",q:1,p:282700000},
+      {g:"부대비용",n:"자율안전인증(KCS)",s:"컨베이어 설비 일체",u:"Lot",q:1,p:5500000}
+    ]
+  },
+  {
+    id:"PROD-2WAY-C1", model:"2way",
+    project:"제품창고 2-Way Shuttle 시스템 (CASE.1)", vendor:"로지스올엔지니어링㈜", date:"2026",
+    temp:"ambient", contract:1876000000, total:1876073200,
+    overhead:[["일반 관리비",0.10],["기업 이윤",0.05]],
+    spec:{ row:10, bay:39, tier:5, minusCells:190, cells:1760,
+           loadW:1100, loadL:1350, loadH:1300, loadKg:300, installH:6.65,
+           alt:"CASE.2 구축 시 1,737,000,000" },
+    items:[
+      {g:"기구설비",n:"2-Way Shuttle 본체",s:"기구&제어",u:"Set",q:5,p:68200000},
+      {g:"기구설비",n:"2-Way Shuttle 지상 제어반",s:"Touch Panel 포함",u:"Set",q:1,p:5170000},
+      {g:"기구설비",n:"Lifter",s:"3단 / 3,440mmST / 설치높이 6.65m",u:"Set",q:2,p:66000000},
+      {g:"기구설비",n:"Conveyor",s:"Chain Type",u:"Set",q:6,p:3740000},
+      {g:"기구설비",n:"Conveyor",s:"Chain Type (Rack내 설치)",u:"Set",q:10,p:4290000},
+      {g:"기구설비",n:"Size Checker",s:"Over Size Check",u:"Set",q:1,p:1100000},
+      {g:"기구설비",n:"Loading Guide",s:"혼용 파렛트 정렬 포함",u:"Set",q:1,p:3300000},
+      {g:"기구설비",n:"Loading Guide",s:"-",u:"Set",q:1,p:1100000},
+      {g:"기구설비",n:"입/출고 설비_제어",s:"Main & OP Panel, 전장품, 센서 외",u:"Lot",q:1,p:134200000},
+      {g:"랙·구조",n:"Storage Rack 설비",s:"Post, Rail Beam, Bracing, Bracket, 점검계단 외",u:"Cells",q:1760,p:293700},
+      {g:"랙·구조",n:"주행통로 Structure",s:"주행Rail, 통로발판, Bracket, 안전난간 외",u:"EA",q:190,p:224400},
+      {g:"정보시스템",n:"창고운영 정보시스템(WCS)",s:"Server, S/W개발비",u:"Lot",q:1,p:104700000},
+      {g:"정보시스템",n:"현장용 PC",s:"-",u:"Set",q:1,p:4290000},
+      {g:"정보시스템",n:"Barcode Scanner",s:"-",u:"Set",q:2,p:3410000},
+      {g:"부대비용",n:"포장비, 운반비 및 장비비",s:"포장비, 운반비, 고소작업차, 지게차, 크레인 외",u:"Lot",q:1,p:50600000},
+      {g:"부대비용",n:"설치, 시운전 & 교육",s:"기구, 제어 및 정보시스템",u:"Lot",q:1,p:216700000},
+      {g:"부대비용",n:"자율안전인증(KCS)",s:"컨베이어 설비 일체",u:"Lot",q:1,p:5500000}
+    ]
+  },
+  {
+    id:"FORKLIFTER-AGV", model:"agf",
+    project:"FORK LIFTER SYSTEM (무인지게차)", vendor:"로지스올엔지니어링㈜", date:"2026",
+    temp:"ambient", contract:550000000, total:550792000,
+    overhead:[["일반 관리비 및 기업 이윤",0.10]],
+    spec:{ units:2, payloadKg:1500, liftH:3000, wms:false },
+    items:[
+      {g:"설비 재료비",n:"AGV 본체",s:"Payload 1,500kg, 리프터 높이 3,000mm",u:"Set",q:2,p:184000000},
+      {g:"설비 재료비",n:"AGV Charger",s:"자동 충전기 80V 200A (KC 인증)",u:"Set",q:2,p:8100000},
+      {g:"설비 재료비",n:"AGV Charger",s:"수동 충전기 80V 100A (KC 인증)",u:"Set",q:1,p:3500000},
+      {g:"설비 재료비",n:"ROBOT CONTROLLER",s:"서버/모니터/RACK, DELL R260, Xeon E-2434, 2×2TB",u:"EA",q:1,p:13800000},
+      {g:"제작 노무비",n:"ACS 프로그램 및 라이선스",s:"AGV CONTROL SYSTEM (RCS) — WMS 견적 제외",u:"Set",q:1,p:20700000},
+      {g:"제작 노무비",n:"설계 및 ENGINEERING",s:"AGV 운영안 협의 (MD 20 × 300,000)",u:"MD",q:20,p:300000},
+      {g:"설치·시운전",n:"운반 및 포장",s:"수입 및 내륙 운송",u:"EA",q:1,p:13800000},
+      {g:"설치·시운전",n:"AGV 현장 설치 및 티칭",s:"MD 40 × 1,200,000",u:"MD",q:40,p:1200000},
+      {g:"설치·시운전",n:"ACS 구축 비용",s:"MD 15 × 500,000",u:"MD",q:15,p:500000},
+      {g:"설치·시운전",n:"설치 부자재",s:"-",u:"Set",q:1,p:1100000},
+      {g:"설치·시운전",n:"안전 관리비",s:"(설치 인건비 × 3.11%) × 1.2",u:"Lot",q:1,p:2120000}
+    ]
+  },
+  {
+    id:"AGF-SYSTEM", model:"agf",
+    project:"AGF SYSTEM (무인지게차)", vendor:"로지스올엔지니어링㈜", date:"2026",
+    temp:"ambient", contract:1370000000, total:1370210000,
+    overhead:[["일반 관리비 및 기업 이윤",0.10]],
+    spec:{ units:5, payloadKg:1000, loadW:1100, loadL:1100, loadH:1310,
+           drive:"DD", guide:"Laser", ctrl:"PLC", top:"Fork", wms:true },
+    items:[
+      {g:"설비 재료비",n:"AGF 본체",s:"실내·캐노피 공간 운행, 1,000kg, DD·Laser·PLC·Fork",u:"Set",q:5,p:161000000},
+      {g:"설비 재료비",n:"AGF Charger",s:"접촉식",u:"Set",q:5,p:6900000},
+      {g:"설비 재료비",n:"AP & AP BOX",s:"-",u:"Set",q:3,p:1730000},
+      {g:"설비 재료비",n:"조작 팬던트",s:"-",u:"EA",q:5,p:1150000},
+      {g:"설비 재료비",n:"AGF SERVER PC + RACK",s:"i6, 16GB, 2×2TB, 모니터·키보드",u:"EA",q:1,p:28750000},
+      {g:"설비 재료비",n:"CLIENT PC",s:"PC Rack, 17인치 모니터",u:"EA",q:1,p:6900000},
+      {g:"설비 재료비",n:"이중화 솔루션",s:"미러링",u:"Set",q:1,p:1150000},
+      {g:"제작 노무비",n:"AGF RCS",s:"작업 할당, 맵과 동선 설정, 교통 관리 등",u:"Set",q:1,p:34500000},
+      {g:"제작 노무비",n:"창고 관리 시스템 (WMS)",s:"화물 위치 및 정보 연동 관리",u:"Set",q:1,p:69000000},
+      {g:"제작 노무비",n:"AGF 운영안 협의",s:"MD 60 × 500,000",u:"MD",q:60,p:500000},
+      {g:"제작 노무비",n:"AGF 설계 (기구/전장/제어/SW)",s:"MD 95 × 500,000",u:"MD",q:95,p:500000},
+      {g:"설치·시운전",n:"설비 FAT / OLT",s:"설치·시운전 기계/제어/SW MD 57 + 운반해체",u:"Lot",q:1,p:29700000},
+      {g:"설치·시운전",n:"운반 및 포장",s:"김포 - 구미",u:"Lot",q:2,p:700000},
+      {g:"설치·시운전",n:"AGF & ACS 설치",s:"현장 설치·티칭 MD 50, ACS 구축 MD 30, 장비비, 안전관리비",u:"Lot",q:1,p:51800000},
+      {g:"설치·시운전",n:"이벤트 대응",s:"양산 대응 MD 75 + 작업자 교육 (3명×10일)",u:"Lot",q:1,p:94500000}
+    ]
+  }
+];
+
+/* 견적 제외 범위 — 제안 시 반드시 고지 */
+const QUOTE_EXCLUDED = {
+  shuttle:[
+    "건축관련 공사 (바닥공사, 철골, 외장판넬, 소방, 건축전기 등)",
+    "1차 Utility (전원, Air 등) 인입 공사",
+    "입·출고 컨베이어부 방열도어 (방화 Shutter, Speed Door) — 컨베이어와 Interlock은 포함",
+    "Spare Parts 공급",
+    "부가세 별도"
+  ],
+  agf:[
+    "건축 관련 공사 일체 (바닥 평탄화, 서버 공간)",
+    "1차측 전원 및 공기원 인입공사",
+    "공사 및 시운전용 전원 투입",
+    "OLT(Off Line Test) 및 Spare Part",
+    "무상보증 기간 후 유지보수 비용은 별도 협의",
+    "부가세 별도"
+  ]
+};
+
+/* ============================================================
+   [CAPEX] 항목별 투자비 산출 모델  (견적 5건 역산)
+   ------------------------------------------------------------
+   ● 셔틀계열 (4way / 2way)  — 견적 3건
+       설비계 = 기구설비 + 랙·구조 + 정보시스템
+       소계   = 설비계 + 부대비용(포장운반 + 설치시운전 + KCS)
+       합계   = 소계 × (1 + 15%)   ← 일반관리비 10% + 기업이윤 5% (또는 이윤 15% 단일)
+
+   ● AGF계열 (무인지게차)    — 견적 2건
+       가.설비재료비 = 본체 + 충전기 + AP + 팬던트 + 서버
+       나.제작노무비 = RCS + WMS + 설계 MD
+       다.설치시운전 = 가 × 19%
+       합계 = (가+나+다) × (1 + 10%)
+
+   ★ 실측(견적서 직접) / 추정(표본 부족) 구분은 각 값의 주석 참조.
+   ★ 미보정 항목: 온도대별 단가차 — 현 표본은 규모와 온도가 교락(confounded)되어
+     분리 불가. 동일 규모 상온·냉동 견적 1쌍 확보 시 반영 가능.
+   ============================================================ */
+const CAPEX = {
+  calibratedFrom: QUOTES.map(q=>q.id),
+
+  /* ── 공통 단가 (모든 셔틀 견적에서 동일하게 확인된 값) ────────── */
+  COMMON: {
+    groundPanel:     5170000,  // 지상 제어반 (3건 동일, 수량 항상 1) — 실측
+    conveyor:        3740000,  // Chain Conveyor (3건 동일)           — 실측
+    conveyorInRack:  4290000,  // Chain Conveyor Rack내 (3건 동일)    — 실측
+    sizeChecker:     1100000,  // (3건 동일, 수량 항상 1)             — 실측
+    loadingGuide:    1100000,  // (3건 동일)                          — 실측
+    lifter2:        50600000,  // Lifter 2단 (설치높이 5.8m급)        — 실측
+    lifter3:        66000000,  // Lifter 3단 (설치높이 6.65m급)       — 실측
+    aislePerEA:      224400,   // 주행통로 Structure /EA (3건 동일)   — 실측
+    fieldPC:         4290000,  // (3건 동일)                          — 실측
+    scanner:         3410000,  // (3건 동일)                          — 실측
+    printer:         1760000,  // (1건)                               — 실측
+    ioCtrlPerUnit:   7400000,  // 입출고 제어 = (컨베이어+리프트) 대수 × 단가 — 추정(3건 평균, ±10%)
+    kcs:             5500000,  // 자율안전인증 (3건 중 2건 5.5M)      — 실측
+    // 부대비용 요율 (설비계 대비) — 3건 평균, 개별 편차 ±3%p
+    rateLogistics:   0.034,    // 포장·운반·장비비  (2.70 / 3.65 / 3.72%)
+    rateCommission:  0.177,    // 설치·시운전·교육  (18.11 / 19.15 / 15.95%)
+    // 간접비 = 일반관리비 + 기업이윤 (3건 모두 합계 15%)  — 실측
+    overheadShuttle: [["일반 관리비",0.10],["기업 이윤",0.05]],
+    // WCS = A × 셀수^exp  (3건 최소자승, ±10%)          — 추정
+    wcsA: 12717000, wcsExp: 0.26877,
+    // 주행통로 EA = A × 셀수^exp  (계열별 A, 지수는 4way 2건 실측)
+    aisleExp: 0.76950
+  },
+
+  /* ── 계열별 모델 ─────────────────────────────────────────────── */
+  MODELS: {
+    "4way":{
+      label:"4-Way Shuttle System",
+      shuttleUnit: 53900000,        // 실측 (2건 동일)
+      // 랙 단가/셀 = A × 셀수^-exp : 536→423,500 / 4,256→168,300 을 정확히 재현
+      rackA: 6956900, rackExp: 0.44540,   // 실측 2점 완전적합
+      aisleA: 0.85748,                    // 실측 2점 완전적합
+      // 셔틀 대수: ceil(단수/2)+1  (2단→2대, 4단→3대)  — 추정(2점 적합)
+      shuttleQty: t => Math.ceil(t/2)+1,
+      calib:["LAE26-0529-Y1","YP-1CAMPUS"]
+    },
+    "2way":{
+      label:"2-Way Shuttle System (MDPS 멀티딥)",
+      shuttleUnit: 68200000,        // 실측 (1건)
+      rackA: 8193000, rackExp: 0.44540,   // A는 1점 역산, 지수는 4way 차용 — 추정
+      aisleA: 0.60414,
+      // 2-Way 셔틀은 층 간 이동 불가 → 층당 1대 (5층→5대)  — 실측(1건) + 물리적 타당
+      shuttleQty: t => Math.max(1,t),
+      calib:["PROD-2WAY-C1"]
+    }
+  },
+
+  /* ── AGF(무인지게차) 모델 ─────────────────────────────────────── */
+  AGF: {
+    label:"무인지게차 AGF / AGV Fork Lifter",
+    // 본체 단가: 1,000kg급 161.0M (AGF 5대) / 1,500kg급 184.0M (AGV 2대) — 실측
+    bodyByPayload: kg => kg>1200 ? 184000000 : 161000000,
+    charger:      6900000,   // 접촉식 (AGF 실측). AGV 자동충전 8.1M은 사양차
+    apBox:        1730000,   // 대수 × 0.6 (5대→3)
+    pendant:      1150000,
+    serverBase:  13800000,   // 2대 기준 (AGV 실측)
+    serverPerUnit:7670000,   // 대수 증가분 (2대 13.8M → 5대 36.8M 선형) — 추정
+    rcsBase:     20700000,   // 2대 기준 RCS (AGV 실측)
+    rcsPerUnit:   4600000,   // 2대 20.7M → 5대 34.5M 선형              — 추정
+    wms:         69000000,   // 창고관리시스템 (AGF 실측, 선택항목)
+    mdRate:        500000,   // 설계·구축 MD 단가
+    mdBase:            20,   // 2대 기준 MD (AGV: 운영안 협의 20MD)
+    mdPerUnit:         45,   // 대수당 추가 MD (2대 20MD → 5대 155MD)   — 추정
+    rateInstall:     0.19,   // 다.설치·시운전 = 가.설비재료비 × 19% (18.06 / 19.99%)
+    overhead: [["일반 관리비 및 기업 이윤",0.10]],   // 실측 (2건 동일)
+    pltPerUnitHr:      10    // 무인지게차 1대 시간당 처리 PLT          — 추정
+  },
+
+  /* 영업 시스템 키 → 원가 모델 매핑 */
+  MODEL_OF: {
+    shuttle4way:"4way",   // 실측 2건
+    mdps:"2way",          // 멀티딥 셔틀 = 2-Way, 실측 1건
+    stc:"4way",           // 스태커크레인 견적 미확보 → 4way 대용 (주의)
+    mini:"2way",          // 미니셔틀 견적 미확보 → 2way 대용 (주의)
+    hybrid:"hybrid"       // 4way + 무인지게차 2대
+  },
+  NO_QUOTE: { stc:"스태커크레인 견적 미확보 — 4-Way 단가로 대용", mini:"미니셔틀 견적 미확보 — 2-Way 단가로 대용" },
+
+  L(g,n,s,u,q,p){ return {g,n,s,u,q:Math.round(q),p:Math.round(p),amt:Math.round(q*p)}; },
+
+  /* ── 셔틀계열 산출 ───────────────────────────────────────────── */
+  estimateShuttle(ctx, key){
+    const C=this.COMMON, M=this.MODELS[key];
+    const cells = Math.max(1, Math.round(ctx.cells||0));
+    const tier  = Math.max(1, Math.round(ctx.tiers||1));
+    const perHr = Math.max(0, ctx.perHr||0);
+
+    const shuttleQty = M.shuttleQty(tier);
+    const lifterQty  = Math.max(tier<=2?1:2, Math.ceil(perHr/50));
+    const lifterUnit = tier<=2 ? C.lifter2 : C.lifter3;
+    const convQty    = 4 * lifterQty;                 // 3건 평균 4/리프트 — 추정
+    const convRackQty= lifterQty * tier;              // 3건 정확히 일치 — 실측
+    const rackUnit   = Math.round(M.rackA * Math.pow(cells, -M.rackExp));
+    const aisleEA    = Math.max(1, Math.round(M.aisleA * Math.pow(cells, C.aisleExp)));
+    const wcs        = Math.round(C.wcsA * Math.pow(cells, C.wcsExp));
+    const ioUnits    = convQty + convRackQty + lifterQty;
+
+    const L=this.L.bind(this);
+    const lines=[
+      L("기구설비", M.label.split(" ")[0]+" Shuttle 본체","기구&제어","Set",shuttleQty,M.shuttleUnit),
+      L("기구설비","Shuttle 지상 제어반","Touch Panel 포함","Set",1,C.groundPanel),
+      L("기구설비","Lifter",(tier<=2?"2단 (설치높이 5.8m급)":"3단 (설치높이 6.65m급)"),"Set",lifterQty,lifterUnit),
+      L("기구설비","Conveyor","Chain Type","Set",convQty,C.conveyor),
+      L("기구설비","Conveyor","Chain Type (Rack내 설치)","Set",convRackQty,C.conveyorInRack),
+      L("기구설비","Size Checker","Over Size Check","Set",1,C.sizeChecker),
+      L("기구설비","Loading Guide","-","Set",lifterQty,C.loadingGuide),
+      L("기구설비","입/출고 설비_제어","Main & OP Panel, 전장품, 센서 외","기구",ioUnits,C.ioCtrlPerUnit),
+      L("랙·구조","Storage Rack 설비","Post, Rail Beam, Bracing, Bracket 외","Cells",cells,rackUnit),
+      L("랙·구조","주행통로 Structure","주행Rail, 통로발판, 안전난간 외","EA",aisleEA,C.aislePerEA),
+      L("정보시스템","창고운영 정보시스템(WCS)","Server, S/W개발비","Lot",1,wcs),
+      L("정보시스템","현장용 PC","-","Set",lifterQty,C.fieldPC),
+      L("정보시스템","Barcode Scanner","-","Set",lifterQty,C.scanner),
+      L("정보시스템","Barcode Printer","-","Set",1,C.printer)
+    ];
+    const sum = g => lines.filter(l=>l.g===g).reduce((a,l)=>a+l.amt,0);
+    const equip = sum("기구설비")+sum("랙·구조")+sum("정보시스템");
+    const logistics  = Math.round(equip * C.rateLogistics);
+    const commission = Math.round(equip * C.rateCommission);
+    lines.push(L("부대비용","포장비, 운반비 및 장비비","설비계 × "+(C.rateLogistics*100).toFixed(1)+"%","Lot",1,logistics));
+    lines.push(L("부대비용","설치, 시운전 & 교육","설비계 × "+(C.rateCommission*100).toFixed(1)+"%","Lot",1,commission));
+    lines.push(L("부대비용","자율안전인증(KCS)","컨베이어 설비 일체","Lot",1,C.kcs));
+
+    return this.finish({
+      model:key, modelLabel:M.label, lines,
+      groupOrder:["기구설비","랙·구조","정보시스템","부대비용"],
+      equipGroups:["기구설비","랙·구조","정보시스템"],
+      overhead:C.overheadShuttle, excluded:QUOTE_EXCLUDED.shuttle, cells,
+      qty:{shuttleQty,lifterQty,convQty,convRackQty,aisleEA,cells,tier,rackUnit},
+      basis:[
+        ["셔틀 대수", shuttleQty+"대 ("+tier+"단 기준)", "추정"],
+        ["리프트 대수", lifterQty+"대 ("+(tier<=2?"2단형":"3단형")+" · 시간당 "+fmt(perHr)+" PLT)", "추정"],
+        ["Rack내 컨베이어", convRackQty+"대 (리프트 "+lifterQty+" × "+tier+"단)", "실측"],
+        ["랙 단가", fmt(rackUnit)+"원/셀 (규모 "+fmt(cells)+"셀 반영)", "실측"],
+        ["주행통로", fmt(aisleEA)+" EA × "+fmt(C.aislePerEA)+"원", "실측"],
+        ["WCS", fmt(wcs)+"원 (규모 연동)", "추정"]
+      ]
+    });
+  },
+
+  /* ── AGF(무인지게차) 산출 ─────────────────────────────────────── */
+  estimateAGF(ctx){
+    const A=this.AGF;
+    const units = Math.max(1, ctx.units || Math.ceil((ctx.perHr||0)/A.pltPerUnitHr) || 2);
+    const payload = ctx.payloadKg || 1000;
+    const body = A.bodyByPayload(payload);
+    const server = Math.round(A.serverBase + Math.max(0,units-2)*A.serverPerUnit);
+    const rcs    = Math.round(A.rcsBase + Math.max(0,units-2)*A.rcsPerUnit);
+    const md     = Math.round(A.mdBase + Math.max(0,units-2)*A.mdPerUnit);
+    const wantWms= ctx.wms!==false;
+
+    const L=this.L.bind(this);
+    const lines=[
+      L("설비 재료비","무인지게차 본체", payload+"kg급 Fork Type","Set",units,body),
+      L("설비 재료비","Charger","접촉식 충전기","Set",units,A.charger),
+      L("설비 재료비","AP & AP BOX","-","Set",Math.max(1,Math.round(units*0.6)),A.apBox),
+      L("설비 재료비","조작 팬던트","-","EA",units,A.pendant),
+      L("설비 재료비","ACS Server 구축","Server PC + RACK, Client PC, 이중화","Lot",1,server),
+      L("제작 노무비","ACS 프로그램 (RCS)","작업 할당, 맵·동선 설정, 교통 관리","Set",1,rcs)
+    ];
+    if(wantWms) lines.push(L("제작 노무비","창고 관리 시스템 (WMS)","화물 위치 및 정보 연동 관리","Set",1,A.wms));
+    lines.push(L("제작 노무비","설계 및 ENGINEERING","운영안 협의·기구/전장/제어/SW 설계","MD",md,A.mdRate));
+
+    const material = lines.filter(l=>l.g==="설비 재료비").reduce((a,l)=>a+l.amt,0);
+    const install  = Math.round(material * A.rateInstall);
+    lines.push(L("설치·시운전","설치, 시운전, 운반 & 교육","설비 재료비 × "+(A.rateInstall*100).toFixed(0)+"%","Lot",1,install));
+
+    return this.finish({
+      model:"agf", modelLabel:A.label, lines,
+      groupOrder:["설비 재료비","제작 노무비","설치·시운전"],
+      equipGroups:["설비 재료비","제작 노무비","설치·시운전"],
+      overhead:A.overhead, excluded:QUOTE_EXCLUDED.agf, cells:0,
+      qty:{units,payload},
+      basis:[
+        ["무인지게차 대수", units+"대 (시간당 "+fmt(ctx.perHr||0)+" PLT ÷ 대당 "+A.pltPerUnitHr+")","추정"],
+        ["본체 단가", fmt(body)+"원/대 ("+payload+"kg급)","실측"],
+        ["설계 공수", md+" MD × "+fmt(A.mdRate)+"원","추정"],
+        ["WMS", wantWms?"포함 "+fmt(A.wms)+"원":"제외","실측"],
+        ["설치·시운전", "재료비 × "+(A.rateInstall*100).toFixed(0)+"%","추정"]
+      ]
+    });
+  },
+
+  /* 공통 마감: 소계·간접비·합계 */
+  finish(o){
+    const equip = o.lines.filter(l=>o.equipGroups.includes(l.g)).reduce((a,l)=>a+l.amt,0);
+    const subtotal = o.lines.reduce((a,l)=>a+l.amt,0);
+    const overheadLines = o.overhead.map(([n,r])=>({n,r,amt:Math.round(subtotal*r)}));
+    const overhead = overheadLines.reduce((a,l)=>a+l.amt,0);
+    const total = subtotal + overhead;
+    const sums={}; o.groupOrder.forEach(g=>{ sums[g]=o.lines.filter(l=>l.g===g).reduce((a,l)=>a+l.amt,0); });
+    return Object.assign(o,{
+      sums, equip, subtotal, overheadLines, overhead, total,
+      totalMan: Math.round(total/10000),
+      perCell: o.cells>0 ? Math.round(total/o.cells) : 0
+    });
+  },
+
+  /* 영업 시스템 키로 디스패치 */
+  estimate(ctx){
+    const key = this.MODEL_OF[ctx.sysKey] || "4way";
+    if(key==="agf") return this.estimateAGF(ctx);
+    if(key==="hybrid"){
+      const s = this.estimateShuttle(ctx,"4way");
+      const a = this.estimateAGF(Object.assign({},ctx,{units:2,wms:false}));
+      const lines = s.lines.concat(a.lines.map(l=>Object.assign({},l,{g:"무인지게차 "+l.g})));
+      return this.finish({
+        model:"hybrid", modelLabel:"하이브리드 (4-Way Shuttle + 무인지게차 2대)", lines,
+        groupOrder: s.groupOrder.concat(a.groupOrder.map(g=>"무인지게차 "+g)),
+        equipGroups: s.equipGroups.concat(a.groupOrder.map(g=>"무인지게차 "+g)),
+        overhead: this.COMMON.overheadShuttle, cells:s.cells,
+        excluded: QUOTE_EXCLUDED.shuttle.concat(QUOTE_EXCLUDED.agf.slice(0,3)),
+        qty: Object.assign({},s.qty,a.qty),
+        basis: s.basis.concat(a.basis)
+      });
+    }
+    const r = this.estimateShuttle(ctx,key);
+    if(this.NO_QUOTE[ctx.sysKey]) r.warn = this.NO_QUOTE[ctx.sysKey];
+    return r;
+  },
+
+  /* 견적서 DB 내부 정합성 검증 (내역 합 + 간접비 = 견적서 합계?) */
+  selfCheck(){
+    return QUOTES.map(q=>{
+      const sub = q.items.reduce((a,i)=>a+i.q*i.p,0);
+      const oh  = q.overhead.reduce((a,[,r])=>a+Math.round(sub*r),0);
+      return {id:q.id, 소계:sub, 간접비:oh, 계산합:sub+oh, 견적서:q.total, 오차:sub+oh-q.total};
+    });
+  },
+
+  /* 모델 역검증: 각 견적의 조건을 넣어 재현 오차 확인 */
+  backtest(){
+    const sysOf = {"4way":"shuttle4way","2way":"mdps","agf":null};
+    return QUOTES.map(q=>{
+      let r;
+      if(q.model==="agf") r = this.estimateAGF({units:q.spec.units, payloadKg:q.spec.payloadKg, wms:q.spec.wms});
+      else r = this.estimateShuttle({cells:q.spec.cells, tiers:q.spec.tier, perHr:0}, q.model);
+      return {id:q.id, 모델:(r.total).toLocaleString(), 실제:(q.total).toLocaleString(),
+              오차율:((r.total/q.total-1)*100).toFixed(2)+"%"};
+    });
+  }
+};
+
+/* ============================================================
    [ENGINE] 계산 로직  — 핸드북 4·6·7장
    ============================================================ */
 const Engine = {
@@ -877,17 +1289,16 @@ const Engine = {
     // 냉동·냉장 운영비 절감: 절감 면적(평) 기준 + 냉동/냉장 단가 차등
     const energyRate = isFrozen ? CONFIG.FROZEN_ENERGY_PER_PYEONG : (isCold ? CONFIG.CHILLED_ENERGY_PER_PYEONG : 0);
     const energySaveMan = Math.round(savedPyeong * energyRate);
-    // CAPEX = 고정비 + 변동비×셀수 + 온도가산
-    const tempAdd = isFrozen ? CONFIG.CAPEX_FROZEN_ADD_MAN
-                  : isCold   ? CONFIG.CAPEX_CHILLED_ADD_MAN
-                  : (d.temp==='hot') ? CONFIG.CAPEX_HOT_ADD_MAN : 0;
-    const capexMan = Math.round(CONFIG.CAPEX_FIXED_MAN + CONFIG.CAPEX_VAR_CELL_MAN * targetCells + tempAdd);
+    // CAPEX = 항목별 산출 (실제 견적서 5건 역산 · 4way/2way/AGF 모델) — [CAPEX] 섹션 참조
+    const perHr = Math.round((d.volume||0) / CONFIG.WORK_DAYS_MONTH / 8);
+    const capex = CAPEX.estimate({ sysKey:Engine.matchSystem(d), cells:targetCells, tiers:est.tiers, perHr, temp:d.temp });
+    const capexMan = capex.totalMan;
     const opexMan = Math.round(capexMan * CONFIG.OPEX_RATE);
     const benefitMan = laborSaveMan + spaceSaveMan + energySaveMan;
     const netMan = benefitMan - opexMan;
     const payback = netMan>0 ? (capexMan/netMan) : null;
     return {
-      laborSaveMan, spaceSaveMan, energySaveMan, savedPyeong, capexMan, opexMan,
+      laborSaveMan, spaceSaveMan, energySaveMan, savedPyeong, capexMan, opexMan, capex,
       benefitMan, netMan, payback, targetCells, staff, reducibleFTE,
       targetFromStock, targetFromVolume, targetDriver, storeDays, areaCapacity
     };
@@ -1204,14 +1615,35 @@ function renderResult(){
     ? `<div class="note" style="border-color:var(--accent);color:var(--accent-2)">정밀 셀 계산 적용: <b>${est.formula} = ${fmt(est.cells)} Cells</b></div>`
     : "";
 
-  // 개략 투자비(CAPEX) 항목 — 회수기간은 표시하지 않음
-  const tempAdd = roi.capexMan - CONFIG.CAPEX_FIXED_MAN - CONFIG.CAPEX_VAR_CELL_MAN * roi.targetCells;
-  const tempAddBlock = tempAdd>0
-    ? `<div class="capex-group" style="margin-top:14px">
-         <div class="cg-title">온도대 가산 <span class="cg-sub">${TEMP_LABEL[d.temp]} 전용 자재</span></div>
-         <div class="li total"><span class="k">${d.temp==='frozen'?'냉동 가산 (저온자재·결로·제상)':d.temp==='chilled'?'냉장 가산 (단열·저온설비)':'항온 가산 (공조·단열)'}</span><span class="v"><b>${won(tempAdd)}원</b></span></div>
-       </div>`
-    : '';
+  // 개략 투자비(CAPEX) — 실제 견적서와 동일한 항목별 구성 (회수기간은 표시하지 않음)
+  const cx = roi.capex;
+  const capexWarn = cx.warn
+    ? `<div class="note" style="border-color:#e5a50a;color:#e5a50a;margin-bottom:10px">⚠ ${cx.warn}</div>` : "";
+  const capexLines = cx.groupOrder.map(g=>{
+    const ls = cx.lines.filter(l=>l.g===g);
+    if(!ls.length) return "";
+    return `<div class="capex-group" style="margin-top:14px">
+      <div class="cg-title">${g}</div>
+      ${ls.map(l=>`<div class="li"><span class="k">${l.n}<br><span style="font-size:10px;opacity:.6">${l.s}</span></span><span class="v mono">${(l.u==="Lot"&&l.q===1)?"":fmt(l.q)+l.u+" × "}${fmt(l.p)}<br><b>${fmt(l.amt)}원</b></span></div>`).join("")}
+      <div class="li total"><span class="k">${g} 소계</span><span class="v"><b>${won(Math.round(cx.sums[g]/10000))}원</b></span></div>
+    </div>`;
+  }).join("");
+
+  const capexMeta = `<div class="capex-group" style="margin-top:14px">
+      <div class="cg-title">산출 조건 <span class="cg-sub">수량·단가 근거 (실측=견적서 / 추정=보간)</span></div>
+      ${cx.basis.map(([k,v,c])=>`<div class="li"><span class="k">${k}</span><span class="v mono">${v} <span style="opacity:.55">${c}</span></span></div>`).join("")}
+      ${cx.perCell?`<div class="li"><span class="k">셀당 환산 단가</span><span class="v mono">${fmt(cx.perCell)}원/셀</span></div>`:""}
+    </div>`;
+
+  const capexProfit = `<div class="capex-group" style="margin-top:14px">
+      <div class="li total"><span class="k">소계 (직접비 계)</span><span class="v"><b>${won(Math.round(cx.subtotal/10000))}원</b></span></div>
+      ${cx.overheadLines.map(o=>`<div class="li total"><span class="k">${o.n} ${(o.r*100).toFixed(0)}%</span><span class="v"><b>${won(Math.round(o.amt/10000))}원</b></span></div>`).join("")}
+    </div>`;
+
+  const capexScope = `<div class="capex-group" style="margin-top:14px">
+      <div class="cg-title">견적 제외 범위 <span class="cg-sub">고객 별도 부담 — 반드시 고지</span></div>
+      ${cx.excluded.map(e=>`<div class="li"><span class="k">· ${e}</span><span class="v"></span></div>`).join("")}
+    </div>`;
 
   // 권장 구축 규모: 재고 기반 / 물동량 기반 각각 표시 (재무계산 적용 기준은 ✓ + 강조)
   const tapHint = `<span style="font-size:9px;color:var(--accent-2);font-family:'IBM Plex Mono',monospace;display:block;margin-top:2px">탭 → 계산 근거 ▼</span>`;
@@ -1269,33 +1701,21 @@ function renderResult(){
       <div class="stat hl roi-tab" id="capexKpi" onclick="toggleCapex()" style="cursor:pointer">
         <div class="l">총 개략 투자비 (VAT 별도) <span class="tab-hint">탭하면 항목별 ▼</span></div>
         <div class="v">${won(roi.capexMan)}<small>원</small></div>
-        <div class="sub">고정비 + ${fmt(CONFIG.CAPEX_VAR_CELL_MAN)}만 × ${fmt(roi.targetCells)}셀${tempAdd>0?' + 온도가산':''}</div>
+        <div class="sub">${cx.modelLabel} 기준${cx.perCell?` · ${fmt(roi.targetCells)}셀 · 셀당 ${fmt(cx.perCell)}원`:""} (관리비·이윤 포함)</div>
       </div>
 
       <div id="panelCapex" class="roi-panel">
         <div class="roi-panel-inner">
-          <div class="capex-group">
-            <div class="cg-title">고정비 <span class="cg-sub">규모와 무관 · 기본 설비</span></div>
-            <div class="li"><span class="k">셔틀 본체 1대</span><span class="v mono">약 5,000~7,000만원</span></div>
-            <div class="li"><span class="k">리프트 2대 (입고1·출고1)</span><span class="v mono">약 3,000~5,000만원</span></div>
-            <div class="li"><span class="k">WCS 제어시스템</span><span class="v mono">약 2,000~4,000만원</span></div>
-            <div class="li"><span class="k">입출고 컨베이어</span><span class="v mono">약 2,000~3,500만원</span></div>
-            <div class="li"><span class="k">안전설비·전기공사</span><span class="v mono">약 1,000~1,800만원</span></div>
-            <div class="li"><span class="k">설치·시운전·교육</span><span class="v mono">약 1,500~2,500만원</span></div>
-            <div class="li total"><span class="k">고정비 소계</span><span class="v"><b>${won(CONFIG.CAPEX_FIXED_MAN)}원</b></span></div>
-          </div>
-          <div class="capex-group" style="margin-top:14px">
-            <div class="cg-title">변동비 <span class="cg-sub">셀 수에 비례</span></div>
-            <div class="li"><span class="k">셔틀랙 구조물 (자체제작)</span><span class="v mono">약 35~40만원/셀</span></div>
-            <div class="li"><span class="k">WMS 라이선스</span><span class="v mono">약 5~8만원/셀</span></div>
-            <div class="li total"><span class="k">변동비 소계 (${fmt(roi.targetCells)}셀)</span><span class="v"><b>${won(CONFIG.CAPEX_VAR_CELL_MAN * roi.targetCells)}원</b></span></div>
-          </div>
-          ${tempAddBlock}
+          ${capexWarn}
+          ${capexLines}
+          ${capexProfit}
           <div class="capex-total">
             <span>총 개략 투자비 (VAT 별도)</span>
             <span class="v"><b>${won(roi.capexMan)}원</b></span>
           </div>
-          <div class="note" style="margin-top:10px">본 금액은 현장 실사·도면 없이 산출한 개략값입니다. 정밀 견적은 요청서 8개 섹션 데이터 수집 후 별도 제출합니다.</div>
+          ${capexMeta}
+          ${capexScope}
+          <div class="note" style="margin-top:10px">단가·요율은 실제 공급 견적서 ${QUOTES.length}건(${CAPEX.calibratedFrom.join(" · ")}) 역산값입니다. 규모별 랙 단가·수량 규칙은 견적서 사이 보간 추정이며, 현장 실사·도면 없이 산출한 개략값입니다. 정밀 견적은 요청서 8개 섹션 데이터 수집 후 별도 제출합니다.</div>
         </div>
       </div>
     </div>
@@ -1359,6 +1779,9 @@ function copySummary(d,est,tp,sys,roi){
     `■ 권장 구축 규모: ${fmt(roi.targetCells)} Cells`,
     `■ 추천 시스템: ${sys.name}`,
     `■ 개략 투자비(CAPEX): ${won(roi.capexMan)}원 (VAT 별도)`,
+    ...roi.capex.groupOrder.map(g=>`   - ${g}  ${won(Math.round(roi.capex.sums[g]/10000))}원`),
+    ...roi.capex.overheadLines.map(o=>`   - ${o.n} ${(o.r*100).toFixed(0)}%  ${won(Math.round(o.amt/10000))}원`),
+    `   ※ 건축공사·Utility 인입 등 견적 제외 (별도 부담)`,
     ``,
     `※ 개략 추정값. 정밀 설계는 시뮬레이션으로 확정.`
   ].join("\n");
@@ -1384,7 +1807,9 @@ function generateWorklog(d,est,tp,sys,sysKey,roi){
   L.push(` 2) 제안 내용`);
   L.push(`  - 제안 요약 : ${sys.name}`);
   L.push(`  - 예상 규모 : 공간 최대 ${fmt(est.cells)} Cells(${est.tiers}단) / 권장 구축 ${fmt(roi.targetCells)} Cells`);
-  L.push(`  - 예상 투자비 : ${won(roi.capexMan)}원 (VAT 별도)`);
+  L.push(`  - 예상 투자비 : ${won(roi.capexMan)}원 (VAT 별도${roi.capex.perCell?`, 셀당 ${fmt(roi.capex.perCell)}원`:""})`);
+  L.push(`                  ${roi.capex.groupOrder.map(g=>g+" "+won(Math.round(roi.capex.sums[g]/10000))).join(" / ")} / 관리·이윤 ${won(Math.round(roi.capex.overhead/10000))}`);
+  L.push(`                  ※ 건축·Utility인입 등 견적 제외 (별도 부담)`);
   L.push(``);
   L.push(` 3) 향후 영업 계획`);
   L.push(`  - `);
