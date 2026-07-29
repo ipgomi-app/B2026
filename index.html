@@ -94,6 +94,14 @@ body{
 .head-row h2{margin-top:7px}
 .intro-btn{flex:0 0 auto;font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;background:linear-gradient(180deg,rgba(92,132,230,.16),rgba(92,132,230,.06));color:var(--accent-2);border:1px solid rgba(92,132,230,.38);box-shadow:var(--sh-sm),var(--hl);cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .intro-btn:active{transform:scale(.97)}
+/* 소개 화면 리스트 */
+.intro-list{display:flex;flex-direction:column;gap:10px}
+.ipt{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft);line-height:1.55}
+.ipt .ck{flex:0 0 14px;color:var(--accent);font-weight:700;font-family:'IBM Plex Mono',monospace}
+.ipt b{color:var(--ink)}
+.isys{display:flex;flex-direction:column;gap:3px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--grad-stat);box-shadow:var(--sh-sm),var(--hl)}
+.isys b{font-size:14px;color:var(--ink)}
+.isys span{font-size:11.5px;color:var(--muted);line-height:1.5}
 .intro-btn:hover{background:linear-gradient(180deg,rgba(92,132,230,.24),rgba(92,132,230,.1))}
 .step-head p{font-size:13px;color:var(--muted);margin-top:4px}
 
@@ -350,10 +358,63 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <!-- ===== STEPS ===== -->
   <div class="steps" id="steps">
 
-    <!-- STEP 1 : 창고 정보 -->
+    <!-- STEP 1 : 소개 -->
     <section class="step show" data-step="0">
       <div class="step-head">
-        <div class="step-kicker mono">STEP 1 / 2</div>
+        <div class="step-kicker mono">STEP 1 / 3</div>
+        <h2>회사 소개</h2>
+        <p>미팅 도입부에 보여주는 소개 자료입니다.</p>
+      </div>
+
+      <div class="result-hero">
+        <div class="co">TSPG · LOGISALL ENGINEERING</div>
+        <h3>물류 자동화 토탈 솔루션</h3>
+        <div class="env">
+          <span>국산 원천기술</span>
+          <span>설계·제작·설치·AS 일괄</span>
+          <span>충남 서천 공장</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="h mono">핵심 강점<span class="ln"></span></div>
+        <div class="intro-list">
+          <div class="ipt"><span class="ck">✓</span><span>국내 최초 셔틀형 자동창고 <b>원천기술 보유</b></span></div>
+          <div class="ipt"><span class="ck">✓</span><span>설계·제작·설치·AS <b>일괄 수행</b> (전 구성원 91% 엔지니어)</span></div>
+          <div class="ipt"><span class="ck">✓</span><span>냉동 -30℃ ~ 고온 55℃ <b>전 온도대 구축 경험</b></span></div>
+          <div class="ipt"><span class="ck">✓</span><span>기존 건물 개조·단계별 구축으로 <b>운영 중단 최소화</b></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="h mono">주요 시스템 라인업<span class="ln"></span></div>
+        <div class="intro-list">
+          <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>냉동·냉장 고밀도 보관 · 결로·제상 설계</span></div>
+          <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 리프트 절감·확장성</span></div>
+          <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span></div>
+          <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="h mono">공급 실적<span class="ln"></span></div>
+        <div class="stats" id="introStats"></div>
+        <div class="note">식품·의약·화장품·생수·2차전지 등 전 업종 구축 실적이며, 이스라엘 수출 사례를 포함합니다.</div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn soft" onclick="shareEngIntro()">📄 회사소개서</button>
+        <button class="btn soft" onclick="shareIntroVideo()">📤 소개 영상</button>
+      </div>
+      <div class="result-actions" style="margin-top:0">
+        <button class="btn soft wide" onclick="showIntroResources()" style="flex:1 1 100%">🔗 소개자료</button>
+      </div>
+    </section>
+
+    <!-- STEP 2 : 운영 정보 -->
+    <section class="step" data-step="1">
+      <div class="step-head">
+        <div class="step-kicker mono">STEP 2 / 3</div>
         <div class="head-row">
           <h2>운영 정보</h2>
           <button class="intro-btn" id="btnEngIntro" onclick="shareEngIntro()">📄 소개서</button>
@@ -450,8 +511,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </section>
 
-    <!-- STEP 2 : 결과 -->
-    <section class="step" data-step="1">
+    <!-- STEP 3 : 결과 -->
+    <section class="step" data-step="2">
       <div class="step-head">
         <h2>솔루션 분석</h2>
         <p>입력값 기반 개략 추정입니다. 정밀 설계는 시뮬레이션으로 확정합니다.</p>
@@ -665,7 +726,7 @@ const REFERENCES = [
    [STATE]
    ============================================================ */
 const STATE = {
-  step:0, total:2, precise:false,
+  step:0, total:3, precise:false,
   data:{ temp:"ambient", build:"new",
          area:0, height:0, volume:0, palletH:0, stock:0, storeDays:0, staff:0, problems:[],
          bay:0, deepFront:0, deepBack:0, tier:0, aisleLoss:0 }
@@ -797,6 +858,18 @@ const won = man => { // 만원 → 사람이 읽는 단위
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
+/* 소개 화면 공급 실적 타일 — REFERENCES에서 동적 산출 */
+function renderIntroStats(){
+  const box = $("#introStats"); if(!box) return;
+  const maxCells  = Math.max(...REFERENCES.map(r=>r.cells||0));
+  const maxHeight = Math.max(...REFERENCES.map(r=>r.height||0));
+  box.innerHTML = `
+    <div class="stat"><div class="l">공급 실적</div><div class="v">${fmt(REFERENCES.length)}<small>건</small></div><div class="sub">자동창고·물류설비</div></div>
+    <div class="stat"><div class="l">최대 보관량</div><div class="v">${fmt(maxCells)}<small>Cells</small></div><div class="sub">단일 창고 기준</div></div>
+    <div class="stat"><div class="l">최고 설치높이</div><div class="v">${maxHeight}<small>m</small></div><div class="sub">고단 랙 구축</div></div>
+    <div class="stat"><div class="l">대응 온도대</div><div class="v">-30~55<small>℃</small></div><div class="sub">냉동·냉장·항온·고온</div></div>`;
+}
+
 function buildProgress(){
   const p = $("#prog"); p.innerHTML="";
   for(let i=0;i<STATE.total;i++){
@@ -859,7 +932,7 @@ function collect(){
 function validateStep(){
   collect();
   const d=STATE.data;
-  if(STATE.step===0){
+  if(STATE.step===1){
     if(!d.area||!d.height||!d.volume){ toast("면적·층고·물동량은 필수입니다"); return false; }
   }
   return true;
@@ -1636,6 +1709,7 @@ function showTargetModal(){
 }
 
 /* ----- init ----- */
+renderIntroStats();
 buildProgress();
 showStep(0);
 

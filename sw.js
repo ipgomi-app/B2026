@@ -1,7 +1,7 @@
 /* ENG — Service Worker
    - HTML 문서: network-first (온라인이면 항상 최신, 오프라인이면 캐시)
    - 정적 자원(아이콘·폰트 등): cache-first */
-const CACHE = "eng-app-v3";
+const CACHE = "eng-app-v4";
 const APP_HTML = "index.html";
 const ASSETS = [
   APP_HTML,
