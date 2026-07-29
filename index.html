@@ -233,6 +233,19 @@ a.btn{text-decoration:none}
 .res-tab{flex:1;border:1px solid var(--line);background:var(--bg-2);color:var(--ink-soft);font-family:inherit;font-size:13px;font-weight:600;padding:11px 8px;border-radius:var(--radius-sm);cursor:pointer;transition:.15s}
 .res-tab:active{transform:scale(.98)}
 .res-tab.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2)}
+
+/* 회사소개서 선택 모달 */
+.doc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid var(--line);background:var(--grad-stat);border-radius:var(--radius-sm);padding:13px 14px;margin-top:10px;box-shadow:var(--sh-sm),var(--hl)}
+.doc-tx{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 130px}
+.doc-tx b{font-size:14px;color:var(--ink)}
+.doc-tx span{font-size:11px;color:var(--muted);line-height:1.4}
+.doc-acts{display:flex;gap:7px;flex:0 0 auto}
+.doc-btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:20px;cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
+.doc-btn:active{transform:scale(.97)}
+.doc-btn.view{background:rgba(92,132,230,.10);color:var(--accent-2);border:1px solid rgba(92,132,230,.34)}
+.doc-btn.view:hover{background:rgba(92,132,230,.18)}
+.doc-btn.send{background:linear-gradient(180deg,#345AB0,#172A5C);color:#fff;border:1px solid rgba(92,132,230,.5);box-shadow:var(--sh-sm),var(--hl)}
+.doc-btn.send:hover{filter:brightness(1.08)}
 .res-tx{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
 .res-tx b{font-size:13.5px;color:var(--ink);line-height:1.35}
 .res-tx span{font-size:11px;color:var(--muted);line-height:1.35}
@@ -412,11 +425,8 @@ a.btn{text-decoration:none}
       </div>
 
       <div class="result-actions">
-        <a class="btn soft" href="logisall_intro.pdf" target="_blank" rel="noopener">📄 회사소개서</a>
-        <button class="btn soft" onclick="shareEngIntro()">📤 소개서 전달</button>
-      </div>
-      <div class="result-actions" style="margin-top:0">
-        <button class="btn soft wide" onclick="showIntroResources()" style="flex:1 1 100%">🔗 소개자료</button>
+        <button class="btn soft" onclick="showDocPicker()">📄 회사소개서</button>
+        <button class="btn soft" onclick="showIntroResources()">🔗 소개자료</button>
       </div>
     </section>
 
@@ -557,6 +567,11 @@ a.btn{text-decoration:none}
   <!-- TSPG 소개자료 모달 -->
   <div class="calc-modal" id="resModal">
     <div class="cm-box" id="resModalBox"></div>
+  </div>
+
+  <!-- 회사소개서 선택 모달 -->
+  <div class="calc-modal" id="docModal">
+    <div class="cm-box" id="docModalBox"></div>
   </div>
 </div>
 
@@ -953,32 +968,52 @@ function toast(msg){
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200);
 }
 
-/* ----- 로지스올 회사소개서 PDF 전달 (네이티브 공유시트 → 카톡 등) ----- */
-const ENG_INTRO_PDF  = "logisall_intro.pdf";        // 앱과 같은 폴더에 위치
-const ENG_INTRO_NAME = "2026_로지스올_회사소개서.pdf";  // 수신자에게 보일 파일명
-let ENG_INTRO_BLOB = null;
+/* ============================================================
+   회사소개서 — 앱에 저장된 PDF 2종 (보기 / 카톡 전달)
+   ============================================================ */
+const DOCS = {
+  logisall: {
+    label:"로지스올 사업소개서",
+    desc:"그룹 사업 전반 · 2026 ver",
+    url:"logisall_intro.pdf",
+    name:"2026_로지스올_회사소개서.pdf",
+    title:"로지스올 사업소개서"
+  },
+  tspg: {
+    label:"TSPG 소개서",
+    desc:"자동화창고 시스템 · 공급실적",
+    url:"tspg_intro.pdf",
+    name:"회사소개서_TSPG.pdf",
+    title:"TSPG 회사소개서"
+  }
+};
+const DOC_BLOBS = {};
 /* 미리 받아두면 클릭 시 지연 없이 공유시트가 뜬다(사용자 제스처 유지) */
-function prefetchEngIntro(){
-  fetch(ENG_INTRO_PDF).then(r=>r.ok?r.blob():null).then(b=>{ if(b) ENG_INTRO_BLOB=b; }).catch(()=>{});
+function prefetchDocs(){
+  Object.keys(DOCS).forEach(k=>{
+    fetch(DOCS[k].url).then(r=>r.ok?r.blob():null).then(b=>{ if(b) DOC_BLOBS[k]=b; }).catch(()=>{});
+  });
 }
-async function shareEngIntro(){
-  let blob = ENG_INTRO_BLOB;
+async function shareDoc(key){
+  const doc = DOCS[key]; if(!doc) return;
+  let blob = DOC_BLOBS[key];
   if(!blob){
     try{
-      const res = await fetch(ENG_INTRO_PDF);
+      const res = await fetch(doc.url);
       if(!res.ok) throw new Error("not found");
       blob = await res.blob();
-      ENG_INTRO_BLOB = blob;
+      DOC_BLOBS[key] = blob;
     }catch(e){
       toast("소개서 파일을 불러오지 못했습니다");
       return;
     }
   }
-  const file = new File([blob], ENG_INTRO_NAME, {type:"application/pdf"});
+  const file = new File([blob], doc.name, {type:"application/pdf"});
   // 파일 공유 지원(모바일 등) → 네이티브 공유시트에서 카카오톡 선택
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{
-      await navigator.share({ files:[file], title:"로지스올 회사소개서", text:"로지스올 회사소개서입니다." });
+      await navigator.share({ files:[file], title:doc.title, text:`${doc.title}입니다.` });
+      document.getElementById('docModal').classList.remove('show');
     }catch(e){
       if(e && e.name === "AbortError") return;
       toast("공유를 완료하지 못했습니다");
@@ -988,11 +1023,34 @@ async function shareEngIntro(){
   // 파일 공유 미지원(PC 등) → PDF 다운로드 폴백
   const dl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = dl; a.download = ENG_INTRO_NAME;
+  a.href = dl; a.download = doc.name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(dl), 4000);
   toast("소개서 PDF를 내려받았습니다");
 }
+/* 회사소개서 선택 모달 — 문서별 [보기] / [카톡 전달] */
+function showDocPicker(){
+  const rows = Object.keys(DOCS).map(k=>{
+    const d = DOCS[k];
+    return `<div class="doc-row">
+      <div class="doc-tx"><b>${d.label}</b><span>${d.desc}</span></div>
+      <div class="doc-acts">
+        <a class="doc-btn view" href="${d.url}" target="_blank" rel="noopener">보기</a>
+        <button class="doc-btn send" onclick="shareDoc('${k}')">카톡 전달</button>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById('docModalBox').innerHTML = `
+    <div class="cm-title">회사소개서</div>
+    <div class="cm-sub mono">// 앱에 저장된 소개서 · 보기 또는 전달</div>
+    ${rows}
+    <div style="font-size:10.5px;color:var(--muted);margin-top:12px;line-height:1.6">‘보기’는 새 창에서 PDF를 열고, ‘카톡 전달’은 공유창에서 카카오톡을 선택해 파일을 보냅니다.</div>
+    <button class="cm-close-btn" onclick="document.getElementById('docModal').classList.remove('show')">닫기</button>`;
+  document.getElementById('docModal').classList.add('show');
+}
+document.getElementById('docModal').addEventListener('click', function(e){
+  if(e.target===this) this.classList.remove('show');
+});
 
 const TEMP_LABEL={ambient:"상온",chilled:"냉장 0~10℃",frozen:"냉동 -20℃↓",hot:"항온/고온",clean:"클린/방폭"};
 const BUILD_LABEL={new:"신설",existing:"기존건물 개조",extend:"증축"};
@@ -1727,7 +1785,7 @@ function showTargetModal(){
 
 /* ----- init ----- */
 renderIntroStats();
-prefetchEngIntro();
+prefetchDocs();
 buildProgress();
 showStep(0);
 
