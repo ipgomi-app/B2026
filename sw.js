@@ -1,16 +1,16 @@
 /* ENG — Service Worker
    - HTML 문서: network-first (온라인이면 항상 최신, 오프라인이면 캐시)
    - 정적 자원(아이콘·폰트 등): cache-first */
-const CACHE = "eng-app-v5";
+const CACHE = "eng-app-v6";
 const APP_HTML = "index.html";
+/* PDF는 캐시하지 않는다 — 뷰어가 쓰는 Range(206) 요청을 서비스워커가 가로채면
+   안드로이드 Chrome에서 PDF가 열리지 않는다. 항상 네트워크가 직접 처리. */
 const ASSETS = [
   APP_HTML,
   "manifest.webmanifest",
   "icon-192.png",
   "icon-512.png",
-  "apple-touch-icon.png",
-  "logisall_intro.pdf",
-  "tspg_intro.pdf"
+  "apple-touch-icon.png"
 ];
 
 self.addEventListener("install", e => {
@@ -30,6 +30,9 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
+
+  // PDF·Range 요청은 서비스워커가 건드리지 않는다(안드로이드 PDF 뷰어 호환)
+  if (req.url.split("?")[0].endsWith(".pdf") || req.headers.has("range")) return;
 
   const isDoc = req.mode === "navigate" ||
                 (req.destination === "document") ||

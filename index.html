@@ -987,46 +987,22 @@ const DOCS = {
     title:"TSPG 회사소개서"
   }
 };
-const DOC_BLOBS = {};
-/* 미리 받아두면 클릭 시 지연 없이 공유시트가 뜬다(사용자 제스처 유지) */
-function prefetchDocs(){
-  Object.keys(DOCS).forEach(k=>{
-    fetch(DOCS[k].url).then(r=>r.ok?r.blob():null).then(b=>{ if(b) DOC_BLOBS[k]=b; }).catch(()=>{});
-  });
-}
+const docUrl = key => new URL(DOCS[key].url, location.href).href;   // 절대 주소(공유용)
+/* 카톡 전달 — 8MB 파일 첨부는 수신 후 열람 실패가 잦아 '링크'로 보낸다.
+   받는 사람은 링크를 눌러 바로 열람·저장할 수 있다. */
 async function shareDoc(key){
   const doc = DOCS[key]; if(!doc) return;
-  let blob = DOC_BLOBS[key];
-  if(!blob){
+  const url = docUrl(key);
+  if(navigator.share){
     try{
-      const res = await fetch(doc.url);
-      if(!res.ok) throw new Error("not found");
-      blob = await res.blob();
-      DOC_BLOBS[key] = blob;
-    }catch(e){
-      toast("소개서 파일을 불러오지 못했습니다");
-      return;
-    }
-  }
-  const file = new File([blob], doc.name, {type:"application/pdf"});
-  // 파일 공유 지원(모바일 등) → 네이티브 공유시트에서 카카오톡 선택
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({ files:[file], title:doc.title, text:`${doc.title}입니다.` });
+      await navigator.share({ title:doc.title, text:`${doc.title}입니다.`, url });
       document.getElementById('docModal').classList.remove('show');
+      return;
     }catch(e){
       if(e && e.name === "AbortError") return;
-      toast("공유를 완료하지 못했습니다");
     }
-    return;
   }
-  // 파일 공유 미지원(PC 등) → PDF 다운로드 폴백
-  const dl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = dl; a.download = doc.name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(dl), 4000);
-  toast("소개서 PDF를 내려받았습니다");
+  copyText(url, "소개서 링크가 복사되었습니다");   // 공유 미지원(PC 등) → 링크 복사
 }
 /* 회사소개서 선택 모달 — 문서별 [보기] / [카톡 전달] */
 function showDocPicker(){
@@ -1035,7 +1011,7 @@ function showDocPicker(){
     return `<div class="doc-row">
       <div class="doc-tx"><b>${d.label}</b><span>${d.desc}</span></div>
       <div class="doc-acts">
-        <a class="doc-btn view" href="${d.url}" target="_blank" rel="noopener">보기</a>
+        <a class="doc-btn view" href="${docUrl(k)}" target="_blank" rel="noopener">보기</a>
         <button class="doc-btn send" onclick="shareDoc('${k}')">카톡 전달</button>
       </div>
     </div>`;
@@ -1044,7 +1020,7 @@ function showDocPicker(){
     <div class="cm-title">회사소개서</div>
     <div class="cm-sub mono">// 앱에 저장된 소개서 · 보기 또는 전달</div>
     ${rows}
-    <div style="font-size:10.5px;color:var(--muted);margin-top:12px;line-height:1.6">‘보기’는 새 창에서 PDF를 열고, ‘카톡 전달’은 공유창에서 카카오톡을 선택해 파일을 보냅니다.</div>
+    <div style="font-size:10.5px;color:var(--muted);margin-top:12px;line-height:1.6">‘보기’는 새 창에서 PDF를 엽니다. ‘카톡 전달’은 소개서 링크를 보내며, 받는 분이 링크를 눌러 바로 보거나 저장할 수 있습니다.</div>
     <button class="cm-close-btn" onclick="document.getElementById('docModal').classList.remove('show')">닫기</button>`;
   document.getElementById('docModal').classList.add('show');
 }
@@ -1785,7 +1761,6 @@ function showTargetModal(){
 
 /* ----- init ----- */
 renderIntroStats();
-prefetchDocs();
 buildProgress();
 showStep(0);
 
