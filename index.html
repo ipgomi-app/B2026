@@ -387,27 +387,32 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
 
       <div class="card">
-        <div class="h mono">주요 시스템 라인업<span class="ln"></span></div>
-        <div class="intro-list">
-          <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>냉동·냉장 고밀도 보관 · 결로·제상 설계</span></div>
-          <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 리프트 절감·확장성</span></div>
-          <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span></div>
-          <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span></div>
+        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">주요 시스템 라인업<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+        <div class="roi-panel">
+          <div class="roi-panel-inner">
+            <div class="intro-list">
+              <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>냉동·냉장 고밀도 보관 · 결로·제상 설계</span></div>
+              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 리프트 절감·확장성</span></div>
+              <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span></div>
+              <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="h mono">공급 실적<span class="ln"></span></div>
-        <div class="stats" id="introStats"></div>
-        <div class="note">식품·의약·화장품·생수·2차전지 등 전 업종 구축 실적이며, 이스라엘 수출 사례를 포함합니다.</div>
+        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">공급 실적<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+        <div class="roi-panel">
+          <div class="roi-panel-inner">
+            <div class="stats" id="introStats"></div>
+            <div class="note">식품·의약·화장품·생수·2차전지 등 전 업종 구축 실적이며, 이스라엘 수출 사례를 포함합니다.</div>
+          </div>
+        </div>
       </div>
 
       <div class="result-actions">
         <button class="btn soft" onclick="shareEngIntro()">📄 회사소개서</button>
-        <button class="btn soft" onclick="shareIntroVideo()">📤 소개 영상</button>
-      </div>
-      <div class="result-actions" style="margin-top:0">
-        <button class="btn soft wide" onclick="showIntroResources()" style="flex:1 1 100%">🔗 소개자료</button>
+        <button class="btn soft" onclick="showIntroResources()">🔗 소개자료</button>
       </div>
     </section>
 
@@ -858,6 +863,14 @@ const won = man => { // 만원 → 사람이 읽는 단위
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
+/* 카드 헤더 탭 → 바로 아래 패널 펼치기/접기 (소개 화면 등 공용) */
+function toggleCardPanel(head){
+  const panel = head.nextElementSibling;
+  if(!panel) return;
+  const open = panel.classList.toggle('show');
+  head.classList.toggle('open', open);
+}
+
 /* 소개 화면 공급 실적 타일 — REFERENCES에서 동적 산출 */
 function renderIntroStats(){
   const box = $("#introStats"); if(!box) return;
@@ -931,11 +944,7 @@ function collect(){
 
 function validateStep(){
   collect();
-  const d=STATE.data;
-  if(STATE.step===1){
-    if(!d.area||!d.height||!d.volume){ toast("면적·층고·물동량은 필수입니다"); return false; }
-  }
-  return true;
+  return true;   // 입력값 없이도 다음 단계로 진행 가능 (미입력 항목은 결과에서 '—' 처리)
 }
 
 function toast(msg){
