@@ -652,7 +652,7 @@ const CONFIG = {
   OPEX_RATE: 0.035,            // 연 OPEX = CAPEX × 3.5%
   WORK_DAYS_MONTH: 26,
   // TSPG 공식 채널 (영상·블로그 연결용)
-  YT_CHANNEL: "https://www.youtube.com/@namuckKim",
+  YT_CHANNEL: "https://youtube.com/@namuckkim",
   BLOG_URL: "https://blog.naver.com/uck2000"
 };
 
@@ -741,7 +741,7 @@ const REFERENCES = [
   {co:"L사", loc:"전북 군산", temp:"frozen", cells:944, height:5.3, sys:"MDPS System", note:"원료·제품용 상온·냉동 자동창고 (-20℃)"},
   {co:"D식품", loc:"전북 군산", temp:"frozen", cells:1356, height:14.7, sys:"MDPS System", note:"원료·제품용 냉장(5℃)·냉동(-20℃) 자동창고"},
   {co:"W냉동식품", loc:"충남 청양", temp:"frozen", cells:4264, height:13.0, sys:"MDPS System", note:"원료·제품용 냉동 자동창고 (-20℃)"},
-  {co:"X사", loc:"충북 음성", temp:"ambient", cells:848, height:12.1, sys:"MDPS System", note:"완·부자재 자동창고, 지하 4.5m 포함", video:"https://youtu.be/MLz6X1eK5no"},
+  {co:"X사", loc:"충북 음성", temp:"ambient", cells:848, height:12.1, sys:"MDPS System", note:"완·부자재 자동창고, 지하 4.5m 포함"},
   {co:"B약품", loc:"경기 파주", temp:"clean", cells:0, height:0, sys:"Auto Sorting System", note:"의약품 자동분류설비 (69 Chute, 3,000EA/Hr)"},
   {co:"D사", loc:"전북 김제", temp:"frozen", cells:2258, height:18.2, sys:"MDPS + Stacker Crane", note:"김제FMC 냉장(5℃이하)·냉동(-20℃) 부분육 (하이브리드)"},
   {co:"D시스템즈", loc:"충북 진천", temp:"hot", cells:208, height:5.2, sys:"AS/RS (Stacker Crane)", note:"반제품용 숙성실 자동창고 (고온 55℃)"},
@@ -766,7 +766,7 @@ const REFERENCES = [
   {co:"S사", loc:"충남 천안", temp:"ambient", cells:4836, height:17.6, sys:"MDPS System", note:"제품용 자동창고 (생수 제조)"},
   {co:"S사", loc:"경기 광주", temp:"ambient", cells:4660, height:10.1, sys:"MDPS System", note:"오포물류센터 자동창고시스템 (생활용품 유통)"},
   {co:"P사", loc:"전북 익산", temp:"frozen", cells:2885, height:18.5, sys:"MDPS System", note:"원료·제품용 냉동 자동창고 (-20℃)"},
-  {co:"K로봇랜드", loc:"경남 창원", temp:"ambient", cells:1000, height:5.4, sys:"Mini Shuttle System", note:"5G융합서비스 Mini Shuttle (전기전자)", video:"https://www.youtube.com/watch?v=Q5TfRsJ_m6w"},
+  {co:"K로봇랜드", loc:"경남 창원", temp:"ambient", cells:1000, height:5.4, sys:"Mini Shuttle System", note:"5G융합서비스 Mini Shuttle (전기전자)"},
   {co:"S사", loc:"경남 양산", temp:"ambient", cells:96, height:2.2, sys:"Mini Shuttle System", note:"Mini Shuttle 데모라인 어곡공단 (로봇 제조업)"},
   {co:"H제약", loc:"전북 익산", temp:"hot", cells:1319, height:5.8, sys:"MDPS System", note:"제품용 자동창고 (항온 24℃, 의약품)"},
   {co:"N사", loc:"경기 안양", temp:"ambient", cells:0, height:0, sys:"Conveyor 등 물류설비", note:"자동화창고 컨베이어라인 구축 (식품 제조)"},
@@ -790,13 +790,12 @@ const REFERENCES = [
    temps 가 있는 영상을 먼저 두어 온도대 일치 영상이 우선 선택되게 한다.
    ============================================================ */
 const VIDEOS = [
-  {url:"https://www.youtube.com/watch?v=Z4NuzWWlvpQ", t:"냉동(-20℃) 셔틀랙 자동창고", cats:["mdps","4way"], temps:["frozen","chilled"]},
-  {url:"https://www.youtube.com/watch?v=Zir2XBVRp9o", t:"MDPS 스태커크레인형 셔틀랙", cats:["stc","mdps"]},
-  {url:"https://www.youtube.com/watch?v=Q5TfRsJ_m6w", t:"K로봇랜드 미니셔틀 (창원)",   cats:["mini"]},
-  {url:"https://www.youtube.com/watch?v=tPNmBaEYuns", t:"Shuttle Rack System",        cats:["mdps","4way"]},
-  {url:"https://www.youtube.com/watch?v=TYbxHBZ8KDk", t:"Shuttle & Satellite 랙 시스템", cats:["mdps"]},
-  {url:"https://www.youtube.com/watch?v=NEKmVl7W6cE", t:"셔틀카·새틀라이트 셔틀랙",     cats:["mdps"]},
-  {url:"https://youtu.be/MLz6X1eK5no",                t:"음성 완·부자재 자동창고 현장", cats:["mdps"], temps:["ambient"]}
+  // ★ 전부 사용자(TSPG 채널 @namuckkim)가 직접 확인해준 공식 영상 — 임의 추가 금지
+  {url:"https://youtu.be/BVD1egtVDBQ", t:"냉동 셔틀랙 자동창고",   cats:["mdps","4way"], temps:["frozen","chilled"]},
+  {url:"https://youtu.be/k1Yhm2fbgD4", t:"4-Way Shuttle System",  cats:["4way"]},
+  {url:"https://youtu.be/xzMS0WD3L-Q", t:"셔틀랙 자동창고 (MDPS)", cats:["mdps"]},
+  {url:"https://youtu.be/XFRkj8hrS3Y", t:"미니셔틀 / GTP",         cats:["mini"]},
+  {url:"https://youtu.be/MLz6X1eK5no", t:"스태커크레인 AS/RS",     cats:["stc"]}
 ];
 
 /* 레퍼런스 sys 문자열 → 시스템 계열. MDPS를 먼저 검사해
@@ -1651,6 +1650,13 @@ function renderResult(){
   // 반론 대응: 칩 → 탭하면 모달로 대응 화법 표시
   const objChips=OBJECTIONS.map((o,i)=>`<button class="obj-chip" onclick="showObjModal(${i})"><span>${o[0]}</span></button>`).join("");
 
+  // 추천 시스템 공식 영상 (solu 카드 버튼용): 온도대 일치 우선 → 시스템 일치 → 채널
+  const soluCat = ({shuttle4way:"4way",mdps:"mdps",stc:"stc",mini:"mini",hybrid:"4way"})[sysKey]||"mdps";
+  const soluVideo = VIDEOS.find(v=>v.cats.includes(soluCat) && v.temps && v.temps.includes(d.temp))
+                 || VIDEOS.find(v=>v.cats.includes(soluCat) && !v.temps)
+                 || VIDEOS.find(v=>v.cats.includes(soluCat))
+                 || {url:CONFIG.YT_CHANNEL, t:"TSPG 채널"};
+
   // 레퍼런스 매칭 (feature 4) — 추천 시스템(sysKey)까지 반영
   const refs=Engine.matchReferences(d, roi.targetCells, sysKey);
   const refCards=refs.map(r=>{
@@ -1661,6 +1667,7 @@ function renderResult(){
     if(r.video){ videoUrl=r.video; videoLabel="▶ 현장 영상"; }
     else {
       const v = VIDEOS.find(v=>v.cats.includes(cat) && v.temps && v.temps.includes(r.temp))
+             || VIDEOS.find(v=>v.cats.includes(cat) && !v.temps)
              || VIDEOS.find(v=>v.cats.includes(cat));
       if(v){ videoUrl=v.url; videoLabel="▶ 유사 시스템 영상"; }
       else { videoUrl=CONFIG.YT_CHANNEL; videoLabel="▶ TSPG 채널"; }
@@ -1762,7 +1769,11 @@ function renderResult(){
         <h4>${sys.name}</h4>
         <div class="why">${matchReason(d,sysKey)}</div>
       </div>
-      <div class="body">${pts}</div>
+      <div class="body">${pts}
+        <div class="rlinks" style="margin-top:10px">
+          <a href="${soluVideo.url}" target="_blank" rel="noopener" class="rlink yt">▶ ${soluVideo.t} 공식 영상</a>
+        </div>
+      </div>
     </div>
 
     <div class="card" id="simCard">
@@ -1904,13 +1915,13 @@ function generateWorklog(d,est,tp,sys,sysKey,roi){
 }
 
 /* ============================================================
-   [SIM3D] 자동창고 3D 시뮬레이션 — 순수 Canvas 2D 아이소메트릭
-   - 외부 라이브러리 없음 (오프라인 PWA 유지)
-   - 셀을 개별로 그리지 않음: 랙 블록 프리즘 + 격자 오버레이로 병합
-   - 표시 상한(LOD) 초과 시 축약 렌더 + 실수치 캡션
-   - 데모 애니메이션: 최전면 동선 한정(가림 문제 원천 제거)
+   [SIM3D] 자동창고 3D 시뮬레이션
+   - 기본: three.js(vendor/three.module.min.js, lazy import) WebGL 렌더
+   - 폴백: 아래 SIM2D(순수 Canvas 2D 아이소메트릭) — three 로드/WebGL 실패 시
+   - 오케스트레이터 SIM3D는 파일 하단에 정의 (외부 계약 유지:
+     init/reset/togglePlay/stop/fitView, renderResult가 reset 호출)
    ============================================================ */
-const SIM3D = {
+const SIM2D = {
   inited:false, cv:null, ctx:null, off:null, offCtx:null,
   yaw:-0.52, scale:1, panX:0, panY:0, dpr:1, W:0, H:0,
   scene:null, playing:false, raf:0, t0:0, io:null,
@@ -2332,6 +2343,513 @@ const SIM3D = {
   }
 };
 
+/* ============================================================
+   [SIM3D-GL] three.js WebGL 렌더러 — 실사풍 자동창고
+   ============================================================ */
+const GL3D = {
+  THREE:null, inited:false,
+  renderer:null, scene:null, camera:null, canvas:null,
+  target:null, sph:{theta:-0.6, phi:1.02, r:40}, vel:{t:0,p:0},
+  raf:0, playing:false, animT:0, lastNow:0, needsRender:false, io:null,
+  D:null, actors:null, disposables:[],
+
+  /* 온도대 무드: [랙 프레임색, 파렛트 위 화물색, 배경, fog, 반구광 하늘색] */
+  MOOD:{
+    frozen: {frame:0x3d6db5, cargo:0xdfe9f5, bg:0x0b1322, fogC:0x11203a, sky:0x9fc0e8},
+    chilled:{frame:0x2f8f8a, cargo:0xe2f2ef, bg:0x0b1815, fogC:0x102823, sky:0x9fdcd6},
+    ambient:{frame:0x2e5590, cargo:0xece6da, bg:0x10141d, fogC:0x161c29, sky:0xc8d4ea},
+    hot:    {frame:0xa05a34, cargo:0xf0e2cf, bg:0x180f0b, fogC:0x241610, sky:0xe8c7a8},
+    clean:  {frame:0x7e8aa5, cargo:0xf4f6fa, bg:0x12151c, fogC:0x1a1f2a, sky:0xdfe6f2}
+  },
+  COL:{ post:0x33507e, beam:0x486a9e, pallet:0x9a6b35, palletD:0x7c5528,
+        shuttle:0xf08c28, shuttleD:0xb5641a, lifter:0x8b96ab, rail:0x5a6880,
+        conv:0x47566e, roller:0x76839c, floor:0x141a26, agf:0xd35242 },
+
+  /* ---------- 데이터 도출 (SIM2D.buildScene와 동일 규칙) ---------- */
+  buildData(){
+    const d=window.d_data||STATE.data, est=window.est_data||{cells:500,tiers:3,precise:false};
+    const roi=window.roi_data, sysKey=Engine.matchSystem(d);
+    const qty=(roi&&roi.capex&&roi.capex.qty)||{shuttleQty:2,lifterQty:1};
+    let bay,dF,dB,tier, cellW=1.4, cellD=1.4;
+    const cellH=Math.max(1.2,(d.palletH||1.8)+0.25);
+    const DEEP={shuttle4way:[4,4], mdps:[6,6], stc:[2,2], mini:[3,3], hybrid:[3,3]};
+    if(est.precise && d.bay>0){ bay=d.bay; dF=d.deepFront||0; dB=d.deepBack||0; tier=d.tier||1; }
+    else{
+      tier=Math.max(1,est.tiers||3);
+      [dF,dB]=DEEP[sysKey]||[4,4];
+      const target=(roi&&roi.targetCells)||est.cells||500;
+      bay=Math.max(3, Math.ceil(target/((dF+dB)*tier)));
+    }
+    if(sysKey==="mini"){ cellW=0.95; cellD=0.95; }
+    const real={bay,dF,dB,tier,cells:(est.precise?est.cells:((roi&&roi.targetCells)||est.cells))};
+    const LB=30,LD=10,LT=10;
+    const sBay=Math.min(bay,LB), sDF=Math.min(dF,LD), sDB=Math.min(dB,LD), sTier=Math.min(tier,LT);
+    const lod=(sBay<bay||sDF<dF||sDB<dB||sTier<tier);
+    const occ=Math.max(.15,Math.min(1,((roi&&roi.targetCells)||est.cells)/Math.max(1,est.cells||1)));
+    return { d, sysKey, qty, cellW, cellD, cellH, real, lod, occ,
+             sBay, sDF, sDB, sTier,
+             aisleW:2.0,
+             rackW:sBay*cellW, rackH:sTier*cellH,
+             shown:{bay:sBay,dF:sDF,dB:sDB,tier:sTier} };
+  },
+
+  init(){
+    const T=this.THREE, cv=document.getElementById("simCanvas");
+    if(!T||!cv) throw new Error("no THREE/canvas");
+    this.canvas=cv;
+    const w=cv.clientWidth||360, h=280;
+    this.renderer=new T.WebGLRenderer({canvas:cv, antialias:true});
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    this.renderer.setSize(w,h,false);
+    const gl=this.renderer.getContext(); if(!gl) throw new Error("no WebGL");
+
+    const D=this.D=this.buildData();
+    const mood=this.MOOD[D.d.temp]||this.MOOD.ambient;
+
+    this.scene=new T.Scene();
+    this.scene.background=new T.Color(mood.bg);
+    this.scene.fog=new T.Fog(mood.fogC, 55, 170);
+    this.camera=new T.PerspectiveCamera(40, w/h, 0.1, 400);
+
+    // 조명
+    const hemi=new T.HemisphereLight(mood.sky, 0x0c101a, 1.05); this.scene.add(hemi);
+    const cellsShown=D.sBay*(D.sDF+D.sDB)*D.sTier;
+    const useShadow = cellsShown<=3000;
+    const sun=new T.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(-30, 45, 22);
+    if(useShadow){
+      this.renderer.shadowMap.enabled=true;
+      this.renderer.shadowMap.type=T.PCFSoftShadowMap;
+      sun.castShadow=true; sun.shadow.mapSize.set(1024,1024);
+      const span=Math.max(D.rackW, (D.sDF+D.sDB)*D.cellD+D.aisleW)+14;
+      sun.shadow.camera.left=-span; sun.shadow.camera.right=span;
+      sun.shadow.camera.top=span;   sun.shadow.camera.bottom=-span;
+      sun.shadow.camera.far=140; sun.shadow.bias=-0.0006;
+    }
+    this.scene.add(sun);
+
+    this.buildWorld(useShadow);
+    this.attachGestures();
+    this.fitView();
+    this.render();
+
+    this.io=new IntersectionObserver(es=>{ es.forEach(e=>{ if(!e.isIntersecting) this.stop(); }); });
+    this.io.observe(cv);
+    if(!this._visBound){ this._visBound=true;
+      document.addEventListener("visibilitychange",()=>{ if(document.hidden) this.stop(); }); }
+    this.renderMeta();
+    this.inited=true;
+  },
+
+  track(o){ this.disposables.push(o); return o; },
+  mat(opts){ return this.track(new this.THREE.MeshStandardMaterial(opts)); },
+  geo(g){ return this.track(g); },
+
+  /* ---------- 월드 구성 ---------- */
+  buildWorld(shadow){
+    const T=this.THREE, D=this.D, C=this.COL;
+    const mood=this.MOOD[D.d.temp]||this.MOOD.ambient;
+    const G=new T.Group(); this.scene.add(G); this.world=G;
+    const {cellW,cellD,cellH,sBay,sDF,sDB,sTier,aisleW,rackW,rackH,sysKey}=D;
+    const totD=sDF*cellD+aisleW+sDB*cellD;
+    const aisleY=sDF*cellD;          // z축(three) = 깊이. 통로 시작
+    // 좌표계: x=Bay 방향, y=높이, z=깊이(앞랙 앞면 z=0, 뒤로 +z)
+
+    // 바닥 (콘크리트)
+    const floorW=rackW+16, floorD=totD+14;
+    const floor=new T.Mesh(this.geo(new T.PlaneGeometry(floorW,floorD)),
+      this.mat({color:C.floor, roughness:.92, metalness:.05}));
+    floor.rotation.x=-Math.PI/2;
+    floor.position.set(rackW/2-1, 0, totD/2-2);
+    floor.receiveShadow=shadow;
+    G.add(floor);
+    const grid=new T.GridHelper(Math.max(floorW,floorD), Math.round(Math.max(floorW,floorD)/2), 0x2a3550, 0x212b42);
+    grid.position.set(rackW/2-1, 0.01, totD/2-2);
+    G.add(grid); this.track(grid.geometry); this.track(grid.material);
+
+    // ---- 랙 블록 (앞/뒤) : 기둥·빔·레일 InstancedMesh ----
+    const frameM=this.mat({color:D.sysKey==="mini"?0x5f6f8f:mood.frame, roughness:.55, metalness:.35});
+    const beamM =this.mat({color:C.beam, roughness:.5, metalness:.4});
+    const postG=this.geo(new T.BoxGeometry(0.09, rackH+0.25, 0.09));
+    const railG=this.geo(new T.BoxGeometry(rackW+0.1, 0.09, 0.07));
+    const crossG=this.geo(new T.BoxGeometry(0.07, 0.07, cellD));
+
+    const blocks=[];
+    if(sDF>0) blocks.push({z0:0, deep:sDF, front:true});
+    if(sDB>0) blocks.push({z0:aisleY+aisleW, deep:sDB, front:false});
+
+    // 인스턴스 수 산정
+    let postN=0, railN=0, crossN=0;
+    blocks.forEach(b=>{ postN+=(sBay+1)*(Math.floor(b.deep/2)+1); railN+=sTier*(b.deep+1); crossN+=sTier*(sBay+1)*Math.ceil(b.deep/2); });
+    crossN=Math.min(crossN, 4000);
+    const posts=new T.InstancedMesh(postG, frameM, Math.max(1,postN));
+    const rails=new T.InstancedMesh(railG, beamM, Math.max(1,railN));
+    const m4=new T.Matrix4();
+    let pi=0, ri=0;
+    blocks.forEach(b=>{
+      for(let i=0;i<=sBay;i++) for(let jj=0;jj<=Math.floor(b.deep/2);jj++){
+        m4.setPosition(i*cellW, (rackH+0.25)/2, b.z0+Math.min(b.deep*cellD, jj*2*cellD));
+        posts.setMatrixAt(pi++, m4);
+      }
+      for(let t=1;t<=sTier;t++) for(let jd=0;jd<=b.deep;jd++){
+        m4.setPosition(rackW/2, t*cellH-0.06, b.z0+jd*cellD);
+        rails.setMatrixAt(ri++, m4);
+      }
+    });
+    posts.count=pi; rails.count=ri;
+    posts.castShadow=shadow; rails.castShadow=shadow;
+    G.add(posts,rails); this.track(posts); this.track(rails);
+
+    // ---- 보관 파렛트 + 화물 (점유율 반영) ----
+    const palG=this.geo(new T.BoxGeometry(cellW*0.82, 0.11, cellD*0.82));
+    const boxG=this.geo(new T.BoxGeometry(cellW*0.78, cellH*0.62, cellD*0.78));
+    const palM=this.mat({color:C.pallet, roughness:.85});
+    const boxM=this.mat({color:mood.cargo, roughness:.6, metalness:.02});
+    const cap=6000;
+    const cellsShown=sBay*(sDF+sDB)*sTier;
+    const fillN=Math.min(cap, Math.round(cellsShown*D.occ));
+    const pallets=new T.InstancedMesh(palG,palM,Math.max(1,fillN));
+    const boxes  =new T.InstancedMesh(boxG,boxM,Math.max(1,fillN));
+    let fi=0;
+    outer:
+    for(let t=0;t<sTier;t++) for(const b of blocks) for(let jd=0;jd<b.deep;jd++) for(let i=0;i<sBay;i++){
+      if(fi>=fillN) break outer;
+      if((i*7+jd*3+t*5)%6===5) continue;                 // 빈 셀 산포
+      const x=i*cellW+cellW/2, z=b.z0+jd*cellD+cellD/2, y=t*cellH;
+      m4.setPosition(x, y+0.055, z); pallets.setMatrixAt(fi,m4);
+      m4.setPosition(x, y+0.11+cellH*0.31, z); boxes.setMatrixAt(fi,m4);
+      fi++;
+    }
+    pallets.count=fi; boxes.count=fi;
+    boxes.castShadow=shadow&&fi<=2500;
+    G.add(pallets,boxes); this.track(pallets); this.track(boxes);
+
+    // ---- 통로 주행레일 ----
+    const arail=new T.Mesh(this.geo(new T.BoxGeometry(rackW+3,0.06,0.1)),
+      this.mat({color:0x5a6880, metalness:.6, roughness:.35}));
+    arail.position.set(rackW/2-0.5, 0.03, aisleY+aisleW*0.32);
+    const arail2=arail.clone(); arail2.position.z=aisleY+aisleW*0.68;
+    G.add(arail,arail2);
+
+    this.actors={shuttles:[], lifter:null, carriage:null, animPallet:null, conv:null};
+
+    // ---- 셔틀 (바디+휠) ----
+    const mkShuttle=()=>{
+      const g=new T.Group();
+      const body=new T.Mesh(this.geo(new T.BoxGeometry(1.15,0.32,1.05)),
+        this.mat({color:C.shuttle, roughness:.4, metalness:.3}));
+      body.position.y=0.24; body.castShadow=shadow; g.add(body);
+      const top=new T.Mesh(this.geo(new T.BoxGeometry(0.95,0.08,0.85)),
+        this.mat({color:C.shuttleD, roughness:.5}));
+      top.position.y=0.44; g.add(top);
+      const wg=this.geo(new T.CylinderGeometry(0.09,0.09,0.06,10));
+      const wm=this.mat({color:0x2a2f3a, roughness:.7});
+      [[-.45,-.42],[.45,-.42],[-.45,.42],[.45,.42]].forEach(([wx,wz])=>{
+        const w=new T.Mesh(wg,wm); w.rotation.z=Math.PI/2;
+        w.position.set(wx,0.09,wz); g.add(w);
+      });
+      return g;
+    };
+    const maxSh=Math.min(D.qty.shuttleQty||2,6);
+    if(sysKey!=="stc"){
+      const n=(sysKey==="mdps")?Math.min(sTier,maxSh):maxSh;
+      for(let i=0;i<n;i++){
+        const s=mkShuttle();
+        const t=(sysKey==="mdps")?i:(i%sTier);
+        s.position.set(rackW*(0.15+0.7*i/Math.max(1,n-1)), t*cellH, aisleY+aisleW/2);
+        G.add(s); this.actors.shuttles.push(s);
+      }
+    }
+
+    // ---- 리프트 (마스트+캐리지) ----
+    const nLift=Math.min(D.qty.lifterQty||1,3);
+    for(let i=0;i<nLift;i++){
+      const lg=new T.Group();
+      const mast=new T.Mesh(this.geo(new T.BoxGeometry(0.55,rackH+1.3,0.55)),
+        this.mat({color:C.lifter, roughness:.45, metalness:.5}));
+      mast.position.y=(rackH+1.3)/2; mast.castShadow=shadow; lg.add(mast);
+      const car=new T.Mesh(this.geo(new T.BoxGeometry(1.5,0.5,aisleW-0.35)),
+        this.mat({color:C.shuttle, roughness:.4, metalness:.3}));
+      car.position.set(0.95,0.6,0); car.castShadow=shadow; lg.add(car);
+      lg.position.set(-2.1-i*2.1, 0, aisleY+aisleW/2);
+      G.add(lg);
+      if(i===0){ this.actors.lifter=lg; this.actors.carriage=car; }
+    }
+
+    // ---- 입고 컨베이어 (프레임+롤러) ----
+    const convLen=Math.min(7, aisleY+2.5);
+    const cg=new T.Group();
+    const cf=new T.Mesh(this.geo(new T.BoxGeometry(1.15,0.42,convLen)),
+      this.mat({color:C.conv, roughness:.6, metalness:.3}));
+    cf.position.set(0,0.36,0); cf.castShadow=shadow; cg.add(cf);
+    const rg=this.geo(new T.CylinderGeometry(0.05,0.05,1.05,8));
+    const rm=this.mat({color:C.roller, metalness:.55, roughness:.35});
+    const rollN=Math.floor(convLen/0.42);
+    const rolls=new T.InstancedMesh(rg,rm,rollN);
+    for(let i=0;i<rollN;i++){
+      m4.makeRotationZ(Math.PI/2);
+      m4.setPosition(0,0.62,-convLen/2+0.3+i*0.42);
+      rolls.setMatrixAt(i,m4);
+    }
+    cg.add(rolls); this.track(rolls);
+    cg.position.set(-1.15, 0, aisleY+aisleW/2-convLen/2-1.2);
+    G.add(cg); this.actors.conv={group:cg, len:convLen};
+
+    // ---- 시스템별 추가 ----
+    if(sysKey==="stc"){
+      const mast=new T.Mesh(this.geo(new T.BoxGeometry(0.45,rackH+1.6,0.45)),
+        this.mat({color:C.lifter, metalness:.55, roughness:.4}));
+      mast.position.set(rackW*0.45, (rackH+1.6)/2, aisleY+aisleW/2); mast.castShadow=shadow;
+      const car=new T.Mesh(this.geo(new T.BoxGeometry(1.35,0.7,1.1)),
+        this.mat({color:C.shuttle, roughness:.4}));
+      car.position.set(rackW*0.45, rackH*0.45, aisleY+aisleW/2); car.castShadow=shadow;
+      G.add(mast,car);
+      this.actors.shuttles.push(car);   // 애니메이션 시 크레인 캐리지 활용
+    }
+    if(sysKey==="hybrid"){
+      // 평치 스택 + AGF
+      for(let i=0;i<3;i++) for(let k=0;k<2;k++){
+        const p=new T.Mesh(this.geo(new T.BoxGeometry(1.1,1.0,1.1)),
+          this.mat({color:mood.cargo, roughness:.65}));
+        p.position.set(rackW+2.2, 0.5+k*1.05, 0.8+i*1.6); p.castShadow=shadow;
+        G.add(p.clone()); p.position.x+=1.4; G.add(p);
+      }
+      for(let i=0;i<2;i++){
+        const a=new T.Group();
+        const body=new T.Mesh(this.geo(new T.BoxGeometry(0.95,1.6,1.4)),
+          this.mat({color:C.agf, roughness:.5}));
+        body.position.y=0.8; body.castShadow=shadow; a.add(body);
+        const fork=new T.Mesh(this.geo(new T.BoxGeometry(0.7,0.05,1.0)),
+          this.mat({color:0xc9d2e4, metalness:.7, roughness:.3}));
+        fork.position.set(0,0.12,-1.15); a.add(fork);
+        a.position.set(rackW+5.2, 0, 1.2+i*2.6);
+        G.add(a);
+      }
+    }
+    if(sysKey==="mini"){
+      const st=new T.Mesh(this.geo(new T.BoxGeometry(1.8,1.15,1.3)),
+        this.mat({color:0x4a6faf, roughness:.5}));
+      st.position.set(rackW*0.55, 0.58, -2.2); st.castShadow=shadow;
+      G.add(st);
+    }
+
+    // ---- 애니메이션용 파렛트+화물 ----
+    const ap=new T.Group();
+    const apP=new T.Mesh(palG, palM); ap.add(apP);
+    const apB=new T.Mesh(this.geo(new T.BoxGeometry(cellW*0.75, cellH*0.55, cellD*0.75)), boxM);
+    apB.position.y=0.35; ap.add(apB);
+    ap.visible=false; G.add(ap);
+    this.actors.animPallet=ap;
+
+    // 앵커 (컨베이어→리프트→통로 주행→적입)
+    const liftX=-1.15;
+    this.anchors={
+      convStart:{x:liftX, y:0.72, z:aisleY+aisleW/2-convLen-1.0},
+      convEnd:  {x:liftX, y:0.72, z:aisleY+aisleW/2},
+      liftTopY: Math.max(cellH, rackH-cellH)+0.72,
+      railFromX: 0.8, railToX: rackW*0.7,
+      railZ: aisleY+aisleW/2,
+      dropZ: aisleY-cellD*0.5, cellH
+    };
+    this.center=new this.THREE.Vector3(rackW/2-0.5, rackH/2, totD/2-1);
+    this.bound=Math.max(rackW+8, totD+8, rackH*2.2);
+  },
+
+  /* ---------- 카메라/오빗 ---------- */
+  applyCam(){
+    const s=this.sph, c=this.center;
+    this.camera.position.set(
+      c.x + s.r*Math.sin(s.phi)*Math.sin(s.theta),
+      c.y + s.r*Math.cos(s.phi),
+      c.z + s.r*Math.sin(s.phi)*Math.cos(s.theta));
+    this.camera.lookAt(c);
+  },
+  fitView(){
+    if(!this.camera) return;
+    this.sph.theta=-0.6; this.sph.phi=1.02;
+    this.sph.r=Math.max(12, this.bound/(2*Math.tan(this.camera.fov*Math.PI/360))*1.12);
+    this.vel.t=0; this.vel.p=0;
+    this.applyCam(); this.render();
+  },
+  render(){ if(this.renderer){ this.applyCam(); this.renderer.render(this.scene,this.camera); } },
+
+  attachGestures(){
+    const cv=this.canvas, ptrs=new Map(); let rot=false, lx=0, ly=0, pinch0=0, r0=0, lastTap=0;
+    const clampR=v=>Math.max(8, Math.min(this.bound*4, v));
+    cv.addEventListener("pointerdown",e=>{
+      ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      lx=e.clientX; ly=e.clientY; rot=false; this.vel.t=0; this.vel.p=0;
+      if(ptrs.size===2){ const a=[...ptrs.values()]; pinch0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); r0=this.sph.r; }
+      const now=Date.now();
+      if(now-lastTap<300 && ptrs.size===1) this.fitView();
+      lastTap=now;
+    });
+    cv.addEventListener("pointermove",e=>{
+      if(!ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(ptrs.size===2){
+        const a=[...ptrs.values()];
+        const dnow=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+        if(pinch0>0){ this.sph.r=clampR(r0*pinch0/dnow); this.render(); }
+        e.preventDefault(); return;
+      }
+      const dx=e.clientX-lx, dy=e.clientY-ly;
+      if(!rot){
+        if(Math.abs(dx)>Math.abs(dy)+4){ rot=true; cv.setPointerCapture(e.pointerId); cv.classList.add("dragging"); }
+        else if(Math.abs(dy)>10){ ptrs.delete(e.pointerId); return; }
+        else return;
+      }
+      this.sph.theta-=dx*0.0075;
+      this.sph.phi=Math.max(0.35,Math.min(1.35,this.sph.phi-dy*0.005));
+      this.vel.t=-dx*0.0075; this.vel.p=-dy*0.005;
+      lx=e.clientX; ly=e.clientY;
+      this.render();
+      e.preventDefault();
+    },{passive:false});
+    const up=e=>{
+      ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=0;
+      if(rot){ rot=false; cv.classList.remove("dragging"); this.inertia(); }
+    };
+    cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up);
+    cv.addEventListener("wheel",e=>{ e.preventDefault();
+      this.sph.r=clampR(this.sph.r*(e.deltaY<0?0.92:1.09)); this.render();
+    },{passive:false});
+  },
+  inertia(){
+    if(this.playing) return;                       // 애니메이션 루프가 카메라 갱신을 겸함
+    const step=()=>{
+      this.vel.t*=0.92; this.vel.p*=0.92;
+      if(Math.abs(this.vel.t)<0.0004 && Math.abs(this.vel.p)<0.0004){ this.raf=0; return; }
+      this.sph.theta+=this.vel.t;
+      this.sph.phi=Math.max(0.35,Math.min(1.35,this.sph.phi+this.vel.p));
+      this.render();
+      this.raf=requestAnimationFrame(step);
+    };
+    if(!this.raf) this.raf=requestAnimationFrame(step);
+  },
+
+  /* ---------- 데모 애니메이션 ---------- */
+  togglePlay(){
+    if(this.playing){ this.stop(); return; }
+    this.playing=true; this.lastNow=performance.now(); this.animT=0;
+    const btn=document.getElementById("simPlay");
+    if(btn){ btn.classList.add("on"); btn.textContent="⏸ 정지"; }
+    const loop=now=>{
+      if(!this.playing) return;
+      this.animT=(this.animT+(now-this.lastNow)/1000)%9;
+      this.lastNow=now;
+      this.tick(this.animT);
+      this.renderer.render(this.scene,this.camera);
+      this.raf=requestAnimationFrame(loop);
+    };
+    if(this.raf) cancelAnimationFrame(this.raf);
+    this.raf=requestAnimationFrame(loop);
+  },
+  stop(){
+    this.playing=false;
+    if(this.raf){ cancelAnimationFrame(this.raf); this.raf=0; }
+    const btn=document.getElementById("simPlay");
+    if(btn){ btn.classList.remove("on"); btn.textContent="▶ 데모 재생"; }
+    if(this.actors&&this.actors.animPallet) this.actors.animPallet.visible=false;
+    this.render();
+  },
+  ease(t){ return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; },
+  tick(t){
+    const A=this.anchors, ac=this.actors, ap=ac.animPallet;
+    if(!ap) return;
+    ap.visible=true;
+    const sh=ac.shuttles[0]||null;
+    const lerp=(a,b,k)=>a+(b-a)*k;
+    // 0~2.2 컨베이어 → 2.2~4 리프트 상승 → 4~6.5 셔틀 주행 → 6.5~7.5 적입 → 7.5~9 복귀
+    if(t<2.2){ const k=this.ease(t/2.2);
+      ap.position.set(A.convStart.x, A.convStart.y, lerp(A.convStart.z,A.convEnd.z,k));
+      if(ac.carriage) ac.carriage.position.y=0.6;
+      if(sh) sh.position.x=A.railFromX;
+    }
+    else if(t<4){ const k=this.ease((t-2.2)/1.8);
+      const y=lerp(A.convStart.y, A.liftTopY, k);
+      ap.position.set(A.convEnd.x, y, A.convEnd.z);
+      if(ac.carriage) ac.carriage.position.y=y-0.12;
+      if(sh){ sh.position.x=A.railFromX; sh.position.y=A.liftTopY-0.72; sh.position.z=A.railZ; }
+    }
+    else if(t<6.5){ const k=this.ease((t-4)/2.5);
+      const x=lerp(A.railFromX, A.railToX, k);
+      ap.position.set(x, A.liftTopY, A.railZ);
+      if(sh){ sh.position.x=x; sh.position.y=A.liftTopY-0.72; sh.position.z=A.railZ; }
+    }
+    else if(t<7.5){ const k=this.ease((t-6.5)/1);
+      const z=lerp(A.railZ, A.dropZ, k);
+      ap.position.set(A.railToX, A.liftTopY, z);
+      if(sh){ sh.position.x=A.railToX; sh.position.z=A.railZ; }
+    }
+    else { const k=this.ease((t-7.5)/1.5);
+      ap.visible=false;
+      if(sh) sh.position.x=lerp(A.railToX, A.railFromX, k);
+      if(ac.carriage) ac.carriage.position.y=lerp(A.liftTopY-0.12, 0.6, k);
+    }
+  },
+
+  renderMeta(){
+    const D=this.D, mood=this.MOOD[D.d.temp]||this.MOOD.ambient;
+    const TL={frozen:"냉동",chilled:"냉장",ambient:"상온",hot:"고온·항온",clean:"클린"};
+    const hex=n=>"#"+n.toString(16).padStart(6,"0");
+    const leg=document.getElementById("simLegend");
+    if(leg) leg.innerHTML=
+      `<span><i style="background:${hex(mood.frame)}"></i>랙 (${TL[D.d.temp]||"상온"})</span>`+
+      `<span><i style="background:#9a6b35"></i>보관 파렛트</span>`+
+      `<span><i style="background:#f08c28"></i>${D.sysKey==="stc"?"스태커크레인":"셔틀"}</span>`+
+      `<span><i style="background:#8b96ab"></i>리프트</span>`+
+      (D.sysKey==="hybrid"?`<span><i style="background:#d35242"></i>무인지게차</span>`:"");
+    const note=document.getElementById("simNote");
+    if(note){
+      const r=D.real;
+      note.innerHTML=
+        `${fmt(r.bay)}Bay × ${fmt(r.dF+r.dB)}Deep × ${r.tier}단 ≈ <b>${fmt(r.cells)} Cells</b>`+
+        ` · 셔틀 ${D.qty.shuttleQty||0}대 · 리프트 ${D.qty.lifterQty||0}대`+
+        (D.lod?` <span style="color:var(--accent-2)">(표시 축약 — 실제 규모는 수치 기준)</span>`:"")+
+        `<br>드래그 = 회전 · 위아래 드래그 = 시점 높이 · 핀치/휠 = 줌 · 더블탭 = 초기화. 개략 배치 개념도입니다.`;
+    }
+  },
+
+  reset(){
+    this.stop();
+    if(this.io){ this.io.disconnect(); this.io=null; }
+    if(this.renderer){
+      this.disposables.forEach(o=>{ try{ o.dispose&&o.dispose(); }catch(_){} });
+      this.disposables=[];
+      try{ this.renderer.dispose(); }catch(_){}
+    }
+    this.renderer=this.scene=this.camera=this.canvas=null;
+    this.D=this.actors=null; this.inited=false;
+  }
+};
+
+/* ============================================================
+   [SIM3D] 오케스트레이터 — three.js 우선, 실패 시 SIM2D 폴백
+   ============================================================ */
+const SIM3D = {
+  engine:null, threeMod:null, inited:false, loading:false,
+  async init(){
+    if(this.inited||this.loading) return;
+    this.loading=true;
+    if(!this.threeMod){
+      try{ this.threeMod=await import("vendor/three.module.min.js"); }
+      catch(e){ try{ this.threeMod=await import("./vendor/three.module.min.js"); }catch(e2){ this.threeMod=null; } }
+    }
+    let eng=null;
+    if(this.threeMod){
+      try{ GL3D.THREE=this.threeMod; GL3D.init(); eng=GL3D; }
+      catch(e){ console.warn("WebGL 초기화 실패 — 2D 폴백:",e); try{ GL3D.reset(); }catch(_){} eng=null; }
+    }
+    if(!eng){ SIM2D.init(); eng=SIM2D; }
+    this.engine=eng; this.inited=true; this.loading=false;
+  },
+  reset(){ if(this.engine) this.engine.reset(); this.engine=null; this.inited=false; this.loading=false; },
+  togglePlay(){ if(this.engine) this.engine.togglePlay(); },
+  stop(){ if(this.engine) this.engine.stop(); },
+  fitView(){ if(this.engine) this.engine.fitView(); }
+};
+
 /* 카드 토글 + 최초 펼침 시 lazy init */
 function toggleSim3D(head){
   toggleCardPanel(head);
@@ -2358,20 +2876,15 @@ const RES_TSPG = [
     {t:"MDPS·스태커크레인·미니셔틀 카탈로그", d:"상온·냉장·냉동 적용 시스템 카탈로그", url:"https://blog.naver.com/uck2000/224181509547", kind:"blog"}
   ]},
   {cat:"유튜브 · 회사소개", collapsible:true, items:[
-    {t:"TSPG 회사소개 영상", d:"공식 회사소개", url:INTRO_VIDEO_URL, kind:"yt"}
+    {t:"TSPG 회사소개 영상", d:"공식 회사소개", url:INTRO_VIDEO_URL, kind:"yt"},
+    {t:"TSPG 공식 채널", d:"@namuckkim 전체 영상", url:"https://youtube.com/@namuckkim", kind:"yt"}
   ]},
-  {cat:"유튜브 · 셔틀 / MDPS 시스템", collapsible:true, items:[
-    {t:"MDPS 스태커크레인형 셔틀랙", d:"Stacker Crane Type Shuttle Rack", url:"https://www.youtube.com/watch?v=Zir2XBVRp9o", kind:"yt"},
-    {t:"Shuttle & Satelite 보관 랙 시스템", d:"셔틀카·새틀라이트 구동", url:"https://www.youtube.com/watch?v=TYbxHBZ8KDk", kind:"yt"},
-    {t:"Shuttle Rack System", d:"파렛트 셔틀랙 동작", url:"https://www.youtube.com/watch?v=tPNmBaEYuns", kind:"yt"},
-    {t:"셔틀카 · 새틀라이트 셔틀랙", d:"Shuttle Car & Satellite Car", url:"https://www.youtube.com/watch?v=NEKmVl7W6cE", kind:"yt"}
-  ]},
-  {cat:"유튜브 · 냉동 / 콜드체인", collapsible:true, items:[
-    {t:"냉동(-20℃) 셔틀랙 자동창고", d:"Automatic storage warehouse -20℃", url:"https://www.youtube.com/watch?v=Z4NuzWWlvpQ", kind:"yt"}
-  ]},
-  {cat:"유튜브 · 현장 / 구축사례", collapsible:true, items:[
-    {t:"5G 융합서비스 자동창고 (창원)", d:"K로봇랜드 미니셔틀 현장", url:"https://www.youtube.com/watch?v=Q5TfRsJ_m6w", kind:"yt"},
-    {t:"음성 완·부자재 자동창고 (X사)", d:"지하 4.5m 포함 설치", url:"https://youtu.be/MLz6X1eK5no", kind:"yt"}
+  {cat:"유튜브 · 시스템별 공식 영상", collapsible:true, items:[
+    {t:"냉동 셔틀랙 자동창고", d:"콜드체인 구축 영상", url:"https://youtu.be/BVD1egtVDBQ", kind:"yt"},
+    {t:"4-Way Shuttle System", d:"4방향 셔틀 구동", url:"https://youtu.be/k1Yhm2fbgD4", kind:"yt"},
+    {t:"셔틀랙 자동창고 (MDPS)", d:"상온 셔틀랙 구동", url:"https://youtu.be/xzMS0WD3L-Q", kind:"yt"},
+    {t:"미니셔틀 / GTP", d:"박스·토트 피킹", url:"https://youtu.be/XFRkj8hrS3Y", kind:"yt"},
+    {t:"스태커크레인 AS/RS", d:"고단 자동창고", url:"https://youtu.be/MLz6X1eK5no", kind:"yt"}
   ]}
 ];
 

@@ -1,7 +1,7 @@
 /* ENG — Service Worker
    - HTML 문서: network-first (온라인이면 항상 최신, 오프라인이면 캐시)
    - 정적 자원(아이콘·폰트 등): cache-first */
-const CACHE = "eng-app-v9";
+const CACHE = "eng-app-v10";
 const APP_HTML = "index.html";
 /* PDF는 캐시하지 않는다 — 뷰어가 쓰는 Range(206) 요청을 서비스워커가 가로채면
    안드로이드 Chrome에서 PDF가 열리지 않는다. 항상 네트워크가 직접 처리. */
@@ -12,7 +12,9 @@ const ASSETS = [
   "icon-512.png",
   "apple-touch-icon.png",
   "pdfjs/pdf.min.js",
-  "pdfjs/pdf.worker.min.js"
+  "pdfjs/pdf.worker.min.js",
+  "vendor/three.module.min.js",
+  "vendor/three.core.min.js"
 ];
 
 self.addEventListener("install", e => {
