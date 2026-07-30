@@ -290,6 +290,19 @@ a.btn{text-decoration:none}
 .roi-panel.show{max-height:900px;opacity:1}
 .roi-panel-inner{padding-top:14px}
 
+/* ===== SIM3D : 자동창고 3D 시뮬레이션 ===== */
+#simPanel.show{max-height:1200px}
+#simCanvas{width:100%;height:280px;display:block;border-radius:12px;background:
+  radial-gradient(120% 90% at 50% 0%, rgba(92,132,230,.10), transparent 60%), var(--bg);
+  border:1px solid var(--line);touch-action:pan-y;cursor:grab}
+#simCanvas.dragging{cursor:grabbing}
+.sim-bar{display:flex;gap:8px;margin-top:10px}
+.sim-btn{flex:1;padding:9px 10px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--fg);font-size:12px;font-weight:600;cursor:pointer}
+.sim-btn.on{border-color:var(--accent);color:var(--accent-2);box-shadow:0 0 0 2px rgba(92,132,230,.15)}
+.sim-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:10.5px;color:var(--muted)}
+.sim-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
 /* 투자비 항목별 */
 .capex-group .cg-title{font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
 .capex-group .cg-sub{color:var(--muted);letter-spacing:0;font-family:inherit;font-size:10.5px}
@@ -399,6 +412,7 @@ a.btn{text-decoration:none}
         <div class="co">TSPG · LOGISALL ENGINEERING</div>
         <h3>물류 자동화 토탈 솔루션</h3>
         <div class="env">
+          <span>로지스올그룹 계열</span>
           <span>국산 원천기술</span>
           <span>설계·제작·설치·AS 일괄</span>
           <span>충남 서천 공장</span>
@@ -408,11 +422,13 @@ a.btn{text-decoration:none}
       <div class="card">
         <div class="h mono">핵심 강점<span class="ln"></span></div>
         <div class="intro-list">
-          <div class="ipt"><span class="ck">✓</span><span>국내 최초 셔틀형 자동창고 <b>원천기술 보유</b></span></div>
+          <div class="ipt"><span class="ck">✓</span><span><b>로지스올그룹</b>(40년 풀링 네트워크 · 연매출 2조) 계열 — 2024년 TSPG 인수로 <b>자동화 원천기술 내재화</b></span></div>
+          <div class="ipt"><span class="ck">✓</span><span>국내 최초 셔틀형 자동창고 <b>원천기술 보유</b> (MDPS 자체개발)</span></div>
           <div class="ipt"><span class="ck">✓</span><span>설계·제작·설치·AS <b>일괄 수행</b> (전 구성원 91% 엔지니어)</span></div>
           <div class="ipt"><span class="ck">✓</span><span>냉동 -30℃ ~ 고온 55℃ <b>전 온도대 구축 경험</b></span></div>
           <div class="ipt"><span class="ck">✓</span><span>기존 건물 개조·단계별 구축으로 <b>운영 중단 최소화</b></span></div>
         </div>
+        <div class="note">1984 한국물류연구원 → KPP·KCP·KLP → 2003 로지스올 통합 브랜드 → 2022 로지스올엔지니어링 출범 → 2024 TSPG 인수. 파렛트 풀링부터 자동화 구축까지 그룹 원스톱.</div>
       </div>
 
       <div class="card">
@@ -420,11 +436,13 @@ a.btn{text-decoration:none}
         <div class="roi-panel">
           <div class="roi-panel-inner">
             <div class="intro-list">
-              <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>냉동·냉장 고밀도 보관 · 결로·제상 설계</span></div>
-              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 리프트 절감·확장성</span></div>
+              <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>국내 최초 셔틀랙 자동창고 · 냉동·냉장 고밀도 · 결로·제상 설계</span></div>
+              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 파렛트당 1.5t 적재 · 리프트 절감·확장성</span></div>
               <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span></div>
               <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span></div>
+              <div class="isys"><b>EMS · 무인지게차 AGF</b><span>자체개발 EMS 반송 시스템 · 단계적 자동화 진입</span></div>
             </div>
+            <div class="note">KOREA MAT 2026 국제물류산업전에서 4-Way Shuttle·EMS 실환경 시연. 국산 제작으로 구축비 절감과 신속한 부품·AS 대응.</div>
           </div>
         </div>
       </div>
@@ -647,6 +665,7 @@ const SYSTEMS = {
     badge:"추천 · 국산 원천기술",
     points:[
       ["고밀도 보관으로 ","35% 이상 보관 효율 향상"],
+      ["파렛트당 ","1.5t 적재하중 · 다수 셔틀 동시 독립 주행"],
       ["100% 국산 기술로 신뢰성 및 ","신속한 AS 보장"],
       ["전후좌우 4방향 주행으로 ","리프트 절감·확장성↑"],
       ["단계별 구축으로 ","운영 중단 최소화"]
@@ -696,7 +715,8 @@ const SYSTEMS = {
 
 const OBJECTIONS = [
   ["“너무 비싸다”","초기 투자가 아니라 회수기간·TCO로 보십시오. 통상 5~8년 회수 후 10년 이상 절감이 이어집니다. 무엇보다 사람을 못 구하면 그 매출 기회손실이 더 큰 비용입니다."],
-  ["“수입 장비가 더 검증됐다”","국산 원천기술이라 납기·당일 유지보수·부품·커스터마이징이 유리합니다. 수입 장비는 고장 시 부품이 바다를 건너옵니다. TSPG는 충남 서천 공장에서 직접 제작합니다."],
+  ["“수입 장비가 더 검증됐다”","국산 원천기술이라 납기·당일 유지보수·부품·커스터마이징이 유리합니다. 수입 장비는 고장 시 부품이 바다를 건너옵니다. TSPG는 충남 서천 공장에서 직접 제작하며, 2024년 로지스올그룹(연매출 2조) 인수로 그룹 차원의 재무·운영 안정성까지 확보했습니다. KOREA MAT 2026에서 실환경 시연도 공개했습니다."],
+  ["“회사 규모가 작아 불안하다”","TSPG는 로지스올그룹 계열입니다. 1984년부터 40년간 파렛트 풀링 네트워크를 운영해온 연매출 2조 그룹이 자동화 원천기술을 내재화한 것으로, 장기 AS·부품 공급·프로젝트 이행력이 그룹 차원에서 보증됩니다."],
   ["“물량이 줄면 무용지물 아니냐”","확장·축소가 유연한 셔틀이고, 무인지게차로 시작해 단계적으로 확장하는 모듈러 설계가 가능합니다."],
   ["“고장나면 라인 전체가 멈춘다”","리프트 입·출고 분리 이중화, 원격 예지보전, 자체 AS팀, SLA로 가동률을 보장합니다."],
   ["“기존 건물이라 고단이 안 된다”","Unit Rack Type으로 기존 건물 내부에 설치하고, 멀티딥으로 바닥면적 밀도를 확보합니다. (실적: 지하 4.5m 포함 설치 사례)"],
@@ -746,7 +766,7 @@ const REFERENCES = [
   {co:"S사", loc:"충남 천안", temp:"ambient", cells:4836, height:17.6, sys:"MDPS System", note:"제품용 자동창고 (생수 제조)"},
   {co:"S사", loc:"경기 광주", temp:"ambient", cells:4660, height:10.1, sys:"MDPS System", note:"오포물류센터 자동창고시스템 (생활용품 유통)"},
   {co:"P사", loc:"전북 익산", temp:"frozen", cells:2885, height:18.5, sys:"MDPS System", note:"원료·제품용 냉동 자동창고 (-20℃)"},
-  {co:"K로봇랜드", loc:"경남 창원", temp:"ambient", cells:1000, height:5.4, sys:"Mini Shuttle System", note:"5G융합서비스 Mini Shuttle (전기전자)"},
+  {co:"K로봇랜드", loc:"경남 창원", temp:"ambient", cells:1000, height:5.4, sys:"Mini Shuttle System", note:"5G융합서비스 Mini Shuttle (전기전자)", video:"https://www.youtube.com/watch?v=Q5TfRsJ_m6w"},
   {co:"S사", loc:"경남 양산", temp:"ambient", cells:96, height:2.2, sys:"Mini Shuttle System", note:"Mini Shuttle 데모라인 어곡공단 (로봇 제조업)"},
   {co:"H제약", loc:"전북 익산", temp:"hot", cells:1319, height:5.8, sys:"MDPS System", note:"제품용 자동창고 (항온 24℃, 의약품)"},
   {co:"N사", loc:"경기 안양", temp:"ambient", cells:0, height:0, sys:"Conveyor 등 물류설비", note:"자동화창고 컨베이어라인 구축 (식품 제조)"},
@@ -762,6 +782,40 @@ const REFERENCES = [
   {co:"S사", loc:"충남 천안", temp:"ambient", cells:3060, height:17.7, sys:"MDPS System", note:"프리폼용 자동창고 (생수 제조)"},
   {co:"O제약", loc:"충북 오송", temp:"clean", cells:3058, height:28.5, sys:"MDPS System", note:"오송2공장 제품용 자동창고 (4개층 입출고, 의약품)"}
 ];
+
+/* ============================================================
+   [DATA] 영상 매칭 DB — 소개자료의 유튜브를 온도대·시스템 계열로 태깅
+   레퍼런스 카드의 영상 링크는 이 DB에서 고른다 (검색 URL 폴백 금지:
+   채널에 검색 결과가 없으면 고객 앞에서 빈 화면이 뜨기 때문).
+   temps 가 있는 영상을 먼저 두어 온도대 일치 영상이 우선 선택되게 한다.
+   ============================================================ */
+const VIDEOS = [
+  {url:"https://www.youtube.com/watch?v=Z4NuzWWlvpQ", t:"냉동(-20℃) 셔틀랙 자동창고", cats:["mdps","4way"], temps:["frozen","chilled"]},
+  {url:"https://www.youtube.com/watch?v=Zir2XBVRp9o", t:"MDPS 스태커크레인형 셔틀랙", cats:["stc","mdps"]},
+  {url:"https://www.youtube.com/watch?v=Q5TfRsJ_m6w", t:"K로봇랜드 미니셔틀 (창원)",   cats:["mini"]},
+  {url:"https://www.youtube.com/watch?v=tPNmBaEYuns", t:"Shuttle Rack System",        cats:["mdps","4way"]},
+  {url:"https://www.youtube.com/watch?v=TYbxHBZ8KDk", t:"Shuttle & Satellite 랙 시스템", cats:["mdps"]},
+  {url:"https://www.youtube.com/watch?v=NEKmVl7W6cE", t:"셔틀카·새틀라이트 셔틀랙",     cats:["mdps"]},
+  {url:"https://youtu.be/MLz6X1eK5no",                t:"음성 완·부자재 자동창고 현장", cats:["mdps"], temps:["ambient"]}
+];
+
+/* 레퍼런스 sys 문자열 → 시스템 계열. MDPS를 먼저 검사해
+   "MDPS + Stacker Crane" 하이브리드가 스태커로 오분류되던 것 수정 */
+function sysCatOf(sys){
+  if(/MDPS/i.test(sys)) return "mdps";
+  if(/Stacker|AS\/RS/i.test(sys)) return "stc";
+  if(/Mini/i.test(sys)) return "mini";
+  if(/Sorting/i.test(sys)) return "sort";
+  if(/Conveyor|Lifter|RGV/i.test(sys)) return "equip";
+  if(/4.?Way/i.test(sys)) return "4way";
+  return "mdps";
+}
+
+/* 추천 시스템 키 → 어울리는 레퍼런스 계열 (레퍼런스 매칭 가산용) */
+const SYS_REF_CATS = {
+  shuttle4way:["4way","mdps"],   // 4-Way 레퍼런스가 아직 없어 MDPS(같은 셔틀랙 계열)를 허용
+  mdps:["mdps"], stc:["stc"], mini:["mini"], hybrid:["mdps","4way"]
+};
 
 /* ============================================================
    [STATE]
@@ -1218,13 +1272,20 @@ const Engine = {
     return { cells: Math.max(0,cells), tiers, areaM2:Math.round(areaM2), precise:false, loadH };
   },
   // 레퍼런스 매칭: 온도대 일치 우선 + 보관량·높이 근접도 점수
-  matchReferences(d, targetCells){
+  matchReferences(d, targetCells, sysKey){
     const tc = targetCells || 2000;
     const th = d.height || 12;
+    const wantCats = SYS_REF_CATS[sysKey] || null;
     const scored = REFERENCES.map(r=>{
       let score = 0;
+      const cat = sysCatOf(r.sys);
       if(r.temp===d.temp) score += 100;                      // 온도대 동일: 최우선
       else if((r.temp==="frozen"&&d.temp==="chilled")||(r.temp==="chilled"&&d.temp==="frozen")) score += 40; // 콜드체인 인접
+      // 추천 시스템 계열 일치 (추천과 무관한 레퍼런스가 뜨던 문제 수정)
+      if(wantCats){
+        if(wantCats.includes(cat)) score += 60;
+        if(cat==="equip"||cat==="sort") score -= 50;         // 컨베이어·분류 납품 건은 자동창고 추천 시 하위로
+      }
       // 보관량 근접 (로그 스케일 차이)
       if(r.cells>0 && tc>0){ const ratio=Math.max(r.cells,tc)/Math.min(r.cells,tc); score += Math.max(0, 50 - (ratio-1)*25); }
       // 높이 근접
@@ -1335,7 +1396,9 @@ function renderIntroStats(){
     <div class="stat"><div class="l">공급 실적</div><div class="v">${fmt(REFERENCES.length)}<small>건</small></div><div class="sub">자동창고·물류설비</div></div>
     <div class="stat"><div class="l">최대 보관량</div><div class="v">${fmt(maxCells)}<small>Cells</small></div><div class="sub">단일 창고 기준</div></div>
     <div class="stat"><div class="l">최고 설치높이</div><div class="v">${maxHeight}<small>m</small></div><div class="sub">고단 랙 구축</div></div>
-    <div class="stat"><div class="l">대응 온도대</div><div class="v">-30~55<small>℃</small></div><div class="sub">냉동·냉장·항온·고온</div></div>`;
+    <div class="stat"><div class="l">대응 온도대</div><div class="v">-30~55<small>℃</small></div><div class="sub">냉동·냉장·항온·고온</div></div>
+    <div class="stat"><div class="l">그룹 연매출</div><div class="v">2<small>조원</small></div><div class="sub">로지스올그룹 (2023)</div></div>
+    <div class="stat"><div class="l">풀링 네트워크</div><div class="v">40<small>년</small></div><div class="sub">1984 창립 · 파렛트 풀</div></div>`;
 }
 
 function buildProgress(){
@@ -1572,6 +1635,7 @@ function renderResult(){
   const sys=SYSTEMS[sysKey];
   const roi=Engine.roi(d,est);
   window.roi_data = roi;
+  SIM3D.reset();   // 결과 재렌더 시 3D 카드가 새 캔버스로 다시 초기화되도록
 
   // 환경 칩
   const envChips=[
@@ -1587,15 +1651,20 @@ function renderResult(){
   // 반론 대응: 칩 → 탭하면 모달로 대응 화법 표시
   const objChips=OBJECTIONS.map((o,i)=>`<button class="obj-chip" onclick="showObjModal(${i})"><span>${o[0]}</span></button>`).join("");
 
-  // 레퍼런스 매칭 (feature 4)
-  const refs=Engine.matchReferences(d, roi.targetCells);
-  const VQ={frozen:"냉동 자동창고 셔틀",chilled:"냉장 자동창고 셔틀",ambient:"파렛트 셔틀 자동창고",hot:"항온 자동창고",clean:"의약품 자동창고"};
+  // 레퍼런스 매칭 (feature 4) — 추천 시스템(sysKey)까지 반영
+  const refs=Engine.matchReferences(d, roi.targetCells, sysKey);
   const refCards=refs.map(r=>{
-    // 영상: 확인된 URL이 있으면 직접 연결, 없으면 TSPG 채널 내 온도대·시스템 키워드로 검색
-    const sysKw = /Stacker|AS\/RS/i.test(r.sys) ? "스태커크레인" : (/Mini/i.test(r.sys) ? "미니셔틀" : (/Sorting/i.test(r.sys) ? "자동분류" : (/Conveyor/i.test(r.sys) ? "컨베이어" : "")));
-    const q=encodeURIComponent(`TSPG ${VQ[r.temp]||"자동창고"} ${sysKw}`.trim());
-    const videoUrl = r.video ? r.video : `${CONFIG.YT_CHANNEL}/search?query=${q}`;
-    const videoLabel = r.video ? "▶ 현장 영상" : "▶ 유사 영상 검색";
+    // 영상 결정: ① 해당 현장 영상 → ② 온도대+시스템 일치 영상 → ③ 시스템 일치 영상 → ④ 채널 홈
+    // (검색 URL 폴백은 빈 결과가 뜰 수 있어 제거)
+    const cat = sysCatOf(r.sys);
+    let videoUrl, videoLabel;
+    if(r.video){ videoUrl=r.video; videoLabel="▶ 현장 영상"; }
+    else {
+      const v = VIDEOS.find(v=>v.cats.includes(cat) && v.temps && v.temps.includes(r.temp))
+             || VIDEOS.find(v=>v.cats.includes(cat));
+      if(v){ videoUrl=v.url; videoLabel="▶ 유사 시스템 영상"; }
+      else { videoUrl=CONFIG.YT_CHANNEL; videoLabel="▶ TSPG 채널"; }
+    }
     return `
     <div class="ref">
       <span class="rdot"></span>
@@ -1694,6 +1763,21 @@ function renderResult(){
         <div class="why">${matchReason(d,sysKey)}</div>
       </div>
       <div class="body">${pts}</div>
+    </div>
+
+    <div class="card" id="simCard">
+      <div class="h mono obj-toggle" id="simToggle" onclick="toggleSim3D(this)" style="cursor:pointer">자동창고 3D 시뮬레이션<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+      <div id="simPanel" class="roi-panel">
+        <div class="roi-panel-inner">
+          <canvas id="simCanvas"></canvas>
+          <div class="sim-bar">
+            <button class="sim-btn" id="simPlay" onclick="SIM3D.togglePlay()">▶ 데모 재생</button>
+            <button class="sim-btn" onclick="SIM3D.fitView()">⟳ 시점 초기화</button>
+          </div>
+          <div class="sim-legend" id="simLegend"></div>
+          <div class="note" id="simNote"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card" id="roiCard">
@@ -1817,6 +1901,443 @@ function generateWorklog(d,est,tp,sys,sysKey,roi){
   L.push(` 4) 향후 계획`);
   L.push(`  - `);
   showCopyModal(L.join("\n"));
+}
+
+/* ============================================================
+   [SIM3D] 자동창고 3D 시뮬레이션 — 순수 Canvas 2D 아이소메트릭
+   - 외부 라이브러리 없음 (오프라인 PWA 유지)
+   - 셀을 개별로 그리지 않음: 랙 블록 프리즘 + 격자 오버레이로 병합
+   - 표시 상한(LOD) 초과 시 축약 렌더 + 실수치 캡션
+   - 데모 애니메이션: 최전면 동선 한정(가림 문제 원천 제거)
+   ============================================================ */
+const SIM3D = {
+  inited:false, cv:null, ctx:null, off:null, offCtx:null,
+  yaw:-0.52, scale:1, panX:0, panY:0, dpr:1, W:0, H:0,
+  scene:null, playing:false, raf:0, t0:0, io:null,
+
+  /* 온도대 팔레트: [top, 밝은면, 어두운면, 점유타일] */
+  PAL:{
+    frozen: ["#7FB2E8","#4E7FC0","#35598C","#9CC4EE"],
+    chilled:["#6FC5C0","#3F918C","#2C6663","#93D6D2"],
+    ambient:["#8B96AC","#5B667E","#414A5F","#A6B0C4"],
+    hot:    ["#D99A6E","#A9663F","#7C4A2E","#E6B48F"],
+    clean:  ["#B9C2D4","#8891A6","#626A7E","#D0D7E4"]
+  },
+  C:{ floor:"#151C2C", floorLine:"#26314A", shuttle:"#F0A03C", lifter:"#8E99AF",
+      lifterDark:"#5C6578", conv:"#566072", convTop:"#6B7690", pallet:"#D9A04B",
+      palletDark:"#A87834", grid:"rgba(10,14,24,.35)", label:"#8FA0C0" },
+
+  reset(){
+    this.stop(); this.inited=false; this.cv=this.ctx=this.off=this.offCtx=this.scene=null;
+    if(this.io){ this.io.disconnect(); this.io=null; }
+  },
+
+  init(){
+    const cv=document.getElementById("simCanvas"); if(!cv) return;
+    this.cv=cv; this.ctx=cv.getContext("2d");
+    this.dpr=Math.min(window.devicePixelRatio||1, 1.5);
+    const w=cv.clientWidth||360, h=280;
+    this.W=w; this.H=h;
+    cv.width=Math.round(w*this.dpr); cv.height=Math.round(h*this.dpr);
+    this.off=document.createElement("canvas");
+    this.off.width=cv.width; this.off.height=cv.height;
+    this.offCtx=this.off.getContext("2d");
+    this.scene=this.buildScene();
+    this.attachGestures();
+    this.fitView();
+    this.renderStatic();
+    this.blit();
+    this.renderMeta();
+    // 화면 이탈·탭 전환 시 애니메이션 정지 (배터리)
+    this.io=new IntersectionObserver(es=>{ es.forEach(e=>{ if(!e.isIntersecting) this.stop(); }); });
+    this.io.observe(cv);
+    if(!this._visBound){ this._visBound=true;
+      document.addEventListener("visibilitychange", ()=>{ if(document.hidden) this.stop(); }); }
+    this.inited=true;
+  },
+
+  /* ---------- 씬 구성 ---------- */
+  buildScene(){
+    const d=window.d_data||STATE.data, est=window.est_data||{cells:500,tiers:3,precise:false};
+    const roi=window.roi_data, sysKey=Engine.matchSystem(d);
+    const qty=(roi&&roi.capex&&roi.capex.qty)||{shuttleQty:2,lifterQty:1};
+
+    // 격자 도출: 정밀 입력 우선, 아니면 시스템별 기본 딥으로 역산
+    let bay,dF,dB,tier, cellW=1.4, cellD=1.4;
+    const cellH=Math.max(1.2,(d.palletH||1.8)+0.25);
+    const DEEP={shuttle4way:[4,4], mdps:[6,6], stc:[2,2], mini:[3,3], hybrid:[3,3]};
+    if(est.precise && d.bay>0){ bay=d.bay; dF=d.deepFront||0; dB=d.deepBack||0; tier=d.tier||1; }
+    else{
+      tier=Math.max(1,est.tiers||3);
+      [dF,dB]=DEEP[sysKey]||[4,4];
+      const target=(roi&&roi.targetCells)||est.cells||500;
+      bay=Math.max(3, Math.ceil(target/((dF+dB)*tier)));
+    }
+    if(sysKey==="mini"){ cellW=0.9; cellD=0.9; }
+    const real={bay,dF,dB,tier,cells:(est.precise?est.cells:((roi&&roi.targetCells)||est.cells))};
+
+    // LOD 캡: 성능·가독성 — 초과분은 축약해서 그림
+    const LB=36,LD=10,LT=12;
+    const sBay=Math.min(bay,LB), sDF=Math.min(dF,LD), sDB=Math.min(dB,LD), sTier=Math.min(tier,LT);
+    const lod=(sBay<bay||sDF<dF||sDB<dB||sTier<tier);
+
+    const aisleW=1.8, rackW=sBay*cellW, rackH=sTier*cellH;
+    const frontY=0;                                 // 앞랙 앞면 y=0, 뒤로 갈수록 +y
+    const blocks=[];                                 // {x,y,z,w,d,h,kind,pal|color,grid?}
+    const pal=this.PAL[d.temp]||this.PAL.ambient;
+
+    // 랙 블록 (앞/뒤) — stc는 고단 강조를 위해 tier를 그대로 사용
+    if(sDF>0) blocks.push({kind:"rack",x:0,y:frontY,z:0,w:rackW,d:sDF*cellD,h:rackH,pal,
+                           gx:sBay,gz:sTier,front:true});
+    if(sDB>0) blocks.push({kind:"rack",x:0,y:frontY+sDF*cellD+aisleW,z:0,w:rackW,d:sDB*cellD,h:rackH,pal,
+                           gx:sBay,gz:sTier,front:false});
+    const aisleY=frontY+sDF*cellD;                   // 통로 시작 y
+
+    // 바닥 슬래브
+    const totD=sDF*cellD+aisleW+sDB*cellD;
+    const floor={x:-2.2,y:-3.4,w:rackW+5.2,d:totD+5.2};
+
+    // 리프트 (통로 좌측 단부)
+    const nLift=Math.min(qty.lifterQty||1,3);
+    for(let i=0;i<nLift;i++)
+      blocks.push({kind:"lifter",x:-1.6-i*1.7,y:aisleY+0.15,z:0,w:1.2,d:aisleW-0.3,h:rackH+0.9,i});
+
+    // 입고 컨베이어 (전면 좌측 → 리프트)
+    const nConv=3;
+    for(let i=0;i<nConv;i++)
+      blocks.push({kind:"conv",x:-1.45,y:-2.6+i*0.02,z:0,w:1.0,d:2.2,h:0.55});
+
+    // 셔틀 배치 (시스템별)
+    const shl=[];
+    const maxSh=Math.min(qty.shuttleQty||2,6);
+    if(sysKey==="stc"){
+      blocks.push({kind:"crane",x:rackW*0.42,y:aisleY+aisleW/2-0.35,z:0,w:0.9,d:0.7,h:rackH+1.2});
+    } else if(sysKey==="mdps"){
+      for(let i=0;i<Math.min(sTier,maxSh);i++)
+        shl.push({x:rackW*(0.25+0.12*i), z:i*cellH, tier:i});
+    } else {
+      for(let i=0;i<maxSh;i++)
+        shl.push({x:rackW*(0.18+0.65*i/Math.max(1,maxSh-1)), z:(i%sTier)*cellH, tier:i%sTier});
+    }
+    shl.forEach(s=>blocks.push({kind:"shuttle",x:s.x,y:aisleY+aisleW/2-0.55,z:s.z,w:1.1,d:1.1,h:0.45}));
+
+    // 하이브리드: 평치 파렛트 스택 + AGF 2대
+    if(sysKey==="hybrid"){
+      for(let i=0;i<3;i++)
+        blocks.push({kind:"pstack",x:rackW+1.6,y:frontY+i*1.7,z:0,w:1.2,d:1.2,h:1.15,pal});
+      for(let i=0;i<2;i++)
+        blocks.push({kind:"agf",x:rackW+3.3,y:frontY+0.5+i*2.4,z:0,w:0.9,d:1.5,h:1.7});
+      floor.w+=5.5;
+    }
+    // 미니셔틀: GTP 스테이션
+    if(sysKey==="mini")
+      blocks.push({kind:"gtp",x:rackW*0.55,y:-2.6,z:0,w:1.6,d:1.4,h:1.0});
+
+    // 점유율 (전면 파렛트 타일)
+    const cap=sBay*(sDF+sDB)*sTier;
+    const occ=Math.max(.15,Math.min(1,((roi&&roi.targetCells)||est.cells)/Math.max(1,est.cells||cap)));
+
+    // 애니메이션 앵커 (전면 동선 한정)
+    const anchors={
+      convStart:{x:-1.0,y:-2.5,z:0.55}, convEnd:{x:-1.0,y:aisleY+aisleW/2,z:0.55},
+      liftTop:{x:-1.0,y:aisleY+aisleW/2,z:Math.max(cellH,rackH-cellH)},
+      railFrom:{x:0.6,y:aisleY+aisleW/2}, railTo:{x:rackW*0.72,y:aisleY+aisleW/2},
+      dropY:aisleY-cellD*0.5, cellH
+    };
+
+    return {d,sysKey,blocks,floor,real,lod,occ,anchors,tier:sTier,
+            dims:{w:rackW,dTot:totD,h:rackH},
+            shown:{bay:sBay,dF:sDF,dB:sDB,tier:sTier},
+            qtyInfo:{shuttle:qty.shuttleQty||0,lifter:qty.lifterQty||0}};
+  },
+
+  /* ---------- 투영 ---------- */
+  proj(x,y,z){
+    const cY=Math.cos(this.yaw), sY=Math.sin(this.yaw);
+    const xr=x*cY - y*sY, yr=x*sY + y*cY;
+    const s=this.scale*14;
+    return { X:(xr-yr)*0.866*s + this.W/2 + this.panX,
+             Y:(xr+yr)*0.5*s - z*0.9*s + this.H*0.62 + this.panY,
+             depth:xr+yr };
+  },
+
+  fitView(){
+    if(!this.scene) return;
+    this.yaw=-0.52; this.panX=0; this.panY=0; this.scale=1;
+    // 씬 바운딩을 화면에 맞춤
+    const f=this.scene.floor, h=this.scene.dims.h+2;
+    const pts=[[f.x,f.y,0],[f.x+f.w,f.y,0],[f.x,f.y+f.d,0],[f.x+f.w,f.y+f.d,0],
+               [f.x,f.y,h],[f.x+f.w,f.y+f.d,h]];
+    let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    pts.forEach(p=>{ const q=this.proj(p[0],p[1],p[2]);
+      minX=Math.min(minX,q.X);maxX=Math.max(maxX,q.X);
+      minY=Math.min(minY,q.Y);maxY=Math.max(maxY,q.Y); });
+    const sc=Math.min((this.W-30)/(maxX-minX), (this.H-36)/(maxY-minY));
+    this.scale=Math.max(.3,Math.min(2.5,sc));
+    // 중심 보정
+    minX=1e9;maxX=-1e9;minY=1e9;maxY=-1e9;
+    pts.forEach(p=>{ const q=this.proj(p[0],p[1],p[2]);
+      minX=Math.min(minX,q.X);maxX=Math.max(maxX,q.X);
+      minY=Math.min(minY,q.Y);maxY=Math.max(maxY,q.Y); });
+    this.panX=(this.W-(maxX+minX))/2; this.panY=(this.H-(maxY+minY))/2 - 4;
+    if(this.inited){ this.renderStatic(); this.blit(); }
+  },
+
+  /* ---------- 그리기 ---------- */
+  face(ctx,pts,fill,force){
+    // 뒤면 컬링: 시계방향(화면 좌표)이면 그림. force=윗면(카메라가 항상 위) 무조건 렌더
+    let a=0; for(let i=0;i<pts.length;i++){ const p=pts[i],q=pts[(i+1)%pts.length]; a+=(q.X-p.X)*(q.Y+p.Y); }
+    if(a<=0 && !force) return false;
+    ctx.beginPath(); ctx.moveTo(pts[0].X,pts[0].Y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].X,pts[i].Y);
+    ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+    return true;
+  },
+
+  drawBox(ctx,b,cols){
+    const P=(x,y,z)=>this.proj(x,y,z);
+    const v=[P(b.x,b.y,b.z),P(b.x+b.w,b.y,b.z),P(b.x+b.w,b.y+b.d,b.z),P(b.x,b.y+b.d,b.z),
+             P(b.x,b.y,b.z+b.h),P(b.x+b.w,b.y,b.z+b.h),P(b.x+b.w,b.y+b.d,b.z+b.h),P(b.x,b.y+b.d,b.z+b.h)];
+    // 측면(컬링으로 보이는 면만) → 윗면(항상, 마지막에 덮어 그림)
+    const shown=[];
+    if(this.face(ctx,[v[0],v[1],v[5],v[4]],cols[1])) shown.push(["S",v[0],v[1],v[5],v[4]]);
+    if(this.face(ctx,[v[1],v[2],v[6],v[5]],cols[2])) shown.push(["E",v[1],v[2],v[6],v[5]]);
+    if(this.face(ctx,[v[2],v[3],v[7],v[6]],cols[1])) shown.push(["N",v[2],v[3],v[7],v[6]]);
+    if(this.face(ctx,[v[3],v[0],v[4],v[7]],cols[2])) shown.push(["W",v[3],v[0],v[4],v[7]]);
+    this.face(ctx,[v[4],v[5],v[6],v[7]],cols[0],true);
+    return {v,shown};
+  },
+
+  gridOnFace(ctx,q0,q1,q2,q3,nx,nz){
+    // q0→q1 가로(nx분할), q0→q3 세로(nz분할) 격자 스트로크
+    ctx.beginPath();
+    for(let i=1;i<nx;i++){ const t=i/nx;
+      ctx.moveTo(q0.X+(q1.X-q0.X)*t, q0.Y+(q1.Y-q0.Y)*t);
+      ctx.lineTo(q3.X+(q2.X-q3.X)*t, q3.Y+(q2.Y-q3.Y)*t); }
+    for(let j=1;j<nz;j++){ const t=j/nz;
+      ctx.moveTo(q0.X+(q3.X-q0.X)*t, q0.Y+(q3.Y-q0.Y)*t);
+      ctx.lineTo(q1.X+(q2.X-q1.X)*t, q1.Y+(q2.Y-q1.Y)*t); }
+    ctx.strokeStyle=this.C.grid; ctx.lineWidth=1; ctx.stroke();
+  },
+
+  renderStatic(){
+    const ctx=this.offCtx, S=this.scene; if(!ctx||!S) return;
+    ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+    ctx.clearRect(0,0,this.W,this.H);
+
+    // 바닥
+    const f=S.floor, P=(x,y,z)=>this.proj(x,y,z);
+    this.face(ctx,[P(f.x,f.y,0),P(f.x+f.w,f.y,0),P(f.x+f.w,f.y+f.d,0),P(f.x,f.y+f.d,0)],this.C.floor)
+      || this.face(ctx,[P(f.x,f.y+f.d,0),P(f.x+f.w,f.y+f.d,0),P(f.x+f.w,f.y,0),P(f.x,f.y,0)],this.C.floor);
+    // 바닥 격자
+    ctx.beginPath();
+    const gs=2.2;
+    for(let gx=0;gx<=f.w;gx+=gs){ const a=P(f.x+gx,f.y,0),b=P(f.x+gx,f.y+f.d,0); ctx.moveTo(a.X,a.Y); ctx.lineTo(b.X,b.Y); }
+    for(let gy=0;gy<=f.d;gy+=gs){ const a=P(f.x,f.y+gy,0),b=P(f.x+f.w,f.y+gy,0); ctx.moveTo(a.X,a.Y); ctx.lineTo(b.X,b.Y); }
+    ctx.strokeStyle=this.C.floorLine; ctx.lineWidth=.7; ctx.stroke();
+
+    // 블록 depth 정렬 후 렌더
+    const blocks=[...S.blocks].sort((a,b)=>{
+      const da=this.proj(a.x+a.w/2,a.y+a.d/2,0).depth, db=this.proj(b.x+b.w/2,b.y+b.d/2,0).depth;
+      return da-db;
+    });
+    blocks.forEach(b=>this.drawBlock(ctx,b,S));
+
+    // 치수 라벨
+    ctx.font="10px 'IBM Plex Mono',monospace"; ctx.fillStyle=this.C.label;
+    const d0=P(S.floor.x,S.floor.y+S.floor.d,0);
+    ctx.fillText(`${S.real.bay}Bay × ${(S.real.dF+S.real.dB)}Deep × ${S.real.tier}단`, 10, this.H-10);
+    const hh=P(0,0,S.dims.h);
+    ctx.fillText(`H ${(S.dims.h).toFixed(1)}m`, Math.min(this.W-58,Math.max(6,hh.X-52)), Math.max(12,hh.Y-6));
+  },
+
+  drawBlock(ctx,b,S){
+    const C=this.C;
+    if(b.kind==="rack"){
+      const pal=b.pal;
+      const r=this.drawBox(ctx,b,[pal[0],pal[1],pal[2]]);
+      // 윗면 셀 격자 (Bay × Deep)
+      this.gridOnFace(ctx,r.v[4],r.v[5],r.v[6],r.v[7],b.gx,Math.max(1,Math.round(b.d/1.4)));
+      // 보이는 측면에 셀 격자 + 전면(front) 점유 타일
+      r.shown.forEach(([dir,q0,q1,q2,q3])=>{
+        const horiz=(dir==="S"||dir==="N");
+        const nx=horiz?b.gx:Math.max(1,Math.round(b.d/1.4));
+        this.gridOnFace(ctx,q0,q1,q2,q3,nx,b.gz);
+        // 남쪽(전면 랙 앞면)에만 점유 파렛트 타일
+        if(b.front&&dir==="S"){
+          const rows=Math.max(1,Math.round(b.gz*S.occ));
+          for(let j=0;j<rows;j++) for(let i=0;i<b.gx;i++){
+            if((i*7+j*3)%5===4) continue;            // 빈 셀 몇 개로 자연스럽게
+            const tx0=i/b.gx, tx1=(i+.82)/b.gx, tz0=j/b.gz, tz1=(j+.6)/b.gz;
+            const ax=q0.X+(q1.X-q0.X)*tx0+(q3.X-q0.X)*tz0, ay=q0.Y+(q1.Y-q0.Y)*tx0+(q3.Y-q0.Y)*tz0;
+            const bx=q0.X+(q1.X-q0.X)*tx1+(q3.X-q0.X)*tz0, by=q0.Y+(q1.Y-q0.Y)*tx1+(q3.Y-q0.Y)*tz0;
+            const cx2=q0.X+(q1.X-q0.X)*tx1+(q3.X-q0.X)*tz1, cy2=q0.Y+(q1.Y-q0.Y)*tx1+(q3.Y-q0.Y)*tz1;
+            const dx=q0.X+(q1.X-q0.X)*tx0+(q3.X-q0.X)*tz1, dy=q0.Y+(q1.Y-q0.Y)*tx0+(q3.Y-q0.Y)*tz1;
+            ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.lineTo(cx2,cy2); ctx.lineTo(dx,dy);
+            ctx.closePath(); ctx.fillStyle=C.pallet; ctx.globalAlpha=.85; ctx.fill(); ctx.globalAlpha=1;
+          }
+        }
+      });
+    }
+    else if(b.kind==="lifter"){
+      this.drawBox(ctx,b,["#A8B2C6",C.lifter,C.lifterDark]);
+      // 캐리지
+      this.drawBox(ctx,{x:b.x+.15,y:b.y+.15,z:b.h*0.35,w:b.w-.3,d:b.d-.3,h:.5},[C.shuttle,"#C77F2C","#9E6522"]);
+    }
+    else if(b.kind==="conv"){
+      this.drawBox(ctx,b,[C.convTop,"#4A5468","#3B4356"]);
+    }
+    else if(b.kind==="shuttle"){
+      this.drawBox(ctx,b,[C.shuttle,"#C77F2C","#9E6522"]);
+    }
+    else if(b.kind==="crane"){
+      this.drawBox(ctx,{...b,w:.35,d:.35,x:b.x+.3,y:b.y+.15},["#A8B2C6",C.lifter,C.lifterDark]); // 마스트
+      this.drawBox(ctx,{x:b.x,y:b.y,z:b.h*.45,w:b.w,d:b.d,h:.6},[C.shuttle,"#C77F2C","#9E6522"]); // 캐리지
+    }
+    else if(b.kind==="pstack"){
+      this.drawBox(ctx,b,[C.pallet,"#B98A3E",C.palletDark]);
+    }
+    else if(b.kind==="agf"){
+      this.drawBox(ctx,b,["#E86A5A","#B44B3E","#8C3A30"]);
+      // 포크 2선
+      const p1=this.proj(b.x+.15,b.y-0.7,0.12), p2=this.proj(b.x+.15,b.y,0.12);
+      const p3=this.proj(b.x+b.w-.15,b.y-0.7,0.12), p4=this.proj(b.x+b.w-.15,b.y,0.12);
+      ctx.strokeStyle="#C9D2E4"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(p1.X,p1.Y); ctx.lineTo(p2.X,p2.Y);
+      ctx.moveTo(p3.X,p3.Y); ctx.lineTo(p4.X,p4.Y); ctx.stroke();
+    }
+    else if(b.kind==="gtp"){
+      this.drawBox(ctx,b,["#7FA3D9","#4E6FA8","#3A537E"]);
+    }
+  },
+
+  blit(){
+    const ctx=this.ctx; if(!ctx) return;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,this.cv.width,this.cv.height);
+    ctx.drawImage(this.off,0,0);
+  },
+
+  renderMeta(){
+    const S=this.scene, d=S.d;
+    const pal=this.PAL[d.temp]||this.PAL.ambient;
+    const TL={frozen:"냉동",chilled:"냉장",ambient:"상온",hot:"고온·항온",clean:"클린"};
+    const leg=document.getElementById("simLegend");
+    if(leg) leg.innerHTML=
+      `<span><i style="background:${pal[1]}"></i>랙 (${TL[d.temp]||"상온"})</span>`+
+      `<span><i style="background:${this.C.pallet}"></i>보관 파렛트</span>`+
+      `<span><i style="background:${this.C.shuttle}"></i>${S.sysKey==="stc"?"스태커크레인":"셔틀"}</span>`+
+      `<span><i style="background:${this.C.lifter}"></i>리프트</span>`+
+      (S.sysKey==="hybrid"?`<span><i style="background:#E86A5A"></i>무인지게차</span>`:"");
+    const note=document.getElementById("simNote");
+    if(note){
+      const r=S.real;
+      note.innerHTML=
+        `${fmt(r.bay)}Bay × ${fmt(r.dF+r.dB)}Deep × ${r.tier}단 ≈ <b>${fmt(r.cells)} Cells</b>`+
+        ` · 셔틀 ${S.qtyInfo.shuttle}대 · 리프트 ${S.qtyInfo.lifter}대`+
+        (S.lod?` <span style="color:var(--accent-2)">(표시 축약 — 실제 규모는 캡션 수치 기준)</span>`:"")+
+        `<br>드래그 = 회전 · 휠/핀치 = 줌 · 시점 초기화 버튼으로 복귀. 개략 배치 개념도이며 실제 설계와 다를 수 있습니다.`;
+    }
+  },
+
+  /* ---------- 제스처 ---------- */
+  attachGestures(){
+    const cv=this.cv, ptrs=new Map(); let rot=false, lx=0, ly=0, pinch0=0, sc0=1, lastTap=0;
+    cv.addEventListener("pointerdown",e=>{
+      ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      lx=e.clientX; ly=e.clientY; rot=false;
+      if(ptrs.size===2){ const a=[...ptrs.values()]; pinch0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); sc0=this.scale; }
+      const now=Date.now();
+      if(now-lastTap<300 && ptrs.size===1){ this.fitView(); }
+      lastTap=now;
+    });
+    cv.addEventListener("pointermove",e=>{
+      if(!ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(ptrs.size===2){                                    // 핀치 줌
+        const a=[...ptrs.values()];
+        const dnow=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+        if(pinch0>0){ this.scale=Math.max(.3,Math.min(2.5,sc0*dnow/pinch0));
+          this.renderStatic(); this.blit(); }
+        e.preventDefault(); return;
+      }
+      const dx=e.clientX-lx, dy=e.clientY-ly;
+      if(!rot){                                             // 세로 스와이프는 페이지 스크롤에 양보
+        if(Math.abs(dx)>Math.abs(dy)+4){ rot=true; cv.setPointerCapture(e.pointerId); cv.classList.add("dragging"); }
+        else if(Math.abs(dy)>10) { ptrs.delete(e.pointerId); return; }
+        else return;
+      }
+      this.yaw+=dx*0.012; lx=e.clientX; ly=e.clientY;
+      this.renderStatic(); this.blit();
+      e.preventDefault();
+    },{passive:false});
+    const up=e=>{ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=0; rot=false; cv.classList.remove("dragging"); };
+    cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up);
+    cv.addEventListener("wheel",e=>{ e.preventDefault();
+      this.scale=Math.max(.3,Math.min(2.5,this.scale*(e.deltaY<0?1.1:0.9)));
+      this.renderStatic(); this.blit();
+    },{passive:false});
+  },
+
+  /* ---------- 데모 애니메이션 (전면 동선 한정) ---------- */
+  togglePlay(){
+    if(this.playing){ this.stop(); return; }
+    if(!this.inited) return;
+    this.playing=true; this.t0=performance.now();
+    const btn=document.getElementById("simPlay");
+    if(btn){ btn.classList.add("on"); btn.textContent="⏸ 정지"; }
+    const loop=now=>{
+      if(!this.playing) return;
+      this.drawFrame(((now-this.t0)/1000)%8);            // 8초 루프
+      this.raf=requestAnimationFrame(loop);
+    };
+    this.raf=requestAnimationFrame(loop);
+  },
+  stop(){
+    this.playing=false;
+    if(this.raf){ cancelAnimationFrame(this.raf); this.raf=0; }
+    const btn=document.getElementById("simPlay");
+    if(btn){ btn.classList.remove("on"); btn.textContent="▶ 데모 재생"; }
+    if(this.inited){ this.blit(); }
+  },
+  ease(t){ return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; },
+  drawFrame(t){
+    this.blit();                                          // 정적 배경
+    const ctx=this.ctx, A=this.scene.anchors;
+    ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+    // 구간: 0~2 입고 컨베이어 → 2~3.5 리프트 상승 → 3.5~6 셔틀 주행 → 6~7 적입 → 7~8 대기
+    let px,py,pz, shx=A.railFrom.x;
+    if(t<2){ const k=this.ease(t/2);
+      px=A.convStart.x+(A.convEnd.x-A.convStart.x)*k;
+      py=A.convStart.y+(A.convEnd.y-A.convStart.y)*k; pz=A.convStart.z; }
+    else if(t<3.5){ const k=this.ease((t-2)/1.5);
+      px=A.convEnd.x; py=A.convEnd.y; pz=A.convStart.z+(A.liftTop.z-A.convStart.z)*k; }
+    else if(t<6){ const k=this.ease((t-3.5)/2.5);
+      shx=A.railFrom.x+(A.railTo.x-A.railFrom.x)*k;
+      px=shx; py=A.railFrom.y; pz=A.liftTop.z; }
+    else if(t<7){ const k=this.ease((t-6)/1);
+      shx=A.railTo.x; px=shx; py=A.railFrom.y+(A.dropY-A.railFrom.y)*k; pz=A.liftTop.z; }
+    else { shx=A.railTo.x+(A.railFrom.x-A.railTo.x)*this.ease((t-7)/1); px=null; }
+
+    // 이동 셔틀 (주행·적입 구간)
+    if(t>=3.5){
+      this.drawBox(ctx,{x:shx-.55,y:A.railFrom.y-.55,z:A.liftTop.z-.45,w:1.1,d:1.1,h:.45},
+        [this.C.shuttle,"#C77F2C","#9E6522"]);
+    }
+    // 파렛트
+    if(px!==null&&px!==undefined){
+      this.drawBox(ctx,{x:px-.5,y:py-.5,z:pz,w:1.0,d:1.0,h:.8},
+        [this.C.pallet,"#B98A3E",this.C.palletDark]);
+    }
+  }
+};
+
+/* 카드 토글 + 최초 펼침 시 lazy init */
+function toggleSim3D(head){
+  toggleCardPanel(head);
+  const open=head.nextElementSibling&&head.nextElementSibling.classList.contains("show");
+  if(open&&!SIM3D.inited) requestAnimationFrame(()=>SIM3D.init());
+  if(!open) SIM3D.stop();
 }
 
 /* ============================================================
