@@ -102,6 +102,8 @@ body{
 .isys{display:flex;flex-direction:column;gap:3px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--grad-stat);box-shadow:var(--sh-sm),var(--hl)}
 .isys b{font-size:14px;color:var(--ink)}
 .isys span{font-size:11.5px;color:var(--muted);line-height:1.5}
+.isys a.iv{font-size:11px;color:var(--accent-2);text-decoration:none;margin-top:4px;font-weight:600}
+.isys a.iv:active{opacity:.7}
 .intro-btn:hover{background:linear-gradient(180deg,rgba(92,132,230,.24),rgba(92,132,230,.1))}
 .step-head p{font-size:13px;color:var(--muted);margin-top:4px}
 
@@ -436,11 +438,14 @@ a.btn{text-decoration:none}
         <div class="roi-panel">
           <div class="roi-panel-inner">
             <div class="intro-list">
-              <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>국내 최초 셔틀랙 자동창고 · 냉동·냉장 고밀도 · 결로·제상 설계</span></div>
-              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 파렛트당 1.5t 적재 · 리프트 절감·확장성</span></div>
-              <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span></div>
-              <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span></div>
-              <div class="isys"><b>EMS · 무인지게차 AGF</b><span>자체개발 EMS 반송 시스템 · 단계적 자동화 진입</span></div>
+              <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>국내 최초 셔틀랙 자동창고 · 냉동·냉장 고밀도 · 결로·제상 설계</span><a class="iv" href="https://youtu.be/xzMS0WD3L-Q" target="_blank" rel="noopener">▶ 대표 영상</a></div>
+              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 파렛트당 1.5t 적재 · 리프트 절감·확장성</span><a class="iv" href="https://youtu.be/k1Yhm2fbgD4" target="_blank" rel="noopener">▶ 대표 영상</a></div>
+              <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span><a class="iv" href="https://youtu.be/MLz6X1eK5no" target="_blank" rel="noopener">▶ 대표 영상</a></div>
+              <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span><a class="iv" href="https://youtu.be/XFRkj8hrS3Y" target="_blank" rel="noopener">▶ 대표 영상</a></div>
+              <div class="isys"><b>EMS · 무인지게차 AGF</b><span>자체개발 EMS 반송 시스템 · 단계적 자동화 진입</span><a class="iv" href="https://www.youtube.com/@logisallgroup/shorts" target="_blank" rel="noopener">▶ 로지스올 쇼츠</a></div>
+            </div>
+            <div class="result-actions" style="margin-top:10px">
+              <button class="btn soft wide" style="flex:1 1 100%" onclick="window.open('https://www.youtube.com/@logisallgroup/shorts','_blank')">🎬 로지스올그룹 쇼츠 모아보기</button>
             </div>
             <div class="note">KOREA MAT 2026 국제물류산업전에서 4-Way Shuttle·EMS 실환경 시연. 국산 제작으로 구축비 절감과 신속한 부품·AS 대응.</div>
           </div>
@@ -2889,6 +2894,15 @@ const RES_TSPG = [
 ];
 
 const RES_ENG = [
+  {cat:"유튜브 · 로지스올그룹 (엔지니어링 관련)", collapsible:true, items:[
+    {t:"로지스올그룹 쇼츠 모아보기", d:"@logisallgroup 쇼츠 탭", url:"https://www.youtube.com/@logisallgroup/shorts", kind:"yt"},
+    {t:"로지스올 그룹 홍보 영상", d:"그룹 소개 (Korean ver.)", url:"https://www.youtube.com/watch?v=7ZCcH0Ca8ls", kind:"yt"},
+    {t:"피지컬 인터넷", d:"물류 공동화·자동화 비전", url:"https://www.youtube.com/watch?v=msU95RS0smg", kind:"yt"},
+    {t:"로지스올컨설팅", d:"물류 컨설팅 소개", url:"https://www.youtube.com/watch?v=eeuTM35n3oE", kind:"yt"},
+    {t:"KCP 동안성 콜드체인 물류센터", d:"콜드체인 센터 오픈 현장", url:"https://www.youtube.com/watch?v=cvrJNWUuLYo", kind:"yt"},
+    {t:"수도권 풀필먼트센터 (경기 광주)", d:"보관~고객 맞춤형 서비스", url:"https://www.youtube.com/watch?v=CHpz7jrpmOk", kind:"yt"},
+    {t:"인천 글로벌 풀필먼트센터", d:"보세 수출입 CFS 원스톱", url:"https://www.youtube.com/watch?v=orHydT-eDRM", kind:"yt"}
+  ]},
   {cat:"회사소개", collapsible:true, items:[
     {t:"회사개요", d:"로지스올엔지니어링 소개", url:ENG_BASE+"/kr/sub/company/greeting.asp", kind:"web"},
     {t:"연혁 소개", d:"걸어온 길", url:ENG_BASE+"/kr/sub/company/history.asp", kind:"web"},
