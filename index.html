@@ -293,8 +293,8 @@ a.btn{text-decoration:none}
 .roi-panel-inner{padding-top:14px}
 
 /* ===== SIM3D : 자동창고 3D 시뮬레이션 ===== */
-#simPanel.show{max-height:1200px}
-#simCanvas{width:100%;height:280px;display:block;border-radius:12px;background:
+#simPanel.show{max-height:1300px}
+#simCanvas{width:100%;height:340px;display:block;border-radius:12px;background:
   radial-gradient(120% 90% at 50% 0%, rgba(92,132,230,.10), transparent 60%), var(--bg);
   border:1px solid var(--line);touch-action:pan-y;cursor:grab}
 #simCanvas.dragging{cursor:grabbing}
@@ -304,6 +304,14 @@ a.btn{text-decoration:none}
 .sim-btn.on{border-color:var(--accent);color:var(--accent-2);box-shadow:0 0 0 2px rgba(92,132,230,.15)}
 .sim-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:10.5px;color:var(--muted)}
 .sim-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+/* 전체화면 오버레이 */
+#simFS{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column}
+#simFS .fs-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+#simFS .fs-title{flex:1;font-size:13px;font-weight:700;color:var(--ink)}
+#simFS .fs-cv{flex:1;position:relative;min-height:0}
+#simFS #simCanvas{width:100%!important;height:100%!important;border-radius:0;border:none}
+#simFS .sim-bar{padding:10px 14px calc(10px + env(safe-area-inset-bottom));margin:0;border-top:1px solid var(--line)}
+body.fs-lock{overflow:hidden}
 
 /* 투자비 항목별 */
 .capex-group .cg-title{font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
@@ -1789,6 +1797,7 @@ function renderResult(){
           <div class="sim-bar">
             <button class="sim-btn" id="simPlay" onclick="SIM3D.togglePlay()">▶ 데모 재생</button>
             <button class="sim-btn" onclick="SIM3D.fitView()">⟳ 시점 초기화</button>
+            <button class="sim-btn" id="simFsBtn" onclick="SIM3D.toggleFull()">⛶ 전체화면</button>
           </div>
           <div class="sim-legend" id="simLegend"></div>
           <div class="note" id="simNote"></div>
@@ -1952,7 +1961,7 @@ const SIM2D = {
     const cv=document.getElementById("simCanvas"); if(!cv) return;
     this.cv=cv; this.ctx=cv.getContext("2d");
     this.dpr=Math.min(window.devicePixelRatio||1, 1.5);
-    const w=cv.clientWidth||360, h=280;
+    const w=cv.clientWidth||360, h=cv.clientHeight||340;
     this.W=w; this.H=h;
     cv.width=Math.round(w*this.dpr); cv.height=Math.round(h*this.dpr);
     this.off=document.createElement("canvas");
@@ -2378,31 +2387,50 @@ const GL3D = {
     let bay,dF,dB,tier, cellW=1.4, cellD=1.4;
     const cellH=Math.max(1.2,(d.palletH||1.8)+0.25);
     const DEEP={shuttle4way:[4,4], mdps:[6,6], stc:[2,2], mini:[3,3], hybrid:[3,3]};
-    if(est.precise && d.bay>0){ bay=d.bay; dF=d.deepFront||0; dB=d.deepBack||0; tier=d.tier||1; }
+    const target=(roi&&roi.targetCells)||est.cells||500;
+    let precise=false;
+    if(est.precise && d.bay>0){ bay=d.bay; dF=d.deepFront||0; dB=d.deepBack||0; tier=d.tier||1; precise=true; }
     else{
       tier=Math.max(1,est.tiers||3);
       [dF,dB]=DEEP[sysKey]||[4,4];
-      const target=(roi&&roi.targetCells)||est.cells||500;
       bay=Math.max(3, Math.ceil(target/((dF+dB)*tier)));
     }
     if(sysKey==="mini"){ cellW=0.95; cellD=0.95; }
-    const real={bay,dF,dB,tier,cells:(est.precise?est.cells:((roi&&roi.targetCells)||est.cells))};
-    const LB=30,LD=10,LT=10;
-    const sBay=Math.min(bay,LB), sDF=Math.min(dF,LD), sDB=Math.min(dB,LD), sTier=Math.min(tier,LT);
-    const lod=(sBay<bay||sDF<dF||sDB<dB||sTier<tier);
-    const occ=Math.max(.15,Math.min(1,((roi&&roi.targetCells)||est.cells)/Math.max(1,est.cells||1)));
-    return { d, sysKey, qty, cellW, cellD, cellH, real, lod, occ,
-             sBay, sDF, sDB, sTier,
-             aisleW:2.0,
-             rackW:sBay*cellW, rackH:sTier*cellH,
-             shown:{bay:sBay,dF:sDF,dB:sDB,tier:sTier} };
+    const real={bay,dF,dB,tier,cells:(precise?est.cells:target)};
+
+    // 통로(모듈) 분할: Bay가 24를 넘으면 여러 통로로 나눠 실물 비례 유지
+    // (정밀 입력은 설계 그대로 1개 랙 라인으로 표시)
+    let aisles=1, bayM=bay;
+    if(!precise){
+      aisles=Math.max(Math.ceil(bay/24), Math.min(qty.lifterQty||1,4));
+      aisles=Math.max(1,Math.min(4,aisles));
+      bayM=Math.max(3,Math.ceil(bay/aisles));
+    }
+    // 표시 상한: 총 12,000셀 — 초과 시에만 Bay 축약 (그 외에는 실규모 그대로)
+    const CAP=12000;
+    let sTier=Math.min(tier,14), lod=(sTier<tier);
+    let cellsShown=bayM*aisles*(dF+dB)*sTier;
+    if(cellsShown>CAP){
+      bayM=Math.max(3,Math.floor(bayM*CAP/cellsShown));
+      lod=true;
+      cellsShown=bayM*aisles*(dF+dB)*sTier;
+    }
+    const exact=!lod && Math.abs(cellsShown-real.cells)<=bayM*(dF+dB); // 1 Bay 오차 이내면 "실규모 그대로"
+    // 랙 격자 = 권장 구축 규모이므로, 파렛트 점유율은 "현 재고 / 구축 규모"
+    const fillRate = d.stock>0 ? Math.min(1, d.stock/Math.max(1,target)) : 0.85;
+    return { d, sysKey, qty, cellW, cellD, cellH, real, lod, exact,
+             occ:Math.max(.45, fillRate),
+             sBay:bayM, sDF:dF, sDB:dB, sTier, aisles, cellsShown,
+             aisleW:2.0, moduleGap:1.6,
+             rackW:bayM*cellW, rackH:sTier*cellH,
+             shown:{bay:bayM,dF,dB,tier:sTier} };
   },
 
   init(){
     const T=this.THREE, cv=document.getElementById("simCanvas");
     if(!T||!cv) throw new Error("no THREE/canvas");
     this.canvas=cv;
-    const w=cv.clientWidth||360, h=280;
+    const w=cv.clientWidth||360, h=cv.clientHeight||340;
     this.renderer=new T.WebGLRenderer({canvas:cv, antialias:true});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
     this.renderer.setSize(w,h,false);
@@ -2455,33 +2483,37 @@ const GL3D = {
     const T=this.THREE, D=this.D, C=this.COL;
     const mood=this.MOOD[D.d.temp]||this.MOOD.ambient;
     const G=new T.Group(); this.scene.add(G); this.world=G;
-    const {cellW,cellD,cellH,sBay,sDF,sDB,sTier,aisleW,rackW,rackH,sysKey}=D;
-    const totD=sDF*cellD+aisleW+sDB*cellD;
-    const aisleY=sDF*cellD;          // z축(three) = 깊이. 통로 시작
-    // 좌표계: x=Bay 방향, y=높이, z=깊이(앞랙 앞면 z=0, 뒤로 +z)
+    const {cellW,cellD,cellH,sBay,sDF,sDB,sTier,aisleW,rackW,rackH,sysKey,aisles,moduleGap}=D;
+    const totD=sDF*cellD+aisleW+sDB*cellD;              // 모듈 1개 깊이
+    const totalD=aisles*totD+(aisles-1)*moduleGap;      // 전체 깊이 (멀티 통로)
+    const aisleY=sDF*cellD;          // 모듈 내 통로 시작 오프셋
+    const modZ=m=>m*(totD+moduleGap);                   // m번째 모듈의 z 기준
+    const aisleZ=m=>modZ(m)+aisleY+aisleW/2;            // m번째 통로 중심
+    // 좌표계: x=Bay 방향, y=높이, z=깊이(첫 모듈 앞랙 앞면 z=0, 뒤로 +z)
 
     // 바닥 (콘크리트)
-    const floorW=rackW+16, floorD=totD+14;
+    const floorW=rackW+16, floorD=totalD+14;
     const floor=new T.Mesh(this.geo(new T.PlaneGeometry(floorW,floorD)),
       this.mat({color:C.floor, roughness:.92, metalness:.05}));
     floor.rotation.x=-Math.PI/2;
-    floor.position.set(rackW/2-1, 0, totD/2-2);
+    floor.position.set(rackW/2-1, 0, totalD/2-2);
     floor.receiveShadow=shadow;
     G.add(floor);
     const grid=new T.GridHelper(Math.max(floorW,floorD), Math.round(Math.max(floorW,floorD)/2), 0x2a3550, 0x212b42);
-    grid.position.set(rackW/2-1, 0.01, totD/2-2);
+    grid.position.set(rackW/2-1, 0.01, totalD/2-2);
     G.add(grid); this.track(grid.geometry); this.track(grid.material);
 
-    // ---- 랙 블록 (앞/뒤) : 기둥·빔·레일 InstancedMesh ----
+    // ---- 랙 블록 (모듈별 앞/뒤) : 기둥·빔·레일 InstancedMesh ----
     const frameM=this.mat({color:D.sysKey==="mini"?0x5f6f8f:mood.frame, roughness:.55, metalness:.35});
     const beamM =this.mat({color:C.beam, roughness:.5, metalness:.4});
     const postG=this.geo(new T.BoxGeometry(0.09, rackH+0.25, 0.09));
     const railG=this.geo(new T.BoxGeometry(rackW+0.1, 0.09, 0.07));
-    const crossG=this.geo(new T.BoxGeometry(0.07, 0.07, cellD));
 
     const blocks=[];
-    if(sDF>0) blocks.push({z0:0, deep:sDF, front:true});
-    if(sDB>0) blocks.push({z0:aisleY+aisleW, deep:sDB, front:false});
+    for(let m=0;m<aisles;m++){
+      if(sDF>0) blocks.push({z0:modZ(m), deep:sDF, front:m===0});
+      if(sDB>0) blocks.push({z0:modZ(m)+aisleY+aisleW, deep:sDB, front:false});
+    }
 
     // 인스턴스 수 산정
     let postN=0, railN=0, crossN=0;
@@ -2529,12 +2561,15 @@ const GL3D = {
     boxes.castShadow=shadow&&fi<=2500;
     G.add(pallets,boxes); this.track(pallets); this.track(boxes);
 
-    // ---- 통로 주행레일 ----
-    const arail=new T.Mesh(this.geo(new T.BoxGeometry(rackW+3,0.06,0.1)),
-      this.mat({color:0x5a6880, metalness:.6, roughness:.35}));
-    arail.position.set(rackW/2-0.5, 0.03, aisleY+aisleW*0.32);
-    const arail2=arail.clone(); arail2.position.z=aisleY+aisleW*0.68;
-    G.add(arail,arail2);
+    // ---- 통로 주행레일 (모듈별) ----
+    const arailG=this.geo(new T.BoxGeometry(rackW+3,0.06,0.1));
+    const arailM=this.mat({color:0x5a6880, metalness:.6, roughness:.35});
+    for(let m=0;m<aisles;m++){
+      const a1=new T.Mesh(arailG,arailM);
+      a1.position.set(rackW/2-0.5, 0.03, modZ(m)+aisleY+aisleW*0.32);
+      const a2=a1.clone(); a2.position.z=modZ(m)+aisleY+aisleW*0.68;
+      G.add(a1,a2);
+    }
 
     this.actors={shuttles:[], lifter:null, carriage:null, animPallet:null, conv:null};
 
@@ -2555,19 +2590,20 @@ const GL3D = {
       });
       return g;
     };
-    const maxSh=Math.min(D.qty.shuttleQty||2,6);
+    const maxSh=Math.min(D.qty.shuttleQty||2,8);
     if(sysKey!=="stc"){
-      const n=(sysKey==="mdps")?Math.min(sTier,maxSh):maxSh;
+      const n=(sysKey==="mdps")?Math.min(sTier*aisles,maxSh):maxSh;
       for(let i=0;i<n;i++){
         const s=mkShuttle();
-        const t=(sysKey==="mdps")?i:(i%sTier);
-        s.position.set(rackW*(0.15+0.7*i/Math.max(1,n-1)), t*cellH, aisleY+aisleW/2);
+        const t=(sysKey==="mdps")?(i%sTier):(i%sTier);
+        const m=i%aisles;                              // 통로별 분산
+        s.position.set(rackW*(0.15+0.7*(i/Math.max(1,n-1))), t*cellH, aisleZ(m));
         G.add(s); this.actors.shuttles.push(s);
       }
     }
 
-    // ---- 리프트 (마스트+캐리지) ----
-    const nLift=Math.min(D.qty.lifterQty||1,3);
+    // ---- 리프트 (통로마다 1대, 실제 대수 상한) ----
+    const nLift=Math.max(1,Math.min(D.qty.lifterQty||1, aisles>1?aisles:3));
     for(let i=0;i<nLift;i++){
       const lg=new T.Group();
       const mast=new T.Mesh(this.geo(new T.BoxGeometry(0.55,rackH+1.3,0.55)),
@@ -2576,7 +2612,7 @@ const GL3D = {
       const car=new T.Mesh(this.geo(new T.BoxGeometry(1.5,0.5,aisleW-0.35)),
         this.mat({color:C.shuttle, roughness:.4, metalness:.3}));
       car.position.set(0.95,0.6,0); car.castShadow=shadow; lg.add(car);
-      lg.position.set(-2.1-i*2.1, 0, aisleY+aisleW/2);
+      lg.position.set(aisles>1?-2.1:-2.1-i*2.1, 0, aisleZ(Math.min(i,aisles-1)));
       G.add(lg);
       if(i===0){ this.actors.lifter=lg; this.actors.carriage=car; }
     }
@@ -2656,8 +2692,10 @@ const GL3D = {
       railZ: aisleY+aisleW/2,
       dropZ: aisleY-cellD*0.5, cellH
     };
-    this.center=new this.THREE.Vector3(rackW/2-0.5, rackH/2, totD/2-1);
-    this.bound=Math.max(rackW+8, totD+8, rackH*2.2);
+    this.center=new this.THREE.Vector3(rackW/2-0.5, rackH/2, totalD/2-1);
+    // 바운딩 스피어 반경 — 화면비(세로/가로)에 무관하게 씬 전체가 들어오도록
+    this.radius=0.5*Math.sqrt(Math.pow(rackW+3,2)+Math.pow(totalD+3,2)+Math.pow(rackH+2,2));
+    this.bound=Math.max(rackW+8, totalD+8, rackH*2.2);
   },
 
   /* ---------- 카메라/오빗 ---------- */
@@ -2668,15 +2706,29 @@ const GL3D = {
       c.y + s.r*Math.cos(s.phi),
       c.z + s.r*Math.sin(s.phi)*Math.cos(s.theta));
     this.camera.lookAt(c);
+    // 안개·far 평면을 카메라 거리에 연동 (줌아웃 시 씬이 안개에 묻히지 않도록)
+    if(this.scene&&this.scene.fog){ this.scene.fog.near=s.r*0.45; this.scene.fog.far=s.r*2.3; }
+    if(this.camera.far < s.r*3){ this.camera.far=s.r*3; this.camera.updateProjectionMatrix(); }
   },
   fitView(){
     if(!this.camera) return;
     this.sph.theta=-0.6; this.sph.phi=1.02;
-    this.sph.r=Math.max(12, this.bound/(2*Math.tan(this.camera.fov*Math.PI/360))*1.12);
+    // 수직 FOV와 (화면비로 좁아지는) 수평 FOV 중 작은 쪽 기준으로 거리 산출
+    const fovV=this.camera.fov*Math.PI/180;
+    const fovH=2*Math.atan(Math.tan(fovV/2)*Math.max(0.2,this.camera.aspect||1));
+    this.sph.r=Math.max(10, (this.radius||this.bound/2)/Math.sin(Math.min(fovV,fovH)/2)*0.92);
     this.vel.t=0; this.vel.p=0;
     this.applyCam(); this.render();
   },
   render(){ if(this.renderer){ this.applyCam(); this.renderer.render(this.scene,this.camera); } },
+  /* 캔버스 크기 변경(전체화면 전환·회전) */
+  resize(w,h){
+    if(!this.renderer||!this.camera) return;
+    this.renderer.setSize(w,h,false);
+    this.camera.aspect=w/Math.max(1,h);
+    this.camera.updateProjectionMatrix();
+    this.fitView();
+  },
 
   attachGestures(){
     const cv=this.canvas, ptrs=new Map(); let rot=false, lx=0, ly=0, pinch0=0, r0=0, lastTap=0;
@@ -2811,8 +2863,11 @@ const GL3D = {
       note.innerHTML=
         `${fmt(r.bay)}Bay × ${fmt(r.dF+r.dB)}Deep × ${r.tier}단 ≈ <b>${fmt(r.cells)} Cells</b>`+
         ` · 셔틀 ${D.qty.shuttleQty||0}대 · 리프트 ${D.qty.lifterQty||0}대`+
-        (D.lod?` <span style="color:var(--accent-2)">(표시 축약 — 실제 규모는 수치 기준)</span>`:"")+
-        `<br>드래그 = 회전 · 위아래 드래그 = 시점 높이 · 핀치/휠 = 줌 · 더블탭 = 초기화. 개략 배치 개념도입니다.`;
+        ` · 통로 ${D.aisles}열`+
+        (D.lod
+          ? ` <span style="color:var(--accent-2)">(표시 축약 — 실제 규모는 위 수치 기준)</span>`
+          : ` <span style="color:var(--accent-2)">· 권장 규모를 실제 축척으로 표시</span>`)+
+        `<br>드래그 = 회전 · 위아래 드래그 = 시점 높이 · 핀치/휠 = 줌 · 더블탭 = 초기화 · ⛶ 전체화면. 개략 배치 개념도입니다.`;
     }
   },
 
@@ -2849,10 +2904,63 @@ const SIM3D = {
     if(!eng){ SIM2D.init(); eng=SIM2D; }
     this.engine=eng; this.inited=true; this.loading=false;
   },
-  reset(){ if(this.engine) this.engine.reset(); this.engine=null; this.inited=false; this.loading=false; },
+  reset(){
+    if(this.full) this.exitFull(true);
+    if(this.engine) this.engine.reset();
+    this.engine=null; this.inited=false; this.loading=false;
+  },
   togglePlay(){ if(this.engine) this.engine.togglePlay(); },
   stop(){ if(this.engine) this.engine.stop(); },
-  fitView(){ if(this.engine) this.engine.fitView(); }
+  fitView(){ if(this.engine) this.engine.fitView(); },
+
+  /* ---------- 전체화면 ---------- */
+  full:false,
+  resize(){
+    const cv=document.getElementById("simCanvas"); if(!cv||!this.engine) return;
+    const w=cv.clientWidth||360, h=cv.clientHeight||340;
+    if(this.engine.resize) this.engine.resize(w,h);
+    else { this.engine.reset(); this.engine.init(); }   // 2D 폴백: 재초기화
+  },
+  toggleFull(){ this.full ? this.exitFull() : this.enterFull(); },
+  enterFull(){
+    if(this.full||!this.engine) return;
+    const cv=document.getElementById("simCanvas"), bar=document.querySelector("#simPanel .sim-bar");
+    if(!cv||!bar) return;
+    this._home={cvNext:cv.nextSibling, cvParent:cv.parentNode, barParent:bar.parentNode, barNext:bar.nextSibling};
+    const ov=document.createElement("div"); ov.id="simFS";
+    ov.innerHTML=`<div class="fs-head"><div class="fs-title">자동창고 3D 시뮬레이션</div>
+        <button class="sim-btn" style="flex:0 0 auto;padding:7px 14px" onclick="SIM3D.exitFull()">✕ 닫기</button></div>
+      <div class="fs-cv"></div>`;
+    document.body.appendChild(ov);
+    ov.querySelector(".fs-cv").appendChild(cv);
+    ov.appendChild(bar);
+    document.body.classList.add("fs-lock");
+    this.full=true;
+    const b=document.getElementById("simFsBtn"); if(b){ b.textContent="⛶ 창 모드"; b.classList.add("on"); }
+    try{ ov.requestFullscreen && ov.requestFullscreen(); }catch(_){}
+    try{ history.pushState({simFS:1},""); this._popped=false; }catch(_){}
+    requestAnimationFrame(()=>this.resize());
+    if(!this._onPop){ this._onPop=()=>{ if(this.full){ this._popped=true; this.exitFull(); } };
+      window.addEventListener("popstate", this._onPop); }
+    if(!this._onRz){ this._onRz=()=>{ if(this.full) this.resize(); };
+      window.addEventListener("resize", this._onRz); }
+  },
+  exitFull(skipHistory){
+    if(!this.full) return;
+    const ov=document.getElementById("simFS");
+    const cv=document.getElementById("simCanvas"), bar=ov&&ov.querySelector(".sim-bar");
+    const h=this._home;
+    if(h&&cv) h.cvParent.insertBefore(cv, h.cvNext);
+    if(h&&bar) h.barParent.insertBefore(bar, h.barNext);
+    if(ov) ov.remove();
+    document.body.classList.remove("fs-lock");
+    this.full=false;
+    const b=document.getElementById("simFsBtn"); if(b){ b.textContent="⛶ 전체화면"; b.classList.remove("on"); }
+    try{ document.fullscreenElement && document.exitFullscreen(); }catch(_){}
+    if(!skipHistory && !this._popped){ try{ history.back(); }catch(_){} }
+    this._popped=false;
+    requestAnimationFrame(()=>this.resize());
+  }
 };
 
 /* 카드 토글 + 최초 펼침 시 lazy init */
@@ -2869,7 +2977,27 @@ function toggleSim3D(head){
 const INTRO_VIDEO_URL = "https://www.youtube.com/watch?v=C8RSMXfH3Jk"; // 유튜브 회사소개 영상
 const ENG_BASE = "https://engineering.logisall.com";
 
+/* 로지스올그룹(@logisallgroup) 콘텐츠 중 엔지니어링(자동화·로봇·설비 구축) 관련만 선별.
+   ※ 유튜브 채널 내부 영상 목록은 외부에서 열람이 제한되어, 검색으로 확인된 공식 영상과
+     공식 블로그(blog.naver.com/logisallgroup)의 자동화 콘텐츠만 수록. 쇼츠는 채널 탭 연결. */
+const RES_GROUP_ENG = [
+  {cat:"로지스올그룹 · 물류자동화 (유튜브)", collapsible:true, items:[
+    {t:"로지스올그룹 쇼츠", d:"@logisallgroup 자동화 현장 쇼츠", url:"https://www.youtube.com/@logisallgroup/shorts", kind:"yt"},
+    {t:"피지컬 인터넷", d:"물류 공동화·자동화 비전", url:"https://www.youtube.com/watch?v=msU95RS0smg", kind:"yt"},
+    {t:"로지스올컨설팅 (CES)", d:"Consulting·Engineering·Systems", url:"https://www.youtube.com/watch?v=eeuTM35n3oE", kind:"yt"},
+    {t:"KCP 동안성 콜드체인 물류센터", d:"콜드체인 설비 구축 현장", url:"https://www.youtube.com/watch?v=cvrJNWUuLYo", kind:"yt"},
+    {t:"수도권 풀필먼트센터 (경기 광주)", d:"보관·유통가공 자동화 설비", url:"https://www.youtube.com/watch?v=CHpz7jrpmOk", kind:"yt"},
+    {t:"인천 글로벌 풀필먼트센터", d:"보세 수출입 CFS 원스톱 설비", url:"https://www.youtube.com/watch?v=orHydT-eDRM", kind:"yt"}
+  ]},
+  {cat:"로지스올그룹 · 자동화 솔루션 (공식 블로그)", collapsible:true, items:[
+    {t:"물류로봇 브랜드 LOGIQ(로지큐) 론칭", d:"AMR 무인이송로봇 · AGF 무인지게차(1.5t)", url:"https://blog.naver.com/logisallgroup/223950946108", kind:"blog"},
+    {t:"Rapyuta Robotics AS/RS", d:"기존 창고에 적용하는 보관 자동화", url:"https://blog.naver.com/logisallgroup/224049837158", kind:"blog"},
+    {t:"KOREA MAT 2026 통합 물류자동화", d:"자동상하차 RockyOne · LOGIQ · 4-Way 셔틀", url:"https://blog.naver.com/logisallgroup/224234604422", kind:"blog"}
+  ]}
+];
+
 const RES_TSPG = [
+  ...RES_GROUP_ENG,
   {cat:"회사·사업 소개", collapsible:true, items:[
     {t:"TSPG 주요 사업 범위", d:"2/4-Way 셔틀·MDPS·미니로드·스태커크레인", url:"https://blog.naver.com/uck2000/224170220027", kind:"blog"}
   ]},
@@ -2894,15 +3022,7 @@ const RES_TSPG = [
 ];
 
 const RES_ENG = [
-  {cat:"유튜브 · 로지스올그룹 (엔지니어링 관련)", collapsible:true, items:[
-    {t:"로지스올그룹 쇼츠 모아보기", d:"@logisallgroup 쇼츠 탭", url:"https://www.youtube.com/@logisallgroup/shorts", kind:"yt"},
-    {t:"로지스올 그룹 홍보 영상", d:"그룹 소개 (Korean ver.)", url:"https://www.youtube.com/watch?v=7ZCcH0Ca8ls", kind:"yt"},
-    {t:"피지컬 인터넷", d:"물류 공동화·자동화 비전", url:"https://www.youtube.com/watch?v=msU95RS0smg", kind:"yt"},
-    {t:"로지스올컨설팅", d:"물류 컨설팅 소개", url:"https://www.youtube.com/watch?v=eeuTM35n3oE", kind:"yt"},
-    {t:"KCP 동안성 콜드체인 물류센터", d:"콜드체인 센터 오픈 현장", url:"https://www.youtube.com/watch?v=cvrJNWUuLYo", kind:"yt"},
-    {t:"수도권 풀필먼트센터 (경기 광주)", d:"보관~고객 맞춤형 서비스", url:"https://www.youtube.com/watch?v=CHpz7jrpmOk", kind:"yt"},
-    {t:"인천 글로벌 풀필먼트센터", d:"보세 수출입 CFS 원스톱", url:"https://www.youtube.com/watch?v=orHydT-eDRM", kind:"yt"}
-  ]},
+  ...RES_GROUP_ENG,
   {cat:"회사소개", collapsible:true, items:[
     {t:"회사개요", d:"로지스올엔지니어링 소개", url:ENG_BASE+"/kr/sub/company/greeting.asp", kind:"web"},
     {t:"연혁 소개", d:"걸어온 길", url:ENG_BASE+"/kr/sub/company/history.asp", kind:"web"},
