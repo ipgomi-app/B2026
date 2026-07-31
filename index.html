@@ -2413,16 +2413,22 @@ const GL3D = {
   D:null, actors:null, disposables:[],
 
   /* 온도대 무드: [랙 프레임색, 파렛트 위 화물색, 배경, fog, 반구광 하늘색] */
+  /* 무드 — 영상은 밝고 균일한 창고 조명 + 흰색 화물.
+     온도대는 배경/안개 색조로만 구분하고, 실내는 항상 밝게 유지한다. */
   MOOD:{
-    frozen: {frame:0x3d6db5, cargo:0xdfe9f5, bg:0x0b1322, fogC:0x11203a, sky:0x9fc0e8},
-    chilled:{frame:0x2f8f8a, cargo:0xe2f2ef, bg:0x0b1815, fogC:0x102823, sky:0x9fdcd6},
-    ambient:{frame:0x2e5590, cargo:0xece6da, bg:0x10141d, fogC:0x161c29, sky:0xc8d4ea},
-    hot:    {frame:0xa05a34, cargo:0xf0e2cf, bg:0x180f0b, fogC:0x241610, sky:0xe8c7a8},
-    clean:  {frame:0x7e8aa5, cargo:0xf4f6fa, bg:0x12151c, fogC:0x1a1f2a, sky:0xdfe6f2}
+    frozen: {cargo:0xF2F7FF, bg:0x0E1828, fogC:0x2A3E5C, sky:0xCFE2F7},
+    chilled:{cargo:0xF0FAF8, bg:0x0D1A18, fogC:0x244A45, sky:0xCBEAE5},
+    ambient:{cargo:0xF4F1EA, bg:0x121722, fogC:0x33405A, sky:0xE2E9F5},
+    hot:    {cargo:0xF7EEE0, bg:0x1B120C, fogC:0x4A3325, sky:0xF2D9BF},
+    clean:  {cargo:0xFAFCFF, bg:0x141821, fogC:0x363E52, sky:0xEEF3FA}
   },
-  COL:{ post:0x33507e, beam:0x486a9e, pallet:0x9a6b35, palletD:0x7c5528,
-        shuttle:0xf08c28, shuttleD:0xb5641a, lifter:0x8b96ab, rail:0x5a6880,
-        conv:0x47566e, roller:0x76839c, floor:0x141a26, agf:0xd35242 },
+  /* 색상 — TSPG 공식 4-Way 셔틀 영상(youtu.be/DRaWEaTcmBI) 기준
+     랙=파랑 기둥 + 주황 빔 / 셔틀=검정+노랑 / 리프트=적색 케이지 /
+     컨베이어=청회색 / 바닥=밝은 콘크리트 / 지게차=노랑 */
+  COL:{ post:0x1F63C4, beam:0xE8791F, pallet:0xB07C3E, palletD:0x8A5F2C,
+        shuttle:0x22262E, shuttleY:0xF2C230, shuttleD:0x14171C,
+        lifter:0xD03A2E, lifterD:0x9B2A20, rail:0x9AA6BA,
+        conv:0x54637C, roller:0xA9B4C6, floor:0xC9D0DA, agf:0xE8B21F },
 
   /* ---------- 데이터 도출 (SIM2D.buildScene와 동일 규칙) ---------- */
   buildData(){
@@ -2490,10 +2496,10 @@ const GL3D = {
     this.camera=new T.PerspectiveCamera(40, w/h, 0.1, 400);
 
     // 조명
-    const hemi=new T.HemisphereLight(mood.sky, 0x0c101a, 1.05); this.scene.add(hemi);
+    const hemi=new T.HemisphereLight(mood.sky, 0x8894A6, 1.35); this.scene.add(hemi);   // 밝은 실내 (영상 기준)
     const cellsShown=D.sBay*(D.sDF+D.sDB)*D.sTier;
     const useShadow = cellsShown<=3000;
-    const sun=new T.DirectionalLight(0xffffff, 1.6);
+    const sun=new T.DirectionalLight(0xffffff, 1.5);
     sun.position.set(-30, 45, 22);
     if(useShadow){
       this.renderer.shadowMap.enabled=true;
@@ -2549,8 +2555,9 @@ const GL3D = {
     G.add(grid); this.track(grid.geometry); this.track(grid.material);
 
     // ---- 랙 블록 (모듈별 앞/뒤) : 기둥·빔·레일 InstancedMesh ----
-    const frameM=this.mat({color:D.sysKey==="mini"?0x5f6f8f:mood.frame, roughness:.55, metalness:.35});
-    const beamM =this.mat({color:C.beam, roughness:.5, metalness:.4});
+    // 영상 기준: 기둥=파랑, 수평빔=주황
+    const frameM=this.mat({color:C.post, roughness:.5, metalness:.3});
+    const beamM =this.mat({color:C.beam, roughness:.45, metalness:.3});
     const postG=this.geo(new T.BoxGeometry(0.09, rackH+0.25, 0.09));
     const railG=this.geo(new T.BoxGeometry(rackW+0.1, 0.09, 0.07));
 
@@ -2683,19 +2690,31 @@ const GL3D = {
                  agfs:[], crane:null, convPallets:[], shuttleHome:[]};
 
     // ---- 셔틀 (바디+휠) ----
+    // 4-Way 셔틀 — 영상 기준 검정 바디 + 노랑 측면 스트라이프
     const mkShuttle=()=>{
       const g=new T.Group();
-      const body=new T.Mesh(this.geo(new T.BoxGeometry(1.15,0.32,1.05)),
-        this.mat({color:C.shuttle, roughness:.4, metalness:.3}));
-      body.position.y=0.24; body.castShadow=shadow; g.add(body);
-      const top=new T.Mesh(this.geo(new T.BoxGeometry(0.95,0.08,0.85)),
-        this.mat({color:C.shuttleD, roughness:.5}));
-      top.position.y=0.44; g.add(top);
-      const wg=this.geo(new T.CylinderGeometry(0.09,0.09,0.06,10));
-      const wm=this.mat({color:0x2a2f3a, roughness:.7});
+      const blackM=this.mat({color:C.shuttle, roughness:.45, metalness:.35});
+      const yellowM=this.mat({color:C.shuttleY, roughness:.4, metalness:.25});
+      const body=new T.Mesh(this.geo(new T.BoxGeometry(1.15,0.30,1.05)), blackM);
+      body.position.y=0.23; body.castShadow=shadow; g.add(body);
+      // 노랑 측면 밴드 (양 옆)
+      [-0.54,0.54].forEach(dz=>{
+        const band=new T.Mesh(this.geo(new T.BoxGeometry(1.17,0.13,0.04)), yellowM);
+        band.position.set(0,0.25,dz); g.add(band);
+      });
+      // 상부 파렛트 받침 (노랑)
+      const top=new T.Mesh(this.geo(new T.BoxGeometry(1.0,0.07,0.9)), yellowM);
+      top.position.y=0.42; g.add(top);
+      // 4방향 주행륜 (X·Y 두 방향)
+      const wg=this.geo(new T.CylinderGeometry(0.085,0.085,0.055,10));
+      const wm=this.mat({color:0x0E1014, roughness:.8});
       [[-.45,-.42],[.45,-.42],[-.45,.42],[.45,.42]].forEach(([wx,wz])=>{
         const w=new T.Mesh(wg,wm); w.rotation.z=Math.PI/2;
-        w.position.set(wx,0.09,wz); g.add(w);
+        w.position.set(wx,0.085,wz); g.add(w);
+      });
+      [[-.42,-.45],[.42,-.45],[-.42,.45],[.42,.45]].forEach(([wx,wz])=>{
+        const w=new T.Mesh(wg,wm); w.rotation.x=Math.PI/2;
+        w.position.set(wx,0.085,wz); g.add(w);
       });
       return g;
     };
@@ -2713,16 +2732,30 @@ const GL3D = {
     }
 
     // ---- 리프트 (통로마다 1대, 실제 대수 상한) ----
+    // 리프트 — 영상 기준 적색 케이지형 (마스트 2본 + 케이지 프레임)
     const nLift=Math.max(1,Math.min(D.qty.lifterQty||1, aisles>1?aisles:3));
+    const redM=this.mat({color:C.lifter, roughness:.45, metalness:.35});
+    const redD=this.mat({color:C.lifterD, roughness:.5, metalness:.35});
     for(let i=0;i<nLift;i++){
       const lg=new T.Group();
-      const mast=new T.Mesh(this.geo(new T.BoxGeometry(0.55,rackH+1.3,0.55)),
-        this.mat({color:C.lifter, roughness:.45, metalness:.5}));
-      mast.position.y=(rackH+1.3)/2; mast.castShadow=shadow; lg.add(mast);
-      const car=new T.Mesh(this.geo(new T.BoxGeometry(1.5,0.5,aisleW-0.35)),
-        this.mat({color:C.shuttle, roughness:.4, metalness:.3}));
-      car.position.set(0.95,0.6,0); car.castShadow=shadow; lg.add(car);
-      lg.position.set(aisles>1?-2.1:-2.1-i*2.1, 0, aisleZ(Math.min(i,aisles-1)));
+      [-0.62,0.62].forEach(dz=>{
+        const mast=new T.Mesh(this.geo(new T.BoxGeometry(0.30,rackH+1.4,0.26)), redM);
+        mast.position.set(0,(rackH+1.4)/2,dz); mast.castShadow=shadow; lg.add(mast);
+      });
+      const capBar=new T.Mesh(this.geo(new T.BoxGeometry(0.34,0.26,1.55)), redD);
+      capBar.position.y=rackH+1.4; lg.add(capBar);
+      // 승강 케이지 (바닥판 + 기둥 4본 + 상부 프레임)
+      const car=new T.Group();
+      const deck=new T.Mesh(this.geo(new T.BoxGeometry(1.55,0.16,aisleW-0.3)), redD);
+      deck.castShadow=shadow; car.add(deck);
+      [[-0.72,-0.62],[0.72,-0.62],[-0.72,0.62],[0.72,0.62]].forEach(([cx,cz])=>{
+        const cp=new T.Mesh(this.geo(new T.BoxGeometry(0.07,1.25,0.07)), redM);
+        cp.position.set(cx,0.70,cz); car.add(cp);
+      });
+      const cTop=new T.Mesh(this.geo(new T.BoxGeometry(1.55,0.09,1.35)), redM);
+      cTop.position.y=1.35; car.add(cTop);
+      car.position.set(0.95,0.6,0); lg.add(car);
+      lg.position.set(aisles>1?-2.3:-2.3-i*2.3, 0, aisleZ(Math.min(i,aisles-1)));
       G.add(lg);
       if(i===0){ this.actors.lifter=lg; this.actors.carriage=car; }
     }
@@ -2745,6 +2778,67 @@ const GL3D = {
     cg.add(rolls); this.track(rolls);
     cg.position.set(-1.15, 0, aisleY+aisleW/2-convLen/2-1.2);
     G.add(cg); this.actors.conv={group:cg, len:convLen};
+
+    /* ── 원형 턴테이블 (영상: 컨베이어 중간 회전 구간) ── */
+    {
+      const zTT=aisleY+aisleW/2-convLen*0.45;
+      const base=new T.Mesh(this.geo(new T.CylinderGeometry(0.95,0.95,0.30,20)),
+        this.mat({color:C.conv, roughness:.6, metalness:.35}));
+      base.position.set(-1.15,0.30,zTT); base.castShadow=shadow; G.add(base);
+      const plate=new T.Mesh(this.geo(new T.CylinderGeometry(0.85,0.85,0.10,20)),
+        this.mat({color:C.roller, roughness:.4, metalness:.6}));
+      plate.position.set(-1.15,0.50,zTT); G.add(plate);
+      this.actors.turntable=plate;
+    }
+
+    /* ── 노란 지게차 + 기사 (영상: 입고단/출고단에서 파렛트 상하차) ── */
+    const mkForklift=()=>{
+      const g=new T.Group();
+      const yM=this.mat({color:C.agf, roughness:.5, metalness:.25});
+      const dM=this.mat({color:0x2A2F3A, roughness:.75});
+      const body=new T.Mesh(this.geo(new T.BoxGeometry(1.1,0.95,1.7)), yM);
+      body.position.y=0.62; body.castShadow=shadow; g.add(body);
+      // 마스트 + 포크
+      [-0.34,0.34].forEach(dx=>{
+        const mst=new T.Mesh(this.geo(new T.BoxGeometry(0.09,2.0,0.09)), yM);
+        mst.position.set(dx,1.0,-0.92); g.add(mst);
+        const fk=new T.Mesh(this.geo(new T.BoxGeometry(0.10,0.05,1.05)),
+          this.mat({color:0xB9C3D4, metalness:.7, roughness:.3}));
+        fk.position.set(dx,0.13,-1.45); g.add(fk);
+      });
+      // 오버헤드 가드
+      const grd=new T.Mesh(this.geo(new T.BoxGeometry(1.0,0.06,1.0)), yM);
+      grd.position.set(0,1.95,0.15); g.add(grd);
+      [[-0.45,-0.3],[0.45,-0.3],[-0.45,0.6],[0.45,0.6]].forEach(([px,pz])=>{
+        const pl=new T.Mesh(this.geo(new T.BoxGeometry(0.06,1.0,0.06)), yM);
+        pl.position.set(px,1.45,pz); g.add(pl);
+      });
+      // 기사 (앉은 자세)
+      const seatB=new T.Mesh(this.geo(new T.CylinderGeometry(0.17,0.19,0.5,10)),
+        this.mat({color:0xE8B84B, roughness:.75}));
+      seatB.position.set(0,1.32,0.28); g.add(seatB);
+      const hd=new T.Mesh(this.geo(new T.SphereGeometry(0.105,12,10)),
+        this.mat({color:0xD9C3A5, roughness:.8}));
+      hd.position.set(0,1.66,0.28); g.add(hd);
+      const hat=new T.Mesh(this.geo(new T.CylinderGeometry(0.125,0.135,0.09,12)),
+        this.mat({color:0xF2F2F2, roughness:.5}));
+      hat.position.set(0,1.73,0.28); g.add(hat);
+      const wg2=this.geo(new T.CylinderGeometry(0.24,0.24,0.16,12));
+      [[-0.55,-0.55],[0.55,-0.55],[-0.55,0.6],[0.55,0.6]].forEach(([wx,wz])=>{
+        const w=new T.Mesh(wg2,dM); w.rotation.z=Math.PI/2;
+        w.position.set(wx,0.24,wz); g.add(w);
+      });
+      return g;
+    };
+    {
+      const fkIn=mkForklift();                       // 입고측 (컨베이어 시작단)
+      fkIn.position.set(-4.6, 0, aisleY+aisleW/2-convLen-1.6);
+      fkIn.rotation.y=-Math.PI/2; G.add(fkIn);
+      const fkOut=mkForklift();                      // 출고측
+      fkOut.position.set(rackW+4.0, 0, totalD*0.62);
+      fkOut.rotation.y=Math.PI/2; G.add(fkOut);
+      this.actors.forklifts=[fkIn,fkOut];
+    }
 
     /* ── Size Checker (오버사이즈 검지) : 견적 항목 — 컨베이어 상부 게이트 ── */
     {
@@ -3154,10 +3248,12 @@ const GL3D = {
     const hex=n=>"#"+n.toString(16).padStart(6,"0");
     const leg=document.getElementById("simLegend");
     if(leg) leg.innerHTML=
-      `<span><i style="background:${hex(mood.frame)}"></i>랙 (${TL[D.d.temp]||"상온"})</span>`+
-      `<span><i style="background:#9a6b35"></i>보관 파렛트</span>`+
-      `<span><i style="background:#f08c28"></i>${D.sysKey==="stc"?"스태커크레인":"셔틀"}</span>`+
-      `<span><i style="background:#8b96ab"></i>리프트</span>`+
+      `<span><i style="background:${hex(this.COL.post)}"></i>랙 기둥</span>`+
+      `<span><i style="background:${hex(this.COL.beam)}"></i>랙 빔</span>`+
+      `<span><i style="background:${hex(this.COL.pallet)}"></i>보관 파렛트</span>`+
+      `<span><i style="background:${hex(this.COL.shuttleY)}"></i>${D.sysKey==="stc"?"스태커크레인":"4-Way 셔틀"}</span>`+
+      `<span><i style="background:${hex(this.COL.lifter)}"></i>리프트</span>`+
+      `<span><i style="background:${hex(this.COL.agf)}"></i>지게차</span>`+
       (D.sysKey==="hybrid"?`<span><i style="background:#d35242"></i>무인지게차</span>`:"");
     const note=document.getElementById("simNote");
     if(note){
