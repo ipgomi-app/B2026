@@ -2489,7 +2489,10 @@ const GL3D = {
     return { d, sysKey, qty, cellW, cellD, cellH, real, lod, exact,
              occ:Math.max(.45, fillRate),
              sBay:bayM, sDF:dF, sDB:dB, sTier, aisles, cellsShown,
-             aisleW:2.0, moduleGap:1.6,
+             // moduleGap은 랙-랙 시공 여유만. 통로(aisleW)와 비슷한 폭을 주면
+             // 화면에서 통로처럼 보여 "통로 N열" 캡션과 눈에 보이는 틈 개수가 어긋난다.
+             // 실제 딥레인 창고도 랙 블록을 맞대어 배치하므로 0에 가깝게 둔다.
+             aisleW:2.0, moduleGap:0.15,
              rackW:bayM*cellW, rackH:sTier*cellH,
              shown:{bay:bayM,dF,dB,tier:sTier} };
   },
@@ -2501,6 +2504,10 @@ const GL3D = {
     const w=cv.clientWidth||360, h=cv.clientHeight||340;
     this.renderer=new T.WebGLRenderer({canvas:cv, antialias:true});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    // 사실적 계조 — ACES 톤매핑 + sRGB 출력
+    this.renderer.toneMapping=T.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure=1.05;
+    this.renderer.outputColorSpace=T.SRGBColorSpace;
     this.renderer.setSize(w,h,false);
     const gl=this.renderer.getContext(); if(!gl) throw new Error("no WebGL");
 
@@ -2563,7 +2570,7 @@ const GL3D = {
     // 바닥 (콘크리트)
     const floorW=rackW+16, floorD=totalD+14;
     const floor=new T.Mesh(this.geo(new T.PlaneGeometry(floorW,floorD)),
-      this.mat({color:C.floor, roughness:.92, metalness:.05}));
+      this.mat({color:C.floor, roughness:.68, metalness:.08}));
     floor.rotation.x=-Math.PI/2;
     floor.position.set(rackW/2-1, 0, totalD/2-2);
     floor.receiveShadow=shadow;
@@ -2674,7 +2681,7 @@ const GL3D = {
     const palG=this.geo(new T.BoxGeometry(cellW*0.82, 0.11, cellD*0.82));
     const boxG=this.geo(new T.BoxGeometry(cellW*0.78, cellH*0.62, cellD*0.78));
     const palM=this.mat({color:C.pallet, roughness:.85});
-    const boxM=this.mat({color:mood.cargo, roughness:.6, metalness:.02});
+    const boxM=this.mat({color:mood.cargo, roughness:.42, metalness:.04});
     const cap=6000;
     const cellsShown=sBay*(sDF+sDB)*sTier;
     const fillN=Math.min(cap, Math.round(cellsShown*D.occ));
@@ -2712,7 +2719,7 @@ const GL3D = {
       // ② 각 단 딥레인 주행레일 (초록) — 셀 양옆을 따라 깊이 방향
       const deepRailG=this.geo(new T.BoxGeometry(0.08,0.05,cellD));
       let cnt=0; blocks.forEach(b=>{ cnt+=sTier*(sBay+1)*b.deep; });
-      const cap=Math.min(cnt, 5000);
+      const cap=Math.min(cnt, 2600);
       const deepRails=new T.InstancedMesh(deepRailG, runM, Math.max(1,cap));
       let di2=0;
       outerRail:
@@ -2725,7 +2732,7 @@ const GL3D = {
       // ③ 교차(횡)레일 (빨강) — Bay 경계마다 폭 방향으로 가로질러 4방향 전환점 표시
       const crossG2=this.geo(new T.BoxGeometry(cellW,0.05,0.075));
       let cn=0; blocks.forEach(b=>{ cn+=sTier*sBay*(b.deep+1); });
-      const ccap=Math.min(cn, 4000);
+      const ccap=Math.min(cn, 2000);
       const crossRails=new T.InstancedMesh(crossG2, crossM, Math.max(1,ccap));
       let ci2=0;
       outerCross:
@@ -2956,6 +2963,46 @@ const GL3D = {
       });
     }
 
+    /* ── 입고/출고 구역 표기 — 바닥 존 + 서 있는 사이니지 ── */
+    {
+      // 캔버스로 한글 라벨 텍스처 생성
+      const mkSign=(text, bg, w=2.6, h=0.8)=>{
+        const cv=document.createElement("canvas"); cv.width=512; cv.height=160;
+        const cx=cv.getContext("2d");
+        cx.fillStyle=bg; cx.fillRect(0,0,512,160);
+        cx.fillStyle="#FFFFFF"; cx.font="bold 92px 'Noto Sans KR',sans-serif";
+        cx.textAlign="center"; cx.textBaseline="middle";
+        cx.fillText(text, 256, 84);
+        const tex=new T.CanvasTexture(cv); tex.colorSpace=T.SRGBColorSpace;
+        this.track(tex);
+        const m=new T.MeshBasicMaterial({map:tex, side:T.DoubleSide}); this.track(m);
+        const pl=new T.Mesh(this.geo(new T.PlaneGeometry(w,h)), m);
+        return pl;
+      };
+      const mkPost=(x,z,label,bg,rotY)=>{
+        const g2=new T.Group();
+        const pole=new T.Mesh(this.geo(new T.BoxGeometry(0.09,2.5,0.09)),
+          this.mat({color:0x8894AB, roughness:.6, metalness:.4}));
+        pole.position.y=1.25; g2.add(pole);
+        const sign=mkSign(label,bg); sign.position.y=2.62; g2.add(sign);
+        const back=mkSign(label,bg); back.position.y=2.62; back.rotation.y=Math.PI; g2.add(back);
+        g2.position.set(x,0,z); g2.rotation.y=rotY||0;
+        return g2;
+      };
+      // 바닥 존 마킹 (입고=초록 / 출고=주황)
+      const zone=(x,z,w,d,col)=>{
+        const m=new T.Mesh(this.geo(new T.PlaneGeometry(w,d)),
+          this.mat({color:col, roughness:.95, transparent:true, opacity:0.30, depthWrite:false}));
+        m.rotation.x=-Math.PI/2; m.position.set(x,0.02,z); G.add(m);
+      };
+      const zIn = aisleY+aisleW/2-convLen-1.6;
+      zone(-2.6, zIn, 5.0, 4.2, 0x35C05A);
+      G.add(mkPost(-5.6, zIn, "입　고", "#1E7A3C"));
+      const zOut = totalD*0.62;
+      zone(rackW+4.2, zOut, 4.6, 5.0, 0xE8791F);
+      G.add(mkPost(rackW+6.9, zOut, "출　고", "#B05512", -Math.PI/2));
+    }
+
     /* ── 천장 트러스 + 매달린 조명 (창고 실내 깊이감) ── */
     {
       const ceilY=rackH+3.4;
@@ -3062,8 +3109,8 @@ const GL3D = {
     apB.position.y=0.35; ap.add(apB);
     ap.visible=false; G.add(ap);
     this.actors.animPallet=ap;
-    // 입고 컨베이어 대기 파렛트 5매 (연속 흐름 연출)
-    for(let i=0;i<5;i++){
+    // 입고 컨베이어 대기 파렛트 3매 (간격 있는 자연스러운 흐름)
+    for(let i=0;i<3;i++){
       const q=new T.Group();
       q.add(new T.Mesh(palG, palM));
       const qb=new T.Mesh(this.geo(new T.BoxGeometry(cellW*0.72, cellH*0.5, cellD*0.72)), boxM);
@@ -3499,6 +3546,17 @@ const GL3D = {
     this.render();
   },
   ease(t){ return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; },
+  /* 설비 이동 곡선 — 실제 반송기기처럼 천천히 출발해 순항하다 부드럽게 정지.
+     가·감속 구간을 각 22%로 두고 가운데는 등속. ease보다 기계 움직임에 가깝다. */
+  sCurve(t){
+    t=Math.max(0,Math.min(1,t));
+    const a=0.22, d=0.22, cLen=1-a-d;
+    const vMax=1/(cLen+(a+d)/2);
+    if(t<a) return vMax*t*t/(2*a);
+    if(t<a+cLen) return vMax*(a/2+(t-a));
+    const td=t-(a+cLen);
+    return vMax*(a/2+cLen+td-td*td/(2*d));
+  },
 
   /* 데모 루프 20초 — 실제 설비 속도감에 맞춰 느리게, 동작 사이에 정지(dwell)를 둬
      각 공정이 눈에 읽히도록 한다. (기존 9초는 너무 빨라 공정 구분이 안 됨) */
@@ -3516,7 +3574,7 @@ const GL3D = {
     const sh=ac.shuttles[0]||null;
     ap.visible=true;
     if(t<P.convEnd){                                  // 입고 컨베이어 이송
-      const k=this.ease(t/P.convEnd);
+      const k=this.sCurve(t/P.convEnd);
       ap.position.set(A.convStart.x, A.convStart.y, lerp(A.convStart.z,A.convEnd.z,k));
       if(ac.carriage) ac.carriage.position.y=0.6;
       if(sh) sh.position.x=A.railFromX;
@@ -3527,7 +3585,7 @@ const GL3D = {
       if(sh) sh.position.x=A.railFromX;
     }
     else if(t<P.liftEnd){                             // 리프트 상승
-      const k=this.ease((t-P.dockDwell)/(P.liftEnd-P.dockDwell));
+      const k=this.sCurve((t-P.dockDwell)/(P.liftEnd-P.dockDwell));
       const y=lerp(A.convStart.y, A.liftTopY, k);
       ap.position.set(A.convEnd.x, y, A.convEnd.z);
       if(ac.carriage) ac.carriage.position.y=y-0.12;
@@ -3539,21 +3597,21 @@ const GL3D = {
       if(sh){ sh.position.x=A.railFromX; sh.position.y=A.liftTopY-0.72; sh.position.z=A.railZ; }
     }
     else if(t<P.railEnd){                             // 셔틀 통로 주행
-      const k=this.ease((t-P.handoff)/(P.railEnd-P.handoff));
+      const k=this.sCurve((t-P.handoff)/(P.railEnd-P.handoff));
       const x=lerp(A.railFromX, A.railToX, k);
       ap.position.set(x, A.liftTopY, A.railZ);
       if(sh){ sh.position.x=x; sh.position.y=A.liftTopY-0.72; sh.position.z=A.railZ; }
       if(ac.carriage) ac.carriage.position.y=A.liftTopY-0.12;
     }
     else if(t<P.depositEnd){                          // 딥레인 적입
-      const k=this.ease((t-P.railEnd)/(P.depositEnd-P.railEnd));
+      const k=this.sCurve((t-P.railEnd)/(P.depositEnd-P.railEnd));
       const z=lerp(A.railZ, A.dropZ, k);
       ap.position.set(A.railToX, A.liftTopY, z);
       if(sh){ sh.position.x=A.railToX; sh.position.z=A.railZ; }
       if(ac.carriage) ac.carriage.position.y=A.liftTopY-0.12;
     }
     else {                                            // 셔틀 복귀 + 리프트 하강
-      const k=this.ease((t-P.depositEnd)/(L-P.depositEnd));
+      const k=this.sCurve((t-P.depositEnd)/(L-P.depositEnd));
       ap.visible=false;
       if(sh) sh.position.x=lerp(A.railToX, A.railFromX, k);
       if(ac.carriage) ac.carriage.position.y=lerp(A.liftTopY-0.12, 0.6, k);
@@ -3566,7 +3624,7 @@ const GL3D = {
       const rate=1/(L*(1.0+0.22*i));                  // 셔틀마다 다른 주기
       const ph=(t*rate + i*0.31)%1;
       const tri=ph<0.5 ? ph*2 : (1-ph)*2;
-      s.position.x=home.x + (this.ease(tri)-0.5)*span;
+      s.position.x=home.x + (this.sCurve(tri)-0.5)*span;
       s.position.z=home.z;
       // 셔틀이 파렛트를 싣고 다니는 구간 (왕복 중 절반)
       const carry=ac.shuttleLoad&&ac.shuttleLoad[i];
@@ -3574,17 +3632,33 @@ const GL3D = {
         carry.position.set(s.position.x, s.position.y+0.52, s.position.z); }
     }
 
-    /* ── ③ 입고 컨베이어 대기 파렛트 흐름 (느리게, 간격 유지) ── */
+    /* ── ③ 입고 컨베이어 대기 파렛트 3매 — 등속 이송 + 간헐 정지(축적 컨베이어) ── */
     const cp=ac.convPallets;
     for(let i=0;i<cp.length;i++){
-      const ph=(t/(L*0.42) + i/cp.length)%1;
+      const ph=(t/(L*0.5) + i/cp.length)%1;
+      // 롤러 컨베이어는 등속에 가깝고, 앞이 막히면 잠깐 멈춘다
+      const hold=0.14;                       // 구간 끝에서 대기
+      const pp = ph<1-hold ? ph/(1-hold) : 1;
       cp[i].visible=true;
       cp[i].position.set(A.convStart.x, A.convStart.y,
-        lerp(A.convStart.z-2.0, A.convEnd.z-1.0, ph));
+        lerp(A.convStart.z-2.4, A.convEnd.z-1.1, pp));
+      // 롤러 진동 (미세)
+      cp[i].position.y = A.convStart.y + Math.sin(t*22+i*2.1)*0.006;
     }
 
-    /* ── ④ 턴테이블 회전 ── */
-    if(ac.turntable) ac.turntable.rotation.y = t*0.55;
+    /* ── ④ 턴테이블 — 파렛트 통과 시점에만 90° 회전 ── */
+    if(ac.turntable){
+      const tp=(t%(L*0.5))/(L*0.5);
+      ac.turntable.rotation.y = tp<0.55 ? 0 : (Math.PI/2)*this.sCurve((tp-0.55)/0.30);
+    }
+
+    /* ── ⑤ 미세 동작 — 주행 진동·LED 점멸로 '살아있는' 느낌 ── */
+    ac.shuttles.forEach((s,i)=>{
+      s.position.y = (s.userData.baseY!==undefined? s.userData.baseY : (s.userData.baseY=s.position.y))
+                     + Math.sin(t*17+i*1.7)*0.008;
+      s.rotation.z = Math.sin(t*11+i*2.3)*0.004;     // 주행 롤링
+    });
+    if(ac.carriage) ac.carriage.rotation.z = Math.sin(t*9)*0.002;
 
     /* ── ⑤ 시스템별 고유 동작 ── */
     if(sys==="stc" && ac.crane){
