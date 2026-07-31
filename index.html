@@ -2570,17 +2570,80 @@ const GL3D = {
     let pi=0, ri=0;
     blocks.forEach(b=>{
       for(let i=0;i<=sBay;i++) for(let jj=0;jj<=Math.floor(b.deep/2);jj++){
-        m4.setPosition(i*cellW, (rackH+0.25)/2, b.z0+Math.min(b.deep*cellD, jj*2*cellD));
+        m4.makeTranslation(i*cellW, (rackH+0.25)/2, b.z0+Math.min(b.deep*cellD, jj*2*cellD));
         posts.setMatrixAt(pi++, m4);
       }
       for(let t=1;t<=sTier;t++) for(let jd=0;jd<=b.deep;jd++){
-        m4.setPosition(rackW/2, t*cellH-0.06, b.z0+jd*cellD);
+        m4.makeTranslation(rackW/2, t*cellH-0.06, b.z0+jd*cellD);
         rails.setMatrixAt(ri++, m4);
       }
     });
     posts.count=pi; rails.count=ri;
     posts.castShadow=shadow; rails.castShadow=shadow;
     G.add(posts,rails); this.track(posts); this.track(rails);
+
+    /* ── Bracing (브레이싱) : 랙 측면 대각 보강재 — 견적 'Storage Rack 설비' 구성품 ── */
+    {
+      const braceLen=Math.sqrt(Math.pow(cellD*2,2)+Math.pow(cellH,2));
+      const braceG=this.geo(new T.BoxGeometry(0.05, braceLen, 0.05));
+      const braceM=this.mat({color:C.beam, roughness:.55, metalness:.4});
+      const ends=[]; blocks.forEach(b=>{ ends.push({b,x:0},{b,x:sBay}); });
+      const braces=new T.InstancedMesh(braceG, braceM, Math.max(1, ends.length*sTier*Math.ceil(sDF/2)*2));
+      let bi=0; const q=new T.Quaternion(), v=new T.Vector3(1,1,1), pos=new T.Vector3();
+      ends.forEach(({b,x})=>{
+        for(let t=0;t<sTier;t++) for(let jj=0;jj<Math.floor(b.deep/2);jj++){
+          for(const dir of [1,-1]){
+            if(bi>=braces.count) break;
+            const ang=Math.atan2(cellD*2, cellH)*dir;
+            q.setFromAxisAngle(new T.Vector3(1,0,0), ang);
+            pos.set(x*cellW, t*cellH+cellH/2, b.z0+jj*2*cellD+cellD);
+            m4.compose(pos,q,v); braces.setMatrixAt(bi++, m4);
+          }
+        }
+      });
+      braces.count=bi; if(bi>0){ G.add(braces); this.track(braces); }
+    }
+
+    /* ── 통로발판 + 안전난간 : 견적 '주행통로 Structure' 구성품 ── */
+    if(sTier>1){
+      const wkG=this.geo(new T.BoxGeometry(rackW+1.0, 0.05, 0.55));
+      const wkM=this.mat({color:0x6E7B93, roughness:.7, metalness:.35});
+      const rlG=this.geo(new T.BoxGeometry(rackW+1.0, 0.045, 0.045));
+      const rlM=this.mat({color:0xE0B341, roughness:.6, metalness:.3});   // 안전난간(황색)
+      const nW=aisles*(sTier-1), nR=nW*2;
+      const walks=new T.InstancedMesh(wkG,wkM,Math.max(1,nW));
+      const rails2=new T.InstancedMesh(rlG,rlM,Math.max(1,nR));
+      let wi=0, ri2=0;
+      for(let m=0;m<aisles;m++) for(let t=1;t<sTier;t++){
+        const z=aisleZ(m)-aisleW*0.34, y=t*cellH;
+        m4.makeTranslation(rackW/2, y, z); walks.setMatrixAt(wi++, m4);
+        m4.makeTranslation(rackW/2, y+0.45, z-0.26); rails2.setMatrixAt(ri2++, m4);
+        m4.makeTranslation(rackW/2, y+0.90, z-0.26); rails2.setMatrixAt(ri2++, m4);
+      }
+      walks.count=wi; rails2.count=ri2;
+      walks.castShadow=shadow;
+      G.add(walks,rails2); this.track(walks); this.track(rails2);
+    }
+
+    /* ── 점검계단 : 견적 'Storage Rack 설비' 구성품 (랙 단부 접근 계단) ── */
+    if(sTier>1){
+      const stepN=Math.min(24, Math.round(rackH/0.22));
+      const stG=this.geo(new T.BoxGeometry(0.95,0.045,0.26));
+      const stM=this.mat({color:0x7B879C, roughness:.7, metalness:.35});
+      const stairs=new T.InstancedMesh(stG,stM,stepN);
+      for(let i=0;i<stepN;i++){
+        m4.makeTranslation(rackW+1.5, (i+1)*(rackH/stepN), totalD*0.5 - i*0.26);
+        stairs.setMatrixAt(i,m4);
+      }
+      G.add(stairs); this.track(stairs);
+      // 계단 난간
+      const hG=this.geo(new T.BoxGeometry(0.05, Math.hypot(rackH, stepN*0.26), 0.05));
+      const hM=this.mat({color:0xE0B341, roughness:.6});
+      const hand=new T.Mesh(hG,hM);
+      hand.position.set(rackW+1.98, rackH/2+0.5, totalD*0.5-stepN*0.13);
+      hand.rotation.x=Math.atan2(stepN*0.26, rackH);
+      G.add(hand);
+    }
 
     // ---- 보관 파렛트 + 화물 (점유율 반영) ----
     const palG=this.geo(new T.BoxGeometry(cellW*0.82, 0.11, cellD*0.82));
@@ -2598,8 +2661,8 @@ const GL3D = {
       if(fi>=fillN) break outer;
       if((i*7+jd*3+t*5)%6===5) continue;                 // 빈 셀 산포
       const x=i*cellW+cellW/2, z=b.z0+jd*cellD+cellD/2, y=t*cellH;
-      m4.setPosition(x, y+0.055, z); pallets.setMatrixAt(fi,m4);
-      m4.setPosition(x, y+0.11+cellH*0.31, z); boxes.setMatrixAt(fi,m4);
+      m4.makeTranslation(x, y+0.055, z); pallets.setMatrixAt(fi,m4);
+      m4.makeTranslation(x, y+0.11+cellH*0.31, z); boxes.setMatrixAt(fi,m4);
       fi++;
     }
     pallets.count=fi; boxes.count=fi;
@@ -2682,6 +2745,100 @@ const GL3D = {
     cg.add(rolls); this.track(rolls);
     cg.position.set(-1.15, 0, aisleY+aisleW/2-convLen/2-1.2);
     G.add(cg); this.actors.conv={group:cg, len:convLen};
+
+    /* ── Size Checker (오버사이즈 검지) : 견적 항목 — 컨베이어 상부 게이트 ── */
+    {
+      const gm=this.mat({color:0xE0B341, roughness:.55, metalness:.35});
+      const colG=this.geo(new T.BoxGeometry(0.10,1.55,0.10));
+      const zSC=aisleY+aisleW/2-convLen+0.9;
+      [-0.62,0.62].forEach(dx=>{
+        const c1=new T.Mesh(colG,gm); c1.position.set(-1.15+dx,0.78,zSC); c1.castShadow=shadow; G.add(c1);
+      });
+      const top=new T.Mesh(this.geo(new T.BoxGeometry(1.45,0.10,0.10)), gm);
+      top.position.set(-1.15,1.58,zSC); G.add(top);
+      // 검지 센서 (적색)
+      const sen=new T.Mesh(this.geo(new T.BoxGeometry(0.10,0.10,0.10)),
+        this.mat({color:0xE05252, emissive:0x8a1f1f, roughness:.4}));
+      sen.position.set(-1.15+0.62,1.30,zSC); G.add(sen);
+    }
+    /* ── Loading Guide (파렛트 정렬 가이드) : 견적 항목 ── */
+    {
+      const lgM=this.mat({color:0x8894AB, roughness:.6, metalness:.4});
+      const zLG=aisleY+aisleW/2-convLen+2.4;
+      [-0.68,0.68].forEach(dx=>{
+        const g2=new T.Mesh(this.geo(new T.BoxGeometry(0.09,0.55,1.5)), lgM);
+        g2.position.set(-1.15+dx,0.62,zLG); g2.castShadow=shadow; G.add(g2);
+      });
+    }
+
+    /* ── 안전 펜스 (설비 외곽) + 바닥 통행선 : 현장 필수 안전설비 ── */
+    {
+      const fh=1.85;
+      const fM=this.mat({color:0xE0B341, roughness:.65, metalness:.25});
+      const postFG=this.geo(new T.BoxGeometry(0.07,fh,0.07));
+      const x0=-3.4, x1=rackW+3.0, z0=-3.6, z1=totalD+1.6;
+      const per=[]; const step=2.6;
+      for(let x=x0;x<=x1;x+=step){ per.push([x,z0]); per.push([x,z1]); }
+      for(let z=z0;z<=z1;z+=step){ per.push([x0,z]); per.push([x1,z]); }
+      const fence=new T.InstancedMesh(postFG,fM,per.length);
+      per.forEach(([x,z],i)=>{ m4.makeTranslation(x,fh/2,z); fence.setMatrixAt(i,m4); });
+      G.add(fence); this.track(fence);
+      // 상·하 가로바 4면
+      const barM=fM;
+      [[(x0+x1)/2,z0,x1-x0,0],[(x0+x1)/2,z1,x1-x0,0],
+       [x0,(z0+z1)/2,z1-z0,1],[x1,(z0+z1)/2,z1-z0,1]].forEach(([cx,cz,len,rot])=>{
+        [0.75,1.55].forEach(hy=>{
+          const bar=new T.Mesh(this.geo(new T.BoxGeometry(len,0.05,0.05)), barM);
+          bar.position.set(cx,hy,cz); if(rot) bar.rotation.y=Math.PI/2; G.add(bar);
+        });
+      });
+      // 바닥 통행 안전선 (황색)
+      const lineM=this.mat({color:0xD8B24A, roughness:.9});
+      [z0+0.9, z1-0.9].forEach(z=>{
+        const ln=new T.Mesh(this.geo(new T.PlaneGeometry(x1-x0-1.5,0.16)), lineM);
+        ln.rotation.x=-Math.PI/2; ln.position.set((x0+x1)/2,0.015,z); G.add(ln);
+      });
+    }
+
+    /* ── 천장 트러스 + 매달린 조명 (창고 실내 깊이감) ── */
+    {
+      const ceilY=rackH+3.4;
+      // 트러스 보 (깊이 방향으로 일정 간격)
+      const trussM=this.mat({color:0x39435C, roughness:.8, metalness:.3});
+      const rows=Math.max(2,Math.round(totalD/8));
+      const trussG=this.geo(new T.BoxGeometry(rackW+9,0.22,0.22));
+      const truss=new T.InstancedMesh(trussG,trussM,rows);
+      for(let j=0;j<rows;j++){
+        m4.makeTranslation(rackW/2-1, ceilY, (j+0.5)*totalD/rows);
+        truss.setMatrixAt(j,m4);
+      }
+      G.add(truss); this.track(truss);
+      // 조명 (트러스 바로 아래에 매달림)
+      const lampM=this.mat({color:0xEDF3FF, emissive:0xAFC6EA, emissiveIntensity:.55, roughness:.45});
+      const lampG=this.geo(new T.BoxGeometry(1.9,0.09,0.30));
+      const rodM=this.mat({color:0x39435C, roughness:.8});
+      const rodG=this.geo(new T.BoxGeometry(0.04,0.34,0.04));
+      const cols=Math.max(2,Math.round(rackW/9));
+      const lamps=new T.InstancedMesh(lampG,lampM,cols*rows);
+      const rods =new T.InstancedMesh(rodG,rodM,cols*rows*2);
+      let li=0, di=0;
+      for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){
+        const x=(i+0.5)*rackW/cols, z=(j+0.5)*totalD/rows;
+        m4.makeTranslation(x, ceilY-0.45, z); lamps.setMatrixAt(li++, m4);
+        [-0.7,0.7].forEach(dx=>{ m4.makeTranslation(x+dx, ceilY-0.20, z); rods.setMatrixAt(di++, m4); });
+      }
+      G.add(lamps,rods); this.track(lamps); this.track(rods);
+    }
+
+    /* ── WCS 운전실 (제어반 + 조작 데스크) : 견적 '입/출고 설비_제어' 가시화 ── */
+    {
+      const panel=new T.Mesh(this.geo(new T.BoxGeometry(1.9,2.05,0.65)),
+        this.mat({color:0x46536B, roughness:.55, metalness:.45}));
+      panel.position.set(-4.3, 1.03, totalD*0.32); panel.castShadow=shadow; G.add(panel);
+      const scr=new T.Mesh(this.geo(new T.PlaneGeometry(1.25,0.72)),
+        this.mat({color:0x0F2340, emissive:0x2E6BD0, emissiveIntensity:.75, roughness:.35}));
+      scr.position.set(-3.96, 1.42, totalD*0.32); scr.rotation.y=Math.PI/2; G.add(scr);
+    }
 
     // ---- 시스템별 추가 ----
     if(sysKey==="stc"){
