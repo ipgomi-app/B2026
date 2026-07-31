@@ -447,13 +447,17 @@ body.fs-lock{overflow:hidden}
           <div class="roi-panel-inner">
             <div class="intro-list">
               <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>국내 최초 셔틀랙 자동창고 · 냉동·냉장 고밀도 · 결로·제상 설계</span><a class="iv" href="https://youtu.be/xzMS0WD3L-Q" target="_blank" rel="noopener">▶ 대표 영상</a></div>
-              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 파렛트당 1.5t 적재 · 리프트 절감·확장성</span><a class="iv" href="https://youtu.be/k1Yhm2fbgD4" target="_blank" rel="noopener">▶ 대표 영상</a></div>
+              <div class="isys"><b>4-Way Shuttle</b><span>전후좌우 4방향 주행 · 파렛트당 1.5t 적재 · 리프트 절감·확장성</span><a class="iv" href="https://youtu.be/k1Yhm2fbgD4" target="_blank" rel="noopener">▶ 대표 영상</a><a class="iv" href="https://www.youtube.com/shorts/-P2G_wDHnZk" target="_blank" rel="noopener">▶ 쇼츠</a></div>
               <div class="isys"><b>Stacker Crane AS/RS</b><span>최대 30m급 고단 · 소품종 대량·장기보관</span><a class="iv" href="https://youtu.be/MLz6X1eK5no" target="_blank" rel="noopener">▶ 대표 영상</a></div>
               <div class="isys"><b>Mini Shuttle · GTP</b><span>박스·토트 단위 · 다품종 피킹 생산성</span><a class="iv" href="https://youtu.be/XFRkj8hrS3Y" target="_blank" rel="noopener">▶ 대표 영상</a></div>
-              <div class="isys"><b>EMS · 무인지게차 AGF</b><span>자체개발 EMS 반송 시스템 · 단계적 자동화 진입</span><a class="iv" href="https://www.youtube.com/@logisallgroup/shorts" target="_blank" rel="noopener">▶ 로지스올 쇼츠</a></div>
+              <div class="isys"><b>무인지게차 AGF · AMR</b><span>LOGIQ 자율주행 이송 (최대 1.5t) · 단계적 자동화 진입</span><a class="iv" href="https://www.youtube.com/shorts/4WLB5J8pMqo" target="_blank" rel="noopener">▶ 쇼츠</a></div>
+              <div class="isys"><b>상하차 자동화</b><span>자동 상하차 로봇 · 하역 인력 대체</span><a class="iv" href="https://www.youtube.com/shorts/x_LbCA_UY1s" target="_blank" rel="noopener">▶ 쇼츠</a></div>
+              <div class="isys"><b>로봇 파렛타이저</b><span>자동 적재·팔레타이징 · 반복 중량작업 자동화</span><a class="iv" href="https://www.youtube.com/shorts/q6KXSYNOgjs" target="_blank" rel="noopener">▶ 쇼츠</a></div>
+              <div class="isys"><b>모노레일</b><span>천장 반송 시스템 · 바닥 동선 간섭 없음</span><a class="iv" href="https://www.youtube.com/shorts/EmVdLjH9CdI" target="_blank" rel="noopener">▶ 쇼츠</a></div>
+              <div class="isys"><b>키오스크</b><span>무인 접수·출고 · 현장 운영 무인화</span><a class="iv" href="https://www.youtube.com/shorts/vCLHkuQ_jZI" target="_blank" rel="noopener">▶ 쇼츠</a></div>
             </div>
             <div class="result-actions" style="margin-top:10px">
-              <button class="btn soft wide" style="flex:1 1 100%" onclick="window.open('https://www.youtube.com/@logisallgroup/shorts','_blank')">🎬 로지스올그룹 쇼츠 모아보기</button>
+              <button class="btn soft wide" style="flex:1 1 100%" onclick="window.open('https://www.youtube.com/@logisallgroup/shorts','_blank')">🎬 로지스올그룹 쇼츠 전체보기</button>
             </div>
             <div class="note">KOREA MAT 2026 국제물류산업전에서 4-Way Shuttle·EMS 실환경 시연. 국산 제작으로 구축비 절감과 신속한 부품·AS 대응.</div>
           </div>
@@ -802,13 +806,27 @@ const REFERENCES = [
    채널에 검색 결과가 없으면 고객 앞에서 빈 화면이 뜨기 때문).
    temps 가 있는 영상을 먼저 두어 온도대 일치 영상이 우선 선택되게 한다.
    ============================================================ */
+/* 로지스올그룹(@logisallgroup) 설비별 쇼츠 — 사용자 확인 공식 링크.
+   소개 화면 라인업 · 소개자료 · 솔루션 영상 매칭에서 공통으로 참조한다. */
+const SHORTS = {
+  shuttle4:  {t:"4-Way 셔틀",      url:"https://www.youtube.com/shorts/-P2G_wDHnZk"},
+  agf:       {t:"무인지게차 AGF",   url:"https://www.youtube.com/shorts/4WLB5J8pMqo"},
+  loading:   {t:"상하차 자동화",    url:"https://www.youtube.com/shorts/x_LbCA_UY1s"},
+  palletizer:{t:"로봇 파렛타이저",  url:"https://www.youtube.com/shorts/q6KXSYNOgjs"},
+  monorail:  {t:"모노레일",        url:"https://www.youtube.com/shorts/EmVdLjH9CdI"},
+  kiosk:     {t:"키오스크",        url:"https://www.youtube.com/shorts/vCLHkuQ_jZI"}
+};
+
 const VIDEOS = [
   // ★ 전부 사용자(TSPG 채널 @namuckkim)가 직접 확인해준 공식 영상 — 임의 추가 금지
   {url:"https://youtu.be/BVD1egtVDBQ", t:"냉동 셔틀랙 자동창고",   cats:["mdps","4way"], temps:["frozen","chilled"]},
   {url:"https://youtu.be/k1Yhm2fbgD4", t:"4-Way Shuttle System",  cats:["4way"]},
   {url:"https://youtu.be/xzMS0WD3L-Q", t:"셔틀랙 자동창고 (MDPS)", cats:["mdps"]},
   {url:"https://youtu.be/XFRkj8hrS3Y", t:"미니셔틀 / GTP",         cats:["mini"]},
-  {url:"https://youtu.be/MLz6X1eK5no", t:"스태커크레인 AS/RS",     cats:["stc"]}
+  {url:"https://youtu.be/MLz6X1eK5no", t:"스태커크레인 AS/RS",     cats:["stc"]},
+  // 로지스올그룹 쇼츠 — 하이브리드(셔틀+무인지게차) 추천 시 AGF 영상 사용
+  {url:SHORTS.agf.url,      t:"무인지게차 AGF",  cats:["agf"]},
+  {url:SHORTS.shuttle4.url, t:"4-Way 셔틀 쇼츠", cats:["4wayShort"]}
 ];
 
 /* 레퍼런스 sys 문자열 → 시스템 계열. MDPS를 먼저 검사해
@@ -1664,7 +1682,7 @@ function renderResult(){
   const objChips=OBJECTIONS.map((o,i)=>`<button class="obj-chip" onclick="showObjModal(${i})"><span>${o[0]}</span></button>`).join("");
 
   // 추천 시스템 공식 영상 (solu 카드 버튼용): 온도대 일치 우선 → 시스템 일치 → 채널
-  const soluCat = ({shuttle4way:"4way",mdps:"mdps",stc:"stc",mini:"mini",hybrid:"4way"})[sysKey]||"mdps";
+  const soluCat = ({shuttle4way:"4way",mdps:"mdps",stc:"stc",mini:"mini",hybrid:"agf"})[sysKey]||"mdps";
   const soluVideo = VIDEOS.find(v=>v.cats.includes(soluCat) && v.temps && v.temps.includes(d.temp))
                  || VIDEOS.find(v=>v.cats.includes(soluCat) && !v.temps)
                  || VIDEOS.find(v=>v.cats.includes(soluCat))
@@ -2981,8 +2999,16 @@ const ENG_BASE = "https://engineering.logisall.com";
    ※ 유튜브 채널 내부 영상 목록은 외부에서 열람이 제한되어, 검색으로 확인된 공식 영상과
      공식 블로그(blog.naver.com/logisallgroup)의 자동화 콘텐츠만 수록. 쇼츠는 채널 탭 연결. */
 const RES_GROUP_ENG = [
+  {cat:"로지스올그룹 · 설비별 쇼츠", collapsible:true, items:[
+    {t:"4-Way 셔틀", d:"고밀도 4방향 주행 자동창고", url:SHORTS.shuttle4.url, kind:"yt"},
+    {t:"무인지게차 AGF", d:"LOGIQ 자율주행 이송 (최대 1.5t)", url:SHORTS.agf.url, kind:"yt"},
+    {t:"상하차 자동화", d:"자동 상하차 로봇", url:SHORTS.loading.url, kind:"yt"},
+    {t:"로봇 파렛타이저", d:"자동 적재·팔레타이징", url:SHORTS.palletizer.url, kind:"yt"},
+    {t:"모노레일", d:"천장 반송 시스템", url:SHORTS.monorail.url, kind:"yt"},
+    {t:"키오스크", d:"무인 접수·출고 키오스크", url:SHORTS.kiosk.url, kind:"yt"},
+    {t:"쇼츠 전체보기", d:"@logisallgroup 쇼츠 탭", url:"https://www.youtube.com/@logisallgroup/shorts", kind:"yt"}
+  ]},
   {cat:"로지스올그룹 · 물류자동화 (유튜브)", collapsible:true, items:[
-    {t:"로지스올그룹 쇼츠", d:"@logisallgroup 자동화 현장 쇼츠", url:"https://www.youtube.com/@logisallgroup/shorts", kind:"yt"},
     {t:"피지컬 인터넷", d:"물류 공동화·자동화 비전", url:"https://www.youtube.com/watch?v=msU95RS0smg", kind:"yt"},
     {t:"로지스올컨설팅 (CES)", d:"Consulting·Engineering·Systems", url:"https://www.youtube.com/watch?v=eeuTM35n3oE", kind:"yt"},
     {t:"KCP 동안성 콜드체인 물류센터", d:"콜드체인 설비 구축 현장", url:"https://www.youtube.com/watch?v=cvrJNWUuLYo", kind:"yt"},
