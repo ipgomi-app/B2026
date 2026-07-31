@@ -298,6 +298,16 @@ a.btn{text-decoration:none}
   radial-gradient(120% 90% at 50% 0%, rgba(92,132,230,.10), transparent 60%), var(--bg);
   border:1px solid var(--line);touch-action:pan-y;cursor:grab}
 #simCanvas.dragging{cursor:grabbing}
+.sim-wrap{position:relative}
+.sim-cap{display:none;position:absolute;left:10px;right:10px;bottom:10px;padding:9px 12px;
+  border-radius:10px;background:rgba(10,14,24,.82);border:1px solid rgba(255,255,255,.14);
+  color:#EEF3FA;font-size:12px;line-height:1.5;backdrop-filter:blur(4px)}
+.sim-cap b{color:#7FB2FF;font-size:12.5px}
+.sim-cap span{color:#C6D0E0;font-size:11px}
+#simFS .sim-cap{left:16px;right:16px;bottom:16px;font-size:13.5px}
+#simFS .sim-cap b{font-size:15px}
+#simFS .sim-cap span{font-size:12.5px}
+#simFS .sim-wrap{flex:1;min-height:0;display:flex}
 .sim-bar{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
 .sim-btn{flex:1 1 30%;min-width:0;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
   background:var(--panel-2);color:var(--fg);font-size:11.5px;font-weight:600;cursor:pointer;
@@ -1827,8 +1837,12 @@ function renderResult(){
       <div class="h mono obj-toggle" id="simToggle" onclick="toggleSim3D(this)" style="cursor:pointer">자동창고 3D 시뮬레이션<span class="ln"></span><span class="obj-caret mono">▼</span></div>
       <div id="simPanel" class="roi-panel">
         <div class="roi-panel-inner">
-          <canvas id="simCanvas"></canvas>
+          <div class="sim-wrap">
+            <canvas id="simCanvas"></canvas>
+            <div id="simConceptCap" class="sim-cap"></div>
+          </div>
           <div class="sim-bar">
+            <button class="sim-btn" id="simConcept" onclick="SIM3D.toggleConcept()">📐 개념 설명</button>
             <button class="sim-btn" id="simPlay" onclick="SIM3D.togglePlay()">▶ 데모 재생</button>
             <button class="sim-btn" onclick="SIM3D.fitView()">⟳ 시점 초기화</button>
             <button class="sim-btn" id="simCine" onclick="SIM3D.toggleCinema()">🎬 영상 모드</button>
@@ -2409,7 +2423,7 @@ const SIM2D = {
    [SIM3D-GL] three.js WebGL 렌더러 — 실사풍 자동창고
    ============================================================ */
 const GL3D = {
-  THREE:null, inited:false, speed:1, cinema:false, freeCam:null,
+  THREE:null, inited:false, speed:1, cinema:false, concept:false, freeCam:null,
   renderer:null, scene:null, camera:null, canvas:null,
   target:null, sph:{theta:-0.6, phi:1.02, r:40}, vel:{t:0,p:0},
   raf:0, playing:false, animT:0, lastNow:0, needsRender:false, io:null,
@@ -2680,14 +2694,47 @@ const GL3D = {
     boxes.castShadow=shadow&&fi<=2500;
     G.add(pallets,boxes); this.track(pallets); this.track(boxes);
 
-    // ---- 통로 주행레일 (모듈별) ----
-    const arailG=this.geo(new T.BoxGeometry(rackW+3,0.06,0.1));
-    const arailM=this.mat({color:0x5a6880, metalness:.6, roughness:.35});
-    for(let m=0;m<aisles;m++){
-      const a1=new T.Mesh(arailG,arailM);
-      a1.position.set(rackW/2-0.5, 0.03, modZ(m)+aisleY+aisleW*0.32);
-      const a2=a1.clone(); a2.position.z=modZ(m)+aisleY+aisleW*0.68;
-      G.add(a1,a2);
+    /* ---- 4방향 트랙 그리드 ----
+       개념 영상(youtu.be/0uoVEzir9rE) 기준: 길이방향 주행레일=초록,
+       교차(횡)레일=빨강. 이 격자가 있어야 '4-Way'가 형태로 읽힌다. */
+    const runM  = this.mat({color:0x35C05A, roughness:.4, metalness:.45});  // 주행레일(초록)
+    const crossM= this.mat({color:0xD8443C, roughness:.45, metalness:.4});  // 교차레일(빨강)
+    {
+      // ① 통로 주행레일 (각 통로 바닥)
+      const arailG=this.geo(new T.BoxGeometry(rackW+3,0.07,0.11));
+      for(let m=0;m<aisles;m++){
+        const a1=new T.Mesh(arailG,runM);
+        a1.position.set(rackW/2-0.5, 0.035, modZ(m)+aisleY+aisleW*0.32);
+        const a2=new T.Mesh(arailG,runM);
+        a2.position.set(rackW/2-0.5, 0.035, modZ(m)+aisleY+aisleW*0.68);
+        G.add(a1,a2);
+      }
+      // ② 각 단 딥레인 주행레일 (초록) — 셀 양옆을 따라 깊이 방향
+      const deepRailG=this.geo(new T.BoxGeometry(0.08,0.05,cellD));
+      let cnt=0; blocks.forEach(b=>{ cnt+=sTier*(sBay+1)*b.deep; });
+      const cap=Math.min(cnt, 5000);
+      const deepRails=new T.InstancedMesh(deepRailG, runM, Math.max(1,cap));
+      let di2=0;
+      outerRail:
+      for(const b of blocks) for(let t=0;t<sTier;t++) for(let i=0;i<=sBay;i++) for(let jd=0;jd<b.deep;jd++){
+        if(di2>=cap) break outerRail;
+        m4.makeTranslation(i*cellW, t*cellH+0.045, b.z0+jd*cellD+cellD/2);
+        deepRails.setMatrixAt(di2++, m4);
+      }
+      deepRails.count=di2; G.add(deepRails); this.track(deepRails);
+      // ③ 교차(횡)레일 (빨강) — Bay 경계마다 폭 방향으로 가로질러 4방향 전환점 표시
+      const crossG2=this.geo(new T.BoxGeometry(cellW,0.05,0.075));
+      let cn=0; blocks.forEach(b=>{ cn+=sTier*sBay*(b.deep+1); });
+      const ccap=Math.min(cn, 4000);
+      const crossRails=new T.InstancedMesh(crossG2, crossM, Math.max(1,ccap));
+      let ci2=0;
+      outerCross:
+      for(const b of blocks) for(let t=0;t<sTier;t++) for(let i=0;i<sBay;i++) for(let jd=0;jd<=b.deep;jd++){
+        if(ci2>=ccap) break outerCross;
+        m4.makeTranslation(i*cellW+cellW/2, t*cellH+0.045, b.z0+jd*cellD);
+        crossRails.setMatrixAt(ci2++, m4);
+      }
+      crossRails.count=ci2; G.add(crossRails); this.track(crossRails);
     }
 
     this.actors={shuttles:[], lifter:null, carriage:null, animPallet:null, conv:null,
@@ -2719,6 +2766,17 @@ const GL3D = {
       [[-.42,-.45],[.42,-.45],[-.42,.45],[.42,.45]].forEach(([wx,wz])=>{
         const w=new T.Mesh(wg,wm); w.rotation.x=Math.PI/2;
         w.position.set(wx,0.085,wz); g.add(w);
+      });
+      // 정면 디테일 — 원형 센서 2개 + 초록 LED (개념 영상 0:28 클로즈업 기준)
+      const senM=this.mat({color:0x101317, roughness:.3, metalness:.5});
+      const ledM=this.mat({color:0x3BE06A, emissive:0x1E8F3C, emissiveIntensity:.9, roughness:.35});
+      [-1,1].forEach(sgn=>{
+        [-0.53,0.53].forEach(dz=>{
+          const sen=new T.Mesh(this.geo(new T.CylinderGeometry(0.075,0.075,0.035,12)), senM);
+          sen.rotation.z=Math.PI/2; sen.position.set(sgn*0.585,0.25,dz*0.55); g.add(sen);
+        });
+        const led=new T.Mesh(this.geo(new T.BoxGeometry(0.03,0.05,0.30)), ledM);
+        led.position.set(sgn*0.585,0.34,0); g.add(led);
       });
       return g;
     };
@@ -3126,6 +3184,188 @@ const GL3D = {
     this.cinema=!!on;
     if(!on){ this.freeCam=null; this.applyCam(); this.render(); }
   },
+
+  /* ============ 개념 설명 모드 ============
+     개념 영상(youtu.be/0uoVEzir9rE) 구성 재현:
+     ① 일반 랙이 넓게 퍼진 상태 → ② 안쪽으로 압축(바닥 절감) →
+     ③ 수직 성장(단 쌓기) → ④ 셔틀 4방향 주행(90° 전환)
+     자막에는 이 고객의 실제 산출값(절감 면적·셀 수)을 넣는다. */
+  CLOOP: 22,
+  buildConcept(){
+    const T=this.THREE, D=this.D, C=this.COL, roi=window.roi_data;
+    const g=new T.Group(); g.visible=false; this.scene.add(g); this.conceptG=g;
+    const U=1.5;                       // 개념 모형 1칸 = 1.5m
+    const COLS=6, ROWS=4;              // 일반 랙 6열 × 4행 = 24 유닛
+    const palM=this.mat({color:C.pallet, roughness:.85});
+    const boxM=this.mat({color:0xE9E2D2, roughness:.65});
+    const postM=this.mat({color:C.post, roughness:.5, metalness:.3});
+    const beamM=this.mat({color:C.beam, roughness:.45, metalness:.3});
+    const runM =this.mat({color:0x35C05A, roughness:.4, metalness:.45});
+    const crossM=this.mat({color:0xD8443C, roughness:.45, metalness:.4});
+
+    // 바닥 (절감 면적을 보여주는 판)
+    const fl=new T.Mesh(this.geo(new T.PlaneGeometry(COLS*U*3.2, ROWS*U*3.2)),
+      this.mat({color:0xC9D0DA, roughness:.95}));
+    fl.rotation.x=-Math.PI/2; fl.position.y=-0.01; g.add(fl);
+    const grid=new T.GridHelper(COLS*U*3.2, COLS*3, 0xA8B2C2, 0xBCC5D2);
+    grid.position.y=0.005; g.add(grid); this.track(grid.geometry); this.track(grid.material);
+
+    // 절감되는 바닥 면적 표시판 (압축 후 비워지는 영역)
+    const svGeo=this.geo(new T.PlaneGeometry(COLS*U*2.5+U*2, ROWS*U*2.6+U*2));
+    const sv=new T.Mesh(svGeo, this.mat({color:0xE8574C, roughness:.95,
+      transparent:true, opacity:0.0, depthWrite:false}));
+    sv.rotation.x=-Math.PI/2; sv.position.y=0.012; sv.visible=false;
+    g.add(sv); this.conceptSaved=sv;
+
+    // 유닛(파렛트+화물+프레임) — 압축/성장 애니메이션 대상
+    const units=[];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const u=new T.Group();
+      const pal=new T.Mesh(this.geo(new T.BoxGeometry(U*0.82,0.12,U*0.82)), palM);
+      u.add(pal);
+      const bx=new T.Mesh(this.geo(new T.BoxGeometry(U*0.74,U*0.72,U*0.74)), boxM);
+      bx.position.y=0.42; bx.castShadow=true; u.add(bx);
+      g.add(u);
+      units.push({o:u, r, c,
+        spread:{x:(c-(COLS-1)/2)*U*2.5, z:(r-(ROWS-1)/2)*U*2.6},   // 퍼진 배치(통로 넓음)
+        packed:{x:(c-(COLS-1)/2)*U*1.02, z:(r%2-0.5)*U*1.05}});     // 압축 배치(2행 딥)
+    }
+    this.conceptUnits=units;
+
+    // 랙 프레임(수직 성장 단계에서 등장) — 기둥·빔·레일
+    const frame=new T.Group(); frame.visible=false; g.add(frame);
+    const TIERS=4;
+    for(let c=0;c<=COLS;c++) for(let r=0;r<=1;r++){
+      const p=new T.Mesh(this.geo(new T.BoxGeometry(0.09,TIERS*U*0.95,0.09)), postM);
+      p.position.set((c-COLS/2)*U*1.02, TIERS*U*0.95/2, (r-0.5)*U*1.05);
+      frame.add(p);
+    }
+    for(let t=1;t<=TIERS;t++){
+      for(let r=0;r<=1;r++){
+        const bm=new T.Mesh(this.geo(new T.BoxGeometry(COLS*U*1.02,0.08,0.07)), beamM);
+        bm.position.set(0, t*U*0.95-0.07, (r-0.5)*U*1.05); frame.add(bm);
+      }
+      // 초록 주행레일 + 빨강 교차레일
+      for(let r=0;r<2;r++){
+        const rl=new T.Mesh(this.geo(new T.BoxGeometry(COLS*U*1.02,0.05,0.08)), runM);
+        rl.position.set(0, t*U*0.95-0.02, (r-0.5)*U*1.05*0.55); frame.add(rl);
+      }
+      for(let c=0;c<COLS;c++){
+        const cr=new T.Mesh(this.geo(new T.BoxGeometry(0.07,0.05,U*1.05)), crossM);
+        cr.position.set((c-(COLS-1)/2)*U*1.02, t*U*0.95-0.02, 0); frame.add(cr);
+      }
+    }
+    this.conceptFrame=frame; this.conceptTiers=TIERS; this.conceptU=U; this.conceptCols=COLS;
+
+    // 개념용 셔틀 (4방향 전환 시연)
+    const sh=new T.Group();
+    const body=new T.Mesh(this.geo(new T.BoxGeometry(U*0.8,0.3,U*0.72)),
+      this.mat({color:0xF07C1E, roughness:.45, metalness:.3}));
+    body.position.y=0.2; sh.add(body);
+    [-1,1].forEach(s=>{ const bd=new T.Mesh(this.geo(new T.BoxGeometry(U*0.82,0.1,0.05)),
+      this.mat({color:0x1A1D23, roughness:.6}));
+      bd.position.set(0,0.2,s*U*0.37); sh.add(bd); });
+    const ld=new T.Mesh(this.geo(new T.BoxGeometry(0.04,0.06,0.26)),
+      this.mat({color:0x3BE06A, emissive:0x1E8F3C, emissiveIntensity:.9}));
+    ld.position.set(U*0.41,0.28,0); sh.add(ld);
+    sh.visible=false; g.add(sh); this.conceptShuttle=sh;
+
+    this.conceptInfo={
+      savedPyeong: roi? roi.savedPyeong : 0,
+      cells: roi? roi.targetCells : 0,
+      area: (window.d_data||STATE.data).area||0
+    };
+  },
+
+  conceptTick(t){
+    const g=this.conceptG; if(!g) return;
+    const U=this.conceptU, TI=this.conceptTiers, COLS=this.conceptCols;
+    const E=k=>this.ease(Math.max(0,Math.min(1,k)));
+    const L=(a,b,k)=>a+(b-a)*k;
+    const units=this.conceptUnits, fr=this.conceptFrame, sh=this.conceptShuttle;
+    let cap;
+
+    if(t<4){                                   // ① 일반 랙 — 넓게 퍼진 상태
+      units.forEach(u=>{ u.o.position.set(u.spread.x, 0, u.spread.z); u.o.visible=true; });
+      fr.visible=false; sh.visible=false;
+      cap=["① 현재 · 일반 랙 창고",
+           `파렛트가 넓게 퍼져 통로가 바닥의 대부분을 차지합니다${this.conceptInfo.area?` (현 ${fmt(this.conceptInfo.area)}평)`:""}`];
+    }
+    else if(t<9){                              // ② 고밀도 압축
+      const k=E((t-4)/5);
+      units.forEach(u=>{ u.o.position.set(L(u.spread.x,u.packed.x,k), 0, L(u.spread.z,u.packed.z,k)); });
+      fr.visible=false; sh.visible=false;
+      cap=["② 고밀도 압축 — 통로를 없앤다",
+           `4-Way 셔틀은 랙 안으로 들어가므로 파렛트 사이 통로가 필요 없습니다`+
+           (this.conceptInfo.savedPyeong?` → 약 ${fmt(this.conceptInfo.savedPyeong)}평 절감`:"")];
+    }
+    else if(t<14){                             // ③ 수직 성장
+      const k=E((t-9)/5);
+      units.forEach(u=>{ u.o.position.set(u.packed.x, 0, u.packed.z); });
+      fr.visible=true; fr.scale.set(1, Math.max(0.02,k), 1);
+      // 상단 단에 화물이 채워지는 연출
+      units.forEach((u,i)=>{ const tier=Math.floor(i/(COLS*2));
+        u.o.position.y = tier>0 ? (tier*U*0.95)*k : 0; });
+      sh.visible=false;
+      cap=["③ 수직 확장 — 층고를 쓴다",
+           `압축한 면적 위로 ${TI}단을 쌓아 보관량을 배가합니다`+
+           (this.conceptInfo.cells?` → 권장 ${fmt(this.conceptInfo.cells)} Cells`:"")];
+    }
+    else {                                     // ④ 4방향 주행 (90° 전환)
+      const k=(t-14)/(this.CLOOP-14);
+      units.forEach((u,i)=>{ const tier=Math.floor(i/(COLS*2));
+        u.o.position.set(u.packed.x, tier*U*0.95, u.packed.z); });
+      fr.visible=true; fr.scale.set(1,1,1);
+      sh.visible=true;
+      const y=2*U*0.95+0.06;
+      if(k<0.42){                              // X방향 주행
+        const kk=E(k/0.42);
+        sh.position.set(L(-COLS/2*U*1.02, 0, kk), y, -U*0.52); sh.rotation.y=0;
+      } else if(k<0.58){                       // 교차점에서 90° 회전
+        const kk=E((k-0.42)/0.16);
+        sh.position.set(0, y, -U*0.52); sh.rotation.y=kk*Math.PI/2;
+      } else {                                 // Z방향(딥) 주행
+        const kk=E((k-0.58)/0.42);
+        sh.position.set(0, y, L(-U*0.52, U*0.52, kk)); sh.rotation.y=Math.PI/2;
+      }
+      cap=["④ 4방향 주행 — 전후좌우 자유 이동",
+           `초록 주행레일에서 빨강 교차레일로 90° 전환해 어느 열·어느 딥이든 접근합니다`];
+    }
+    const el=document.getElementById("simConceptCap");
+    if(el && cap) el.innerHTML=`<b>${cap[0]}</b><br><span>${cap[1]}</span>`;
+
+    // 절감 면적 표시판 — 압축으로 비워진 바닥을 붉게 강조
+    if(this.conceptSaved){
+      const sv=this.conceptSaved;
+      if(t<4){ sv.visible=false; }
+      else if(t<9){ sv.visible=true; sv.material.opacity=0.10+0.32*E((t-4)/5); }
+      else { sv.visible=true; sv.material.opacity=0.42; }
+    }
+
+    // 카메라 — 단계별로 부감 → 근접 (압축 효과가 보이도록 충분히 당김)
+    const R = t<4 ? 26 : (t<9 ? L(26,17,E((t-4)/5)) : (t<14 ? 21 : 15));
+    const PH= t<4 ? 0.52 : (t<9 ? L(0.52,0.72,E((t-4)/5)) : (t<14 ? 0.88 : 1.06));
+    const TH= 0.45 + t*0.032;
+    const cy= t<14 ? 1.0 : 2*U*0.95;
+    this.freeCam={ px:R*Math.sin(PH)*Math.sin(TH), py:cy+R*Math.cos(PH), pz:R*Math.sin(PH)*Math.cos(TH),
+                   tx:0, ty:cy*0.7, tz:0 };
+  },
+
+  setConcept(on){
+    this.concept=!!on;
+    if(on){
+      if(!this.conceptG) this.buildConcept();
+      this.conceptG.visible=true; this.world.visible=false;
+      this.setBright(true);
+    } else {
+      if(this.conceptG) this.conceptG.visible=false;
+      if(this.world) this.world.visible=true;
+      this.freeCam=null; this.setBright(false); this.fitView();
+    }
+    const cap=document.getElementById("simConceptCap");
+    if(cap) cap.style.display = on?"block":"none";
+    this.render();
+  },
   /* 밝은 창고 환경 — 영상의 "clean white, bright even lighting" 재현 */
   setBright(on){
     if(!this.scene) return;
@@ -3227,10 +3467,16 @@ const GL3D = {
     if(btn){ btn.classList.add("on"); btn.textContent="⏸ 정지"; }
     const loop=now=>{
       if(!this.playing) return;
-      this.animT=(this.animT+(now-this.lastNow)/1000*(this.speed||1))%this.LOOP;
+      const dt=(now-this.lastNow)/1000*(this.speed||1);
       this.lastNow=now;
-      this.tick(this.animT);
-      if(this.cinema){ this.camTick(this.animT); this.applyCam(); }
+      if(this.concept){
+        this.animT=(this.animT+dt)%this.CLOOP;
+        this.conceptTick(this.animT); this.applyCam();
+      } else {
+        this.animT=(this.animT+dt)%this.LOOP;
+        this.tick(this.animT);
+        if(this.cinema){ this.camTick(this.animT); this.applyCam(); }
+      }
       this.renderer.render(this.scene,this.camera);
       this.raf=requestAnimationFrame(loop);
     };
@@ -3420,6 +3666,8 @@ const GL3D = {
     }
     this.renderer=this.scene=this.camera=this.canvas=null;
     this.D=this.actors=null; this.inited=false;
+    this.conceptG=this.conceptUnits=this.conceptFrame=this.conceptShuttle=this.conceptSaved=null;
+    this.concept=false; this.cinema=false; this.freeCam=null; this._darkBg=null;
   }
 };
 
@@ -3451,11 +3699,28 @@ const SIM3D = {
   togglePlay(){ if(this.engine) this.engine.togglePlay(); },
   stop(){ if(this.engine) this.engine.stop(); },
   fitView(){ if(this.engine) this.engine.fitView(); },
+  /* 개념 설명 모드 — 일반랙 압축 → 수직 확장 → 4방향 주행을 자막과 함께 시연 */
+  toggleConcept(){
+    const e=this.engine;
+    if(!e||!e.setConcept) return;                 // 2D 폴백 미지원
+    const on=!e.concept;
+    if(on && e.cinema) this.cinemaOff();
+    e.animT=0;
+    e.setConcept(on);
+    if(on){ if(!e.playing) e.togglePlay(); }
+    else if(e.playing) e.stop();
+    const b=document.getElementById("simConcept");
+    if(b){ b.textContent = on?"📐 개념 설명 ON":"📐 개념 설명"; b.classList.toggle("on", on); }
+  },
+
   /* 영상 모드 — 공식 영상 샷 구성대로 카메라가 공정을 따라간다 (three 엔진 전용) */
   toggleCinema(){
     const e=this.engine;
     if(!e||!e.setCinema){ return; }              // 2D 폴백은 미지원
     const on=!e.cinema;
+    if(on && e.concept){ e.setConcept(false);
+      const cb=document.getElementById('simConcept');
+      if(cb){ cb.textContent='📐 개념 설명'; cb.classList.remove('on'); } }
     e.setCinema(on);
     if(on){ e.setBright(true); if(!e.playing) e.togglePlay(); }
     else  { e.setBright(false); e.fitView(); }
