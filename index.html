@@ -2719,6 +2719,26 @@ const GL3D = {
       G.add(st);
     }
 
+    // ---- 크기 기준 인물 (키 1.7m) : 규모 차이를 눈으로 알 수 있게 하는 스케일 레퍼런스 ----
+    const mkPerson=()=>{
+      const g=new T.Group();
+      const bodyM=this.mat({color:0xE8B84B, roughness:.75});   // 안전조끼 톤
+      const skinM=this.mat({color:0xD9C3A5, roughness:.8});
+      const legM =this.mat({color:0x2E3646, roughness:.85});
+      const legs=new T.Mesh(this.geo(new T.BoxGeometry(0.34,0.85,0.24)), legM);
+      legs.position.y=0.425; g.add(legs);
+      const torso=new T.Mesh(this.geo(new T.CylinderGeometry(0.20,0.23,0.62,10)), bodyM);
+      torso.position.y=1.16; torso.castShadow=shadow; g.add(torso);
+      const head=new T.Mesh(this.geo(new T.SphereGeometry(0.115,12,10)), skinM);
+      head.position.y=1.60; g.add(head);
+      const hat=new T.Mesh(this.geo(new T.CylinderGeometry(0.135,0.145,0.10,12)),
+        this.mat({color:0xF2F2F2, roughness:.5}));
+      hat.position.y=1.68; g.add(hat);                          // 안전모 → 총 1.7m
+      return g;
+    };
+    const p1=mkPerson(); p1.position.set(-2.6, 0, -1.4); G.add(p1);
+    const p2=mkPerson(); p2.position.set(rackW*0.5, 0, -2.3); p2.rotation.y=0.6; G.add(p2);
+
     // ---- 애니메이션용 파렛트+화물 ----
     const ap=new T.Group();
     const apP=new T.Mesh(palG, palM); ap.add(apP);
@@ -2905,13 +2925,17 @@ const GL3D = {
     const note=document.getElementById("simNote");
     if(note){
       const r=D.real;
+      // 실제로 그려진 격자를 그대로 표기 (모듈 Bay × 통로 수 = 총 Bay)
+      const totBay=D.sBay*D.aisles;
+      const fw=Math.round(D.rackW+6), fd=Math.round(D.aisles*(D.sDF*D.cellD+D.aisleW+D.sDB*D.cellD)+(D.aisles-1)*D.moduleGap+6);
       note.innerHTML=
-        `${fmt(r.bay)}Bay × ${fmt(r.dF+r.dB)}Deep × ${r.tier}단 ≈ <b>${fmt(r.cells)} Cells</b>`+
-        ` · 셔틀 ${D.qty.shuttleQty||0}대 · 리프트 ${D.qty.lifterQty||0}대`+
-        ` · 통로 ${D.aisles}열`+
+        `<b>${fmt(D.cellsShown)} Cells</b> 배치 — 통로 ${D.aisles}열 × (${D.sBay}Bay × ${D.sDF}+${D.sDB}Deep × ${D.sTier}단)`+
+        ` = 총 ${fmt(totBay)}Bay`+
+        `<br>셔틀 ${D.qty.shuttleQty||0}대 · 리프트 ${D.qty.lifterQty||0}대 · 창고 약 ${fw}m × ${fd}m × H${D.rackH.toFixed(1)}m`+
         (D.lod
-          ? ` <span style="color:var(--accent-2)">(표시 축약 — 실제 규모는 위 수치 기준)</span>`
-          : ` <span style="color:var(--accent-2)">· 권장 규모를 실제 축척으로 표시</span>`)+
+          ? ` <span style="color:var(--accent-2)">(표시 축약 — 권장 ${fmt(r.cells)}셀)</span>`
+          : ` <span style="color:var(--accent-2)">· 권장 ${fmt(r.cells)}셀을 실제 축척으로 표시</span>`)+
+        `<br>바닥 격자 1칸 = 2m · 서 있는 작업자(키 1.7m)가 크기 기준입니다.`+
         `<br>드래그 = 회전 · 위아래 드래그 = 시점 높이 · 핀치/휠 = 줌 · 더블탭 = 초기화 · ⛶ 전체화면. 개략 배치 개념도입니다.`;
     }
   },
