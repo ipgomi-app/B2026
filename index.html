@@ -2616,7 +2616,8 @@ const GL3D = {
       G.add(a1,a2);
     }
 
-    this.actors={shuttles:[], lifter:null, carriage:null, animPallet:null, conv:null};
+    this.actors={shuttles:[], lifter:null, carriage:null, animPallet:null, conv:null,
+                 agfs:[], crane:null, convPallets:[], shuttleHome:[]};
 
     // ---- 셔틀 (바디+휠) ----
     const mkShuttle=()=>{
@@ -2644,6 +2645,7 @@ const GL3D = {
         const m=i%aisles;                              // 통로별 분산
         s.position.set(rackW*(0.15+0.7*(i/Math.max(1,n-1))), t*cellH, aisleZ(m));
         G.add(s); this.actors.shuttles.push(s);
+        this.actors.shuttleHome.push({x:s.position.x, y:s.position.y, z:s.position.z});
       }
     }
 
@@ -2690,7 +2692,7 @@ const GL3D = {
         this.mat({color:C.shuttle, roughness:.4}));
       car.position.set(rackW*0.45, rackH*0.45, aisleY+aisleW/2); car.castShadow=shadow;
       G.add(mast,car);
-      this.actors.shuttles.push(car);   // 애니메이션 시 크레인 캐리지 활용
+      this.actors.crane={mast,car};     // 스태커크레인: 마스트 주행 + 캐리지 승강
     }
     if(sysKey==="hybrid"){
       // 평치 스택 + AGF
@@ -2710,6 +2712,7 @@ const GL3D = {
         fork.position.set(0,0.12,-1.15); a.add(fork);
         a.position.set(rackW+5.2, 0, 1.2+i*2.6);
         G.add(a);
+        this.actors.agfs.push({g:a, z0:1.2+i*2.6, x0:rackW+5.2});
       }
     }
     if(sysKey==="mini"){
@@ -2746,6 +2749,15 @@ const GL3D = {
     apB.position.y=0.35; ap.add(apB);
     ap.visible=false; G.add(ap);
     this.actors.animPallet=ap;
+    // 입고 컨베이어 대기 파렛트 3매 (연속 흐름 연출)
+    for(let i=0;i<3;i++){
+      const q=new T.Group();
+      q.add(new T.Mesh(palG, palM));
+      const qb=new T.Mesh(this.geo(new T.BoxGeometry(cellW*0.72, cellH*0.5, cellD*0.72)), boxM);
+      qb.position.y=0.32; q.add(qb);
+      q.visible=false; G.add(q);
+      this.actors.convPallets.push(q);
+    }
 
     // 앵커 (컨베이어→리프트→통로 주행→적입)
     const liftX=-1.15;
@@ -2872,17 +2884,25 @@ const GL3D = {
     if(this.raf){ cancelAnimationFrame(this.raf); this.raf=0; }
     const btn=document.getElementById("simPlay");
     if(btn){ btn.classList.remove("on"); btn.textContent="▶ 데모 재생"; }
-    if(this.actors&&this.actors.animPallet) this.actors.animPallet.visible=false;
+    if(this.actors){
+      if(this.actors.animPallet) this.actors.animPallet.visible=false;
+      (this.actors.convPallets||[]).forEach(q=>q.visible=false);
+      // 셔틀을 초기 위치로 복귀
+      (this.actors.shuttles||[]).forEach((s,i)=>{ const h=(this.actors.shuttleHome||[])[i];
+        if(h) s.position.set(h.x,h.y,h.z); });
+    }
     this.render();
   },
   ease(t){ return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; },
   tick(t){
-    const A=this.anchors, ac=this.actors, ap=ac.animPallet;
+    const A=this.anchors, ac=this.actors, ap=ac.animPallet, D=this.D;
     if(!ap) return;
-    ap.visible=true;
-    const sh=ac.shuttles[0]||null;
     const lerp=(a,b,k)=>a+(b-a)*k;
-    // 0~2.2 컨베이어 → 2.2~4 리프트 상승 → 4~6.5 셔틀 주행 → 6.5~7.5 적입 → 7.5~9 복귀
+    const sys=D.sysKey;
+
+    /* ── ① 메인 스토리라인: 입고 → 리프트 → 셔틀 주행 → 적입 ── */
+    const sh=ac.shuttles[0]||null;
+    ap.visible=true;
     if(t<2.2){ const k=this.ease(t/2.2);
       ap.position.set(A.convStart.x, A.convStart.y, lerp(A.convStart.z,A.convEnd.z,k));
       if(ac.carriage) ac.carriage.position.y=0.6;
@@ -2898,17 +2918,77 @@ const GL3D = {
       const x=lerp(A.railFromX, A.railToX, k);
       ap.position.set(x, A.liftTopY, A.railZ);
       if(sh){ sh.position.x=x; sh.position.y=A.liftTopY-0.72; sh.position.z=A.railZ; }
+      if(ac.carriage) ac.carriage.position.y=A.liftTopY-0.12;   // 상단 대기
     }
     else if(t<7.5){ const k=this.ease((t-6.5)/1);
       const z=lerp(A.railZ, A.dropZ, k);
       ap.position.set(A.railToX, A.liftTopY, z);
       if(sh){ sh.position.x=A.railToX; sh.position.z=A.railZ; }
+      if(ac.carriage) ac.carriage.position.y=A.liftTopY-0.12;
     }
     else { const k=this.ease((t-7.5)/1.5);
       ap.visible=false;
       if(sh) sh.position.x=lerp(A.railToX, A.railFromX, k);
       if(ac.carriage) ac.carriage.position.y=lerp(A.liftTopY-0.12, 0.6, k);
     }
+
+    /* ── ② 나머지 셔틀 동시 가동 (각기 다른 위상으로 자기 통로를 왕복) ── */
+    const span=Math.max(4, D.rackW*0.62);
+    for(let i=1;i<ac.shuttles.length;i++){
+      const s=ac.shuttles[i], home=ac.shuttleHome[i]; if(!home) continue;
+      const ph=(t/9 + i*0.37)%1;                       // 셔틀마다 위상 차
+      const tri=ph<0.5 ? ph*2 : (1-ph)*2;              // 0→1→0 왕복
+      s.position.x=home.x + (this.ease(tri)-0.5)*span;
+      s.position.z=home.z;
+    }
+
+    /* ── ③ 입고 컨베이어 위 대기 파렛트 흐름 ── */
+    const cp=ac.convPallets, convLen=(ac.conv&&ac.conv.len)||6;
+    for(let i=0;i<cp.length;i++){
+      const ph=(t/3 + i/cp.length)%1;
+      cp[i].visible=true;
+      cp[i].position.set(A.convStart.x, A.convStart.y,
+        lerp(A.convStart.z-1.2, A.convEnd.z-1.0, ph));
+    }
+
+    /* ── ④ 시스템별 고유 동작 ── */
+    if(sys==="stc" && ac.crane){
+      // 스태커크레인: 마스트가 레일 위를 주행 + 캐리지 승강 (셔틀 없음)
+      const ph=(t/9)%1, tri=ph<0.5?ph*2:(1-ph)*2;
+      const x=lerp(D.rackW*0.12, D.rackW*0.82, this.ease(tri));
+      ac.crane.mast.position.x=x;
+      ac.crane.car.position.x=x;
+      ac.crane.car.position.y=lerp(1.0, Math.max(1.2,D.rackH-0.8),
+        this.ease((Math.sin(t/9*Math.PI*2)+1)/2));
+    }
+    if(sys==="hybrid" && ac.agfs.length){
+      // 무인지게차: 평치 구역과 랙 사이를 왕복, 포크 승강
+      ac.agfs.forEach((a,i)=>{
+        const ph=(t/9 + i*0.5)%1, tri=ph<0.5?ph*2:(1-ph)*2, k=this.ease(tri);
+        a.g.position.x=lerp(a.x0, a.x0-4.2, k);
+        a.g.position.z=a.z0;
+        a.g.rotation.y=k>0.5?Math.PI:0;
+      });
+    }
+  },
+
+  /* 이 규모가 무엇으로 정해졌는지 — 면적을 바꿔도 안 변하는 이유를 명시 */
+  driverNote(){
+    const D=this.D, roi=window.roi_data, d=D.d;
+    if(!roi) return "";
+    const S='color:var(--accent-2)';
+    if(roi.targetDriver==='precise')
+      return `<span style="${S}">규모 결정: Bay×Deep×Tier 직접 입력값</span>`;
+    if(roi.targetDriver==='stock')
+      return `<span style="${S}">규모 결정: 현 재고 ${fmt(d.stock)}매 × 1.2</span>`
+        + ` — 면적 ${fmt(d.area)}평은 최대 ${fmt(roi.areaCapacity)}셀까지 수용 가능(여유). `
+        + `<b>면적을 늘려도 규모는 그대로</b>이며, 재고·물동량을 바꿔야 변합니다.`;
+    if(roi.targetDriver==='volume')
+      return `<span style="${S}">규모 결정: 월 ${fmt(d.volume)}PLT × 보관 ${roi.storeDays}일 × 1.2</span>`
+        + ` — 면적 ${fmt(d.area)}평은 최대 ${fmt(roi.areaCapacity)}셀 수용(여유). `
+        + `<b>면적을 늘려도 규모는 그대로</b>입니다.`;
+    return `<span style="${S}">규모 결정: 면적 ${fmt(d.area)}평 한도</span>`
+      + ` — 재고·물동량 기준 수요가 공간 한도(${fmt(roi.areaCapacity)}셀)를 넘어 <b>면적이 규모를 제한</b>합니다. 면적을 늘리면 규모가 커집니다.`;
   },
 
   renderMeta(){
@@ -2935,6 +3015,7 @@ const GL3D = {
         (D.lod
           ? ` <span style="color:var(--accent-2)">(표시 축약 — 권장 ${fmt(r.cells)}셀)</span>`
           : ` <span style="color:var(--accent-2)">· 권장 ${fmt(r.cells)}셀을 실제 축척으로 표시</span>`)+
+        `<br>${this.driverNote()}`+
         `<br>바닥 격자 1칸 = 2m · 서 있는 작업자(키 1.7m)가 크기 기준입니다.`+
         `<br>드래그 = 회전 · 위아래 드래그 = 시점 높이 · 핀치/휠 = 줌 · 더블탭 = 초기화 · ⛶ 전체화면. 개략 배치 개념도입니다.`;
     }
