@@ -1067,8 +1067,11 @@ const CAPEX = {
       // 랙 단가/셀 = A × 셀수^-exp : 536→423,500 / 4,256→168,300 을 정확히 재현
       rackA: 6956900, rackExp: 0.44540,   // 실측 2점 완전적합
       aisleA: 0.85748,                    // 실측 2점 완전적합
-      // 셔틀 대수: ceil(단수/2)+1  (2단→2대, 4단→3대)  — 추정(2점 적합)
-      shuttleQty: t => Math.ceil(t/2)+1,
+      // 셔틀 대수 — 4-Way는 리프트로 층간 이동이 가능해 층수가 아니라 '규모(=취급량)'가 결정한다.
+      //   실측 2점: 536셀→2대 / 4,256셀→3대 (규모 8배에 셔틀 1.5배 = 로그 스케일)
+      //   qty = 2 + 0.4826 × ln(셀수/536)   ※ 두 점을 정확히 통과
+      shuttleQty: (t, cells) => Math.max(1, Math.min(8,
+                    Math.round(2 + 0.4826*Math.log(Math.max(1,cells)/536)))),
       calib:["LAE26-0529-Y1","YP-1CAMPUS"]
     },
     "2way":{
@@ -1077,7 +1080,7 @@ const CAPEX = {
       rackA: 8193000, rackExp: 0.44540,   // A는 1점 역산, 지수는 4way 차용 — 추정
       aisleA: 0.60414,
       // 2-Way 셔틀은 층 간 이동 불가 → 층당 1대 (5층→5대)  — 실측(1건) + 물리적 타당
-      shuttleQty: t => Math.max(1,t),
+      shuttleQty: (t, cells) => Math.max(1,t),
       calib:["PROD-2WAY-C1"]
     }
   },
@@ -1122,8 +1125,13 @@ const CAPEX = {
     const tier  = Math.max(1, Math.round(ctx.tiers||1));
     const perHr = Math.max(0, ctx.perHr||0);
 
-    const shuttleQty = M.shuttleQty(tier);
-    const lifterQty  = Math.max(tier<=2?1:2, Math.ceil(perHr/50));
+    // 셔틀: 계열별 규칙(4-Way=규모 기반 / 2-Way=층당 1대) + 처리량 하한(대당 25 PLT/h)
+    const shuttleQty = Math.max(M.shuttleQty(tier, cells), Math.ceil(perHr/25) || 1);
+    // 리프트: 실측 2점(536셀→1대 / 4,256셀→2대)을 통과하는 규모 기반 + 처리량 하한(대당 45 PLT/h)
+    //   qty = 1 + 0.4826 × ln(셀수/536)
+    const lifterQty  = Math.max(1, Math.min(4, Math.max(
+                         Math.round(1 + 0.4826*Math.log(cells/536)),
+                         Math.ceil(perHr/45))));
     const lifterUnit = tier<=2 ? C.lifter2 : C.lifter3;
     const convQty    = 4 * lifterQty;                 // 3건 평균 4/리프트 — 추정
     const convRackQty= lifterQty * tier;              // 3건 정확히 일치 — 실측
@@ -1164,12 +1172,19 @@ const CAPEX = {
       overhead:C.overheadShuttle, excluded:QUOTE_EXCLUDED.shuttle, cells,
       qty:{shuttleQty,lifterQty,convQty,convRackQty,aisleEA,cells,tier,rackUnit},
       basis:[
-        ["셔틀 대수", shuttleQty+"대 ("+tier+"단 기준)", "추정"],
-        ["리프트 대수", lifterQty+"대 ("+(tier<=2?"2단형":"3단형")+" · 시간당 "+fmt(perHr)+" PLT)", "추정"],
-        ["Rack내 컨베이어", convRackQty+"대 (리프트 "+lifterQty+" × "+tier+"단)", "실측"],
-        ["랙 단가", fmt(rackUnit)+"원/셀 (규모 "+fmt(cells)+"셀 반영)", "실측"],
-        ["주행통로", fmt(aisleEA)+" EA × "+fmt(C.aislePerEA)+"원", "실측"],
-        ["WCS", fmt(wcs)+"원 (규모 연동)", "추정"]
+        ["셔틀 대수", shuttleQty+"대 — "+(key==="2way"
+            ? "2-Way는 층간 이동 불가 → 층당 1대 ("+tier+"단)"
+            : "규모 기반 (실적 536셀 2대 / 4,256셀 3대 사이 보간)")
+            +(Math.ceil(perHr/25)>M.shuttleQty(tier,cells) ? " · 시간당 "+fmt(perHr)+"PLT로 증대":""),
+          key==="2way"?"실측":"보간"],
+        ["리프트 대수", lifterQty+"대 ("+(tier<=2?"2단형 5.8m급":"3단형 6.65m급")+") — 실적 536셀 1대 / 4,256셀 2대 기준"
+            +(Math.ceil(perHr/45)>Math.round(1+0.4826*Math.log(cells/536)) ? " · 시간당 "+fmt(perHr)+"PLT로 증대":""), "보간"],
+        ["Rack내 컨베이어", convRackQty+"대 = 리프트 "+lifterQty+" × "+tier+"단 (견적 3건 정확히 일치)", "실측"],
+        ["입출고 컨베이어", convQty+"대 = 리프트당 4대 (견적 3건 평균)", "추정"],
+        ["랙 단가", fmt(rackUnit)+"원/셀 — "+fmt(cells)+"셀 규모 반영 (536셀 423,500 / 4,256셀 168,300 곡선)", "실측"],
+        ["주행통로", fmt(aisleEA)+" EA × "+fmt(C.aislePerEA)+"원 (셀수 연동)", "실측"],
+        ["WCS", fmt(wcs)+"원 (규모 연동 · 견적 3건 회귀)", "추정"],
+        ["부대·간접비", "설치·시운전 "+(C.rateCommission*100).toFixed(1)+"% + 운반 "+(C.rateLogistics*100).toFixed(1)+"% + 관리비·이윤 15%", "실측"]
       ]
     });
   },
@@ -1888,12 +1903,24 @@ function renderResult(){
   $("#btnWorklog").onclick=()=>generateWorklog(d,est,tp,sys,sysKey,roi);
 }
 
+/* 추천 근거 — 실제로 판정에 쓰인 입력값을 그대로 인용해 설명한다
+   (Engine.matchSystem의 분기 조건과 1:1 대응) */
 function matchReason(d,key){
-  if(key==="mdps") return "냉동·냉장 환경 + 고밀도 보관 요구 → 콜드체인 강점인 멀티딥 셔틀이 최적입니다.";
-  if(key==="stc")  return "고층 고밀도·소품종 대량 보관에 스태커크레인이 가장 효율적입니다.";
-  if(key==="mini") return "다품종·소량 출고와 재고 정확도 개선에는 미니셔틀 GTP가 적합합니다.";
-  if(key==="hybrid") return "기존 건물·단계적 도입 조건 → 부분 자동화로 시작해 확장하는 하이브리드를 권장합니다.";
-  return "다품종·대물동량·확장 가능성을 고려할 때 4-Way Shuttle의 처리능력·유연성이 최적입니다.";
+  const P={space:"보관공간 부족",temp:"온도관리",expand:"확장 필요",efficiency:"작업효율",error:"재고오류",labor:"인력난"};
+  const picked=(d.problems||[]).map(p=>P[p]).filter(Boolean);
+  const V=[];
+  if(d.temp&&d.temp!=="ambient") V.push(TEMP_LABEL[d.temp]);
+  if(d.build==="existing") V.push("기존 건물 개조");
+  if(d.height) V.push("유효높이 "+d.height+"m");
+  if(d.volume) V.push("월 "+fmt(d.volume)+" PLT");
+  if(picked.length) V.push("현안: "+picked.join("·"));
+  const ctx = V.length ? `[판정 근거: ${V.join(" / ")}]` : "";
+
+  if(key==="mdps") return `${TEMP_LABEL[d.temp]} 환경이 1순위 조건입니다. 멀티딥 셔틀은 저온(-30℃)·결로·제상 설계 실적이 있고, 딥을 깊게 가져가 냉각 체적을 줄일 수 있어 콜드체인에서 가장 유리합니다. ${ctx}`;
+  if(key==="stc")  return `기존 건물 조건에서 층고를 최대한 활용해야 하는 경우입니다. 스태커크레인은 최대 30m급 고단·더블딥으로 바닥면적 대비 보관량이 가장 크고, 소품종 대량·장기보관에 적합합니다. ${ctx}`;
+  if(key==="mini") return `물동량 대비 품목 수가 많고 재고 정확도가 현안입니다. 박스·토트 단위 미니셔틀 + GTP(Goods-to-Person)로 피킹 생산성과 재고 정확도를 함께 올리는 구성이 적합합니다. ${ctx}`;
+  if(key==="hybrid") return `기존 건물 + 단계적 확장 조건입니다. Unit Rack으로 부분 적용하고 무인지게차(AGF)로 저위험 진입 후 셔틀로 확장하는 구성이 초기 투자와 공사 리스크를 모두 낮춥니다. ${ctx}`;
+  return `물동량·확장 가능성이 핵심 조건입니다. 4-Way 셔틀은 전후좌우 주행으로 리프트 의존도가 낮아 확장이 유연하고, 파렛트당 1.5t 적재로 고밀도 보관이 가능합니다. ${ctx}`;
 }
 
 function copySummary(d,est,tp,sys,roi){
