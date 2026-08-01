@@ -104,6 +104,8 @@ body{
 .isys span{font-size:11.5px;color:var(--muted);line-height:1.5}
 .isys a.iv{font-size:11px;color:var(--accent-2);text-decoration:none;margin-top:4px;font-weight:600}
 .isys a.iv:active{opacity:.7}
+/* 라인업 안에 직접 재생되는 쇼츠 플레이어 (세로 9:16) */
+.isys .ytshort{width:100%;max-width:240px;aspect-ratio:9/16;margin:8px auto 2px;border:0;border-radius:var(--radius-sm);display:block;background:#000;box-shadow:var(--sh-sm)}
 .intro-btn:hover{background:linear-gradient(180deg,rgba(92,132,230,.24),rgba(92,132,230,.1))}
 .step-head p{font-size:13px;color:var(--muted);margin-top:4px}
 
@@ -465,7 +467,7 @@ body.fs-lock{overflow:hidden}
               <div class="isys"><b>상하차 자동화</b><span>자동 상하차 로봇 · 하역 인력 대체</span><a class="iv" href="https://www.youtube.com/shorts/x_LbCA_UY1s" target="_blank" rel="noopener">▶ 쇼츠</a></div>
               <div class="isys"><b>로봇 파렛타이저</b><span>자동 적재·팔레타이징 · 반복 중량작업 자동화</span><a class="iv" href="https://www.youtube.com/shorts/q6KXSYNOgjs" target="_blank" rel="noopener">▶ 쇼츠</a></div>
               <div class="isys"><b>모노레일</b><span>천장 반송 시스템 · 바닥 동선 간섭 없음</span><a class="iv" href="https://www.youtube.com/shorts/EmVdLjH9CdI" target="_blank" rel="noopener">▶ 쇼츠</a></div>
-              <div class="isys"><b>키오스크</b><span>무인 접수·출고 · 현장 운영 무인화</span><a class="iv" href="https://www.youtube.com/shorts/vCLHkuQ_jZI" target="_blank" rel="noopener">▶ 쇼츠</a></div>
+              <div class="isys"><b>키오스크</b><span>무인 접수·출고 · 현장 운영 무인화</span><iframe class="ytshort" src="https://www.youtube.com/embed/vCLHkuQ_jZI?rel=0&amp;playsinline=1" title="키오스크 쇼츠" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe><a class="iv" href="https://www.youtube.com/shorts/vCLHkuQ_jZI" target="_blank" rel="noopener">▶ 유튜브에서 열기</a></div>
             </div>
             <div class="result-actions" style="margin-top:10px">
               <button class="btn soft wide" style="flex:1 1 100%" onclick="window.open('https://www.youtube.com/@logisallgroup/shorts','_blank')">🎬 로지스올그룹 쇼츠 전체보기</button>
@@ -1899,13 +1901,6 @@ function renderResult(){
       <button class="btn ghost" id="btnEdit">← 입력 수정</button>
       <button class="btn ghost" id="btnRestart">초기화</button>
     </div>
-    <div class="result-actions" style="margin-top:0">
-      <button class="btn soft" id="btnIntroShare">📤 소개서 전달</button>
-      <button class="btn soft" id="btnIntroRes">🔗 소개자료</button>
-    </div>
-    <div class="result-actions" style="margin-top:0">
-      <button class="btn soft wide" id="btnWorklog" style="flex:1 1 100%">📋 업무일지</button>
-    </div>
 
     <div class="disclaimer">
       본 분석은 LOGISALL ENGINEERING · TSPG 영업 핸드북 로직 기반 현장용 개략 추정 도구입니다.<br>
@@ -1915,9 +1910,6 @@ function renderResult(){
 
   $("#btnEdit").onclick=()=>showStep(STATE.step-1);
   $("#btnRestart").onclick=()=>{ if(confirm("입력을 초기화하고 새 미팅을 시작할까요?")) location.reload(); };
-  $("#btnIntroShare").onclick=()=>shareIntroVideo();
-  $("#btnIntroRes").onclick=()=>showIntroResources();
-  $("#btnWorklog").onclick=()=>generateWorklog(d,est,tp,sys,sysKey,roi);
 }
 
 /* 추천 근거 — 실제로 판정에 쓰인 입력값을 그대로 인용해 설명한다
@@ -1957,37 +1949,6 @@ function copySummary(d,est,tp,sys,roi){
     `※ 개략 추정값. 정밀 설계는 시뮬레이션으로 확정.`
   ].join("\n");
   copyText(lines, "제안 요약이 복사되었습니다");
-}
-
-/* ----- 업무일지 작성: 입력값·결과 기반 초안 생성 → 복사 모달 ----- */
-function generateWorklog(d,est,tp,sys,sysKey,roi){
-  const L = [];
-  L.push(`엔지니어링 업무일지`);
-  L.push(``);
-  L.push(`1. 업체명 : `);
-  L.push(`2. 면담자 : `);
-  L.push(`3. 업무내용 `);
-  L.push(``);
-  L.push(` 1) 운영 현황`);
-  L.push(`  - 온도대 및 신축여부 : ${TEMP_LABEL[d.temp]} / ${BUILD_LABEL[d.build]}`);
-  L.push(`  - 규모 : ${fmt(d.area)}평 · 유효층고 ${d.height}m`);
-  L.push(`  - 물동량 : 월 ${fmt(d.volume)} PLT (${fmt(tp.perDay)}/일, ${fmt(tp.perHr)}/h)`);
-  if(d.stock) L.push(`  - 현 보관량 : ${fmt(d.stock)} 파렛트`);
-  if(d.staff) L.push(`  - 운영 인력 : ${d.staff}명`);
-  L.push(``);
-  L.push(` 2) 제안 내용`);
-  L.push(`  - 제안 요약 : ${sys.name}`);
-  L.push(`  - 예상 규모 : 공간 최대 ${fmt(est.cells)} Cells(${est.tiers}단) / 권장 구축 ${fmt(roi.targetCells)} Cells`);
-  L.push(`  - 예상 투자비 : ${won(roi.capexMan)}원 (VAT 별도${roi.capex.perCell?`, 셀당 ${fmt(roi.capex.perCell)}원`:""})`);
-  L.push(`                  ${roi.capex.groupOrder.map(g=>g+" "+won(Math.round(roi.capex.sums[g]/10000))).join(" / ")} / 관리·이윤 ${won(Math.round(roi.capex.overhead/10000))}`);
-  L.push(`                  ※ 건축·Utility인입 등 견적 제외 (별도 부담)`);
-  L.push(``);
-  L.push(` 3) 향후 영업 계획`);
-  L.push(`  - `);
-  L.push(``);
-  L.push(` 4) 향후 계획`);
-  L.push(`  - `);
-  showCopyModal(L.join("\n"));
 }
 
 /* ============================================================
@@ -3895,18 +3856,6 @@ const RES_GROUP_ENG = [
     {t:"모노레일", d:"천장 반송 시스템", url:SHORTS.monorail.url, kind:"yt"},
     {t:"키오스크", d:"무인 접수·출고 키오스크", url:SHORTS.kiosk.url, kind:"yt"},
     {t:"쇼츠 전체보기", d:"@logisallgroup 쇼츠 탭", url:"https://www.youtube.com/@logisallgroup/shorts", kind:"yt"}
-  ]},
-  {cat:"로지스올그룹 · 물류자동화 (유튜브)", collapsible:true, items:[
-    {t:"피지컬 인터넷", d:"물류 공동화·자동화 비전", url:"https://www.youtube.com/watch?v=msU95RS0smg", kind:"yt"},
-    {t:"로지스올컨설팅 (CES)", d:"Consulting·Engineering·Systems", url:"https://www.youtube.com/watch?v=eeuTM35n3oE", kind:"yt"},
-    {t:"KCP 동안성 콜드체인 물류센터", d:"콜드체인 설비 구축 현장", url:"https://www.youtube.com/watch?v=cvrJNWUuLYo", kind:"yt"},
-    {t:"수도권 풀필먼트센터 (경기 광주)", d:"보관·유통가공 자동화 설비", url:"https://www.youtube.com/watch?v=CHpz7jrpmOk", kind:"yt"},
-    {t:"인천 글로벌 풀필먼트센터", d:"보세 수출입 CFS 원스톱 설비", url:"https://www.youtube.com/watch?v=orHydT-eDRM", kind:"yt"}
-  ]},
-  {cat:"로지스올그룹 · 자동화 솔루션 (공식 블로그)", collapsible:true, items:[
-    {t:"물류로봇 브랜드 LOGIQ(로지큐) 론칭", d:"AMR 무인이송로봇 · AGF 무인지게차(1.5t)", url:"https://blog.naver.com/logisallgroup/223950946108", kind:"blog"},
-    {t:"Rapyuta Robotics AS/RS", d:"기존 창고에 적용하는 보관 자동화", url:"https://blog.naver.com/logisallgroup/224049837158", kind:"blog"},
-    {t:"KOREA MAT 2026 통합 물류자동화", d:"자동상하차 RockyOne · LOGIQ · 4-Way 셔틀", url:"https://blog.naver.com/logisallgroup/224234604422", kind:"blog"}
   ]}
 ];
 
@@ -3959,18 +3908,6 @@ const RES_ENG = [
     {t:"스마트 로지스틱스 사례", d:"구축 사례", url:ENG_BASE+"/kr/sub/case/smartLogistics.asp", kind:"web"}
   ]}
 ];
-
-/* ----- 카톡 전달: 유튜브 회사소개 영상 링크 공유 ----- */
-async function shareIntroVideo(){
-  const data = { title:"TSPG 회사소개", text:"TSPG · LOGISALL ENGINEERING 회사소개 영상입니다.", url:INTRO_VIDEO_URL };
-  if(navigator.share){
-    try{ await navigator.share(data); }
-    catch(e){ if(e && e.name === "AbortError") return; copyText(INTRO_VIDEO_URL, "회사소개 영상 링크가 복사되었습니다"); }
-    return;
-  }
-  // 공유 미지원(PC 등) → 링크 복사 폴백
-  copyText(INTRO_VIDEO_URL, "회사소개 영상 링크가 복사되었습니다");
-}
 
 /* ----- 소개자료: 회사 선택(TSPG / 로지스올엔지니어링) → 분류 링크 ----- */
 function resGroupsHtml(list){
