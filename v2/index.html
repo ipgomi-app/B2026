@@ -585,7 +585,7 @@ body.fs-lock{overflow:hidden}
           </div>
         </div>
       </div>
-      <div class="hint" id="flowLive" style="margin-bottom:14px">운영 기준 <b>주 5일 · 1일 8시간</b>. 시간당 취급량 = (입고 + 출고) ÷ 8 → 설비 대수 산정의 기준입니다.</div>
+      <div class="hint" id="flowLive" style="margin-bottom:14px">운영 기준 <b>주 6일 · 1일 8시간</b>. 시간당 취급량 = (입고 + 출고) ÷ 8 → 설비 대수 산정의 기준입니다.</div>
 
       <div class="field" style="margin-bottom:18px">
         <label>월 물동량 <span style="font-weight:400;color:var(--muted);font-size:12px">— 하루 입·출고를 모를 때만</span></label>
@@ -593,7 +593,7 @@ body.fs-lock{overflow:hidden}
           <input type="number" id="f_volume" placeholder="예: 10000" inputmode="numeric">
           <span class="u mono">PLT/월</span>
         </div>
-        <div class="hint" style="margin-top:8px">입·출고 합산 월간 파렛트 수. 위에 하루 입·출고를 넣으면 이 값은 무시되고 (입고+출고)×22일로 환산합니다.</div>
+        <div class="hint" style="margin-top:8px">입·출고 합산 월간 파렛트 수. 위에 하루 입·출고를 넣으면 이 값은 무시되고 (입고+출고)×26일로 환산합니다.</div>
       </div>
 
       <div class="row2" style="margin-bottom:12px">
@@ -788,9 +788,9 @@ const CONFIG = {
   STAFF_PER_VOLUME: 1500,      // 인력 추정: 월 N PLT당 1명
   STAFF_PER_PYEONG: 60,        // 인력 추정: 면적 N평당 1명 (둘 중 큰 값)
   OPEX_RATE: 0.035,            // 연 OPEX = CAPEX × 3.5%
-  /* 운영 기준: 주 5일 · 1일 8시간
-     주5일 → 월 평균 21.7일 ≈ 22일. (v1은 주6일 기준 26일이었다) */
-  WORK_DAYS_MONTH: 22,
+  /* 운영 기준: 주 6일 · 1일 8시간 (사용자 확정)
+     주6일 → 월 평균 26일. */
+  WORK_DAYS_MONTH: 26,
   OP_HOURS: 8,                 // 1일 가동시간 — 시간당 취급량 = 일 취급량 ÷ 8
   PLT_PER_TRUCK: 16,           // 11t 차량 1대당 파렛트 수(개략) — 자동상하차 차량 대수 환산용
   // TSPG 공식 채널 (영상·블로그 연결용)
@@ -2296,7 +2296,7 @@ function copySummary(d,est,tp,sys,roi){
   const lines=[
     `[TSPG 현장 솔루션 제안 요약]`,
     `창고: ${TEMP_LABEL[d.temp]} · ${BUILD_LABEL[d.build]} · ${fmt(d.area)}평 · 유효 ${d.height}m`,
-    `물동량: 일 ${fmt(tp.perDay)} PL (시간당 ${fmt(tp.perHr)} · 주5일 8시간 · 월 ${fmt(tp.volMonth)} PLT)`,
+    `물동량: 일 ${fmt(tp.perDay)} PL (시간당 ${fmt(tp.perHr)} · 주6일 8시간 · 월 ${fmt(tp.volMonth)} PLT)`,
     ``,
     `■ 개략 규모: 약 ${fmt(est.cells)} Cells (${est.tiers}단 적재)`,
     `■ 권장 구축 규모: ${fmt(roi.targetCells)} Cells`,
@@ -4761,7 +4761,7 @@ function flowLiveCalc(){
   const i=+$("#f_inDay").value||0, o=+$("#f_outDay").value||0, el=$("#flowLive");
   if(!el) return;
   if(i+o<=0){
-    el.innerHTML='운영 기준 <b>주 5일 · 1일 8시간</b>. 시간당 취급량 = (입고 + 출고) ÷ 8 → 설비 대수 산정의 기준입니다.';
+    el.innerHTML='운영 기준 <b>주 6일 · 1일 8시간</b>. 시간당 취급량 = (입고 + 출고) ÷ 8 → 설비 대수 산정의 기준입니다.';
     return;
   }
   const day=i+o, hr=Math.round(day/CONFIG.OP_HOURS);
@@ -4938,7 +4938,7 @@ function copyDetailReq(){
     L.push("■ 오늘 확인한 조건");
     L.push(`  - 온도대 / 공사분류 : ${TEMP_LABEL[d.temp]} / ${BUILD_LABEL[d.build]}`);
     L.push(`  - 규모 : ${fmt(d.area)}평 · 유효 층고 ${d.height}m`);
-    L.push(`  - 물동량 : 일 ${fmt(tp.perDay)} PL (시간당 ${fmt(tp.perHr)} PL/h · 주5일 8시간)`);
+    L.push(`  - 물동량 : 일 ${fmt(tp.perDay)} PL (시간당 ${fmt(tp.perHr)} PL/h · 주6일 8시간)`);
     if(d.stock) L.push(`  - 현 보관량 : ${fmt(d.stock)} PL`);
     if(d.palletW&&d.palletL) L.push(`  - 파렛트 : ${fmt(d.palletW)}×${fmt(d.palletL)}mm${d.palletKg?` · ${fmt(d.palletKg)}kg`:""}${d.palletH?` · 적재 ${d.palletH}m`:""}`);
     L.push("");
