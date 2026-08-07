@@ -311,6 +311,9 @@ a.btn{text-decoration:none}
 .roi-tab.active{border:1px solid var(--accent) !important;box-shadow:0 0 0 2px rgba(92,132,230,.15)}
 .roi-panel{overflow:hidden;max-height:0;transition:max-height .35s ease, opacity .25s ease;opacity:0}
 .roi-panel.show{max-height:900px;opacity:1}
+/* 내용이 900px를 넘는 패널(라인업: 시스템 9종 + 쇼츠 임베드 = 약 1,520px)은
+   기본 상한에 잘려 마지막 항목이 통째로 사라진다 → 전용 상한을 준다 */
+.roi-panel.tall.show{max-height:2200px}
 .roi-panel-inner{padding-top:14px}
 
 /* ===== SIM3D : 자동창고 3D 시뮬레이션 ===== */
@@ -450,20 +453,24 @@ body.fs-lock{overflow:hidden}
       </div>
 
       <div class="card">
-        <div class="h mono">핵심 강점<span class="ln"></span></div>
-        <div class="intro-list">
-          <div class="ipt"><span class="ck">✓</span><span><b>로지스올그룹</b>(40년 풀링 네트워크 · 연매출 2조) 계열 — 2024년 TSPG 인수로 <b>자동화 원천기술 내재화</b></span></div>
-          <div class="ipt"><span class="ck">✓</span><span>국내 최초 셔틀형 자동창고 <b>원천기술 보유</b> (MDPS 자체개발)</span></div>
-          <div class="ipt"><span class="ck">✓</span><span>설계·제작·설치·AS <b>일괄 수행</b> (전 구성원 91% 엔지니어)</span></div>
-          <div class="ipt"><span class="ck">✓</span><span>냉동 -30℃ ~ 고온 55℃ <b>전 온도대 구축 경험</b></span></div>
-          <div class="ipt"><span class="ck">✓</span><span>기존 건물 개조·단계별 구축으로 <b>운영 중단 최소화</b></span></div>
+        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">핵심 강점<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+        <div class="roi-panel">
+          <div class="roi-panel-inner">
+            <div class="intro-list">
+              <div class="ipt"><span class="ck">✓</span><span><b>로지스올그룹</b>(40년 풀링 네트워크 · 연매출 2조) 계열 — 2024년 TSPG 인수로 <b>자동화 원천기술 내재화</b></span></div>
+              <div class="ipt"><span class="ck">✓</span><span>국내 최초 셔틀형 자동창고 <b>원천기술 보유</b> (MDPS 자체개발)</span></div>
+              <div class="ipt"><span class="ck">✓</span><span>설계·제작·설치·AS <b>일괄 수행</b> (전 구성원 91% 엔지니어)</span></div>
+              <div class="ipt"><span class="ck">✓</span><span>냉동 -30℃ ~ 고온 55℃ <b>전 온도대 구축 경험</b></span></div>
+              <div class="ipt"><span class="ck">✓</span><span>기존 건물 개조·단계별 구축으로 <b>운영 중단 최소화</b></span></div>
+            </div>
+            <div class="note">1984 한국물류연구원 → KPP·KCP·KLP → 2003 로지스올 통합 브랜드 → 2022 로지스올엔지니어링 출범 → 2024 TSPG 인수. 파렛트 풀링부터 자동화 구축까지 그룹 원스톱.</div>
+          </div>
         </div>
-        <div class="note">1984 한국물류연구원 → KPP·KCP·KLP → 2003 로지스올 통합 브랜드 → 2022 로지스올엔지니어링 출범 → 2024 TSPG 인수. 파렛트 풀링부터 자동화 구축까지 그룹 원스톱.</div>
       </div>
 
       <div class="card">
         <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">주요 시스템 라인업<span class="ln"></span><span class="obj-caret mono">▼</span></div>
-        <div class="roi-panel">
+        <div class="roi-panel tall">
           <div class="roi-panel-inner">
             <div class="intro-list">
               <div class="isys"><b>MDPS 멀티딥 셔틀</b><span>국내 최초 셔틀랙 자동창고 · 냉동·냉장 고밀도 · 결로·제상 설계</span><a class="iv" href="https://youtu.be/xzMS0WD3L-Q" target="_blank" rel="noopener">▶ 대표 영상</a></div>
