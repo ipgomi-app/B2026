@@ -1535,10 +1535,34 @@ const Engine = {
     const benefitMan = laborSaveMan + spaceSaveMan + energySaveMan;
     const netMan = benefitMan - opexMan;
     const payback = netMan>0 ? (capexMan/netMan) : null;
+    /* ── 공간이 수요를 못 담는 경우를 반드시 표면화한다 ──
+       면적·층고 한도가 재고/물동량 수요를 잘라내면 '권장 규모'가 현 재고보다
+       작아진다. 그대로 두면 축소를 개선처럼 보여주게 되므로, 얼마나 모자라고
+       무엇이(면적/층고) 얼마나 더 필요한지 역산해 함께 넘긴다. */
+    // 실제로 적용된 기준(재고 우선 → 물동량)의 수요량. max 를 쓰면
+    // 화면에 안 쓰는 쪽 숫자가 튀어나와 근거가 어긋난다.
+    const demandApplied = demandFromStock || demandFromVolume || 0;
+    const perPyTier = CONFIG.PYEONG_M2/CONFIG.CELL_FOOTPRINT_M2*(1-CONFIG.AISLE_LOSS);
+    const capped  = demandApplied > areaCapacity + 1;   // 권장 랙 비율로는 부족
+    const overMax = demandApplied > est.cells + 1;      // 면적 전부를 랙으로 써도 불가
+    const needCells = capped ? demandApplied : 0;
+    // 현 층고를 유지할 때 필요한 창고 면적(평) — 권장 랙 비율 기준
+    const needArea  = capped && est.tiers>0
+      ? Math.ceil(needCells/(est.tiers*perPyTier*CONFIG.BUILD_RATIO)) : 0;
+    // 현 면적을 유지할 때 필요한 단수·유효 층고(m)
+    const needTier  = capped && d.area>0
+      ? Math.ceil(needCells/(d.area*perPyTier*CONFIG.BUILD_RATIO)) : 0;
+    const needHeight= needTier ? +(needTier*(est.loadH+CONFIG.RACK_BEAM_M)).toFixed(1) : 0;
+    // 현 면적·층고를 그대로 두고 랙 비율만 올릴 때 필요한 비율
+    const needRackRatio = capped && est.cells>0
+      ? Math.min(0.95, Math.ceil(needCells/est.cells*100)/100) : 0;
+
     return {
       laborSaveMan, spaceSaveMan, energySaveMan, savedPyeong, capexMan, opexMan, capex,
       benefitMan, netMan, payback, targetCells, staff, reducibleFTE,
       targetFromStock, targetFromVolume, targetDriver, storeDays, areaCapacity,
+      capped, overMax, needCells, needArea, needTier, needHeight, needRackRatio,
+      maxCellsShown: est.cells,
       tp, volMonth:vol,
       conventionalPyeong: Math.round(conventionalM2/CONFIG.PYEONG_M2),
       autoPyeong:         Math.round(autoM2/CONFIG.PYEONG_M2),
@@ -1569,6 +1593,19 @@ const Engine = {
       } else if(heavy){
         v = "cond"; why = `파렛트 최대중량 ${fmt(d.palletKg)}kg — 셔틀 표준 적재능력 1.5t을 넘습니다.`;
         note = "중량 사양 셔틀 또는 스태커크레인으로 재검토가 필요합니다.";
+      } else if(roi.overMax){
+        v = "cond";
+        why = `필요량 ${fmt(roi.needCells)} Cells인데 ${fmt(d.area)}평·유효 ${d.height}m(${tiers}단)는 `
+            + `면적을 전부 랙으로 채워도 ${fmt(est.cells)} Cells가 한계입니다. 이 공간에서는 전량 수용이 불가능합니다.`;
+        note = `같은 층고로 담으려면 창고 약 ${fmt(roi.needArea)}평, `
+             + `현 면적을 유지하려면 ${roi.needTier}단(유효 ${roi.needHeight}m)이 필요합니다. `
+             + `층고 증축·부지 확장·2개소 분산 중 어느 쪽이 가능한지 먼저 확인해야 합니다.`;
+      } else if(roi.capped){
+        v = "cond";
+        why = `필요량 ${fmt(roi.needCells)} Cells가 권장 배치 기준 수용량 ${fmt(roi.areaCapacity)} Cells를 넘습니다. `
+            + `면적을 전부 랙으로 쓰면 ${fmt(est.cells)} Cells까지는 가능합니다.`;
+        note = `입출고장·통행 공간을 줄여 랙 비율을 ${Math.round(roi.needRackRatio*100)}%까지 올리거나, `
+             + `창고를 약 ${fmt(roi.needArea)}평으로 늘리면 수용됩니다. 하역·검수 동선 확인이 선행돼야 합니다.`;
       } else {
         why = `유효 ${d.height}m에서 ${tiers}단 적재, 권장 구축 ${fmt(cells)} Cells 규모로 산출됩니다.`;
       }
@@ -2009,6 +2046,29 @@ function renderResult(){
          <div class="sub">월 ${fmt(roi.volMonth)}PLT · ${roi.storeDays}일 보관${roi.targetDriver==='volume'?' · ✓ 적용':''}</div>
        </div>`;
 
+  /* ── [v2] 공간 부족 경고 — 권장 규모가 현 재고보다 작아지는 경우 ── */
+  const cappedWarn = roi.capped ? `
+    <div class="card" style="border-color:#E8B21F">
+      <div class="h mono" style="color:#E8B21F">⚠ ${roi.overMax?'현 공간으로는 수요를 담을 수 없습니다':'권장 배치 비율로는 수요를 다 담지 못합니다'}<span class="ln" style="background:#E8B21F"></span></div>
+      <div class="li"><span class="k">필요 보관량 ${roi.targetDriver==='stock'?'(현 재고 ×1.2)':'(물동량 × 보관일수)'}</span><span class="v">${fmt(roi.needCells)} Cells</span></div>
+      <div class="li"><span class="k">권장 배치 기준 수용 (랙 ${Math.round(CONFIG.BUILD_RATIO*100)}%)</span><span class="v" style="color:#E8B21F">${fmt(roi.areaCapacity)} Cells</span></div>
+      <div class="li"><span class="k">면적 전부를 랙으로 쓸 때</span><span class="v"${roi.overMax?' style="color:#E8B21F"':''}>${fmt(est.cells)} Cells</span></div>
+      <div class="li total"><span class="k">부족분</span><span class="v" style="color:#E8B21F">${fmt(roi.needCells-roi.areaCapacity)} Cells</span></div>
+      <div class="note" style="border-color:#E8B21F">
+        ${fmt(d.area)}평 · 유효 ${d.height}m는 적재 <b>${est.tiers}단</b>이 한계입니다(적재높이 ${est.loadH}m 기준).<br>
+        ${roi.overMax
+          ? `면적을 전부 랙으로 채워도 ${fmt(est.cells)} Cells까지라 <b>이 공간에서는 불가능</b>합니다.
+             같은 층고로 담으려면 창고 <b>약 ${fmt(roi.needArea)}평</b>,
+             현 면적을 유지하려면 <b>${roi.needTier}단(유효 ${roi.needHeight}m)</b>이 필요합니다.
+             층고 증축 · 부지 확장 · 2개소 분산 중 무엇이 가능한지 먼저 확인해 주세요.`
+          : `면적을 전부 랙으로 쓰면 ${fmt(est.cells)} Cells까지 가능하므로,
+             입출고장·통행 공간을 줄여 랙 비율을 <b>${Math.round(roi.needRackRatio*100)}%</b>까지 올리면 수용됩니다.
+             다만 하역·검수 공간이 좁아지므로 현장 확인이 필요합니다.
+             면적을 늘린다면 <b>약 ${fmt(roi.needArea)}평</b>입니다.`}
+        <br>아래 투자비는 <b>실제 구축 ${fmt(roi.targetCells)} Cells 기준</b>이며 필요량 전량을 수용하는 금액이 아닙니다.
+      </div>
+    </div>` : "";
+
   /* ── [v2] 제안 가능 4영역 행 ── */
   const scopeRows = SCOPES.map(sp=>{
     const r=sc[sp.k], V=SCOPE_VERDICT[r.v];
@@ -2022,16 +2082,20 @@ function renderResult(){
   /* ── [v2] 개선 예상 — 금액 환산 없이 물량·면적·인원만 ── */
   const nowStaff = roi.staff;
   const tgtStaff = Math.max(1, Math.round(roi.staff - roi.reducibleFTE));
-  const kpiRow = (k, now, tgt) =>
+  /* 목표가 현재보다 나빠지면 개선으로 칠하지 않는다 —
+     축소를 파란 '목표'로 보여주면 화면이 거짓말을 하게 된다. */
+  const kpiRow = (k, now, tgt, worse) =>
     `<div class="li"><span class="k">${k}</span><span class="v">
-       <span class="now">${now}</span><span class="arw">▶</span><span class="tgt">${tgt}</span></span></div>`;
+       <span class="now">${now}</span><span class="arw"${worse?' style="color:#E8B21F"':''}>▶</span>
+       <span class="tgt"${worse?' style="color:#E8B21F"':''}>${tgt}${worse?' <small style="font-weight:400">미달</small>':''}</span></span></div>`;
+  const capOk  = Math.min((cx.qty&&cx.qty.shuttleQty||1)*25, (cx.qty&&cx.qty.lifterQty||1)*45);
   const improveRows =
-      kpiRow("보관량 (PL)",      fmt(roi.stockUsed), fmt(roi.targetCells))
-    + kpiRow("적재 단수",         CONFIG.CONV_RACK_TIERS+"단", est.tiers+"단")
-    + kpiRow("보관 바닥면적 (평)", fmt(roi.conventionalPyeong), fmt(roi.autoPyeong))
-    + kpiRow("작업 인원 (명)",     nowStaff+"명", tgtStaff+"명")
-    + kpiRow("시간당 취급 (PL/h)", fmt(tp.perHr)+" 필요",
-             fmt(Math.min((cx.qty&&cx.qty.shuttleQty||1)*25, (cx.qty&&cx.qty.lifterQty||1)*45))+" 능력");
+      kpiRow("보관량 (PL)",      fmt(roi.stockUsed), fmt(roi.targetCells), roi.targetCells < roi.stockUsed)
+    + kpiRow("적재 단수",         CONFIG.CONV_RACK_TIERS+"단", est.tiers+"단", est.tiers < CONFIG.CONV_RACK_TIERS)
+    + (roi.capped ? "" : kpiRow("보관 바닥면적 (평)", fmt(roi.conventionalPyeong), fmt(roi.autoPyeong),
+             roi.autoPyeong > roi.conventionalPyeong))
+    + kpiRow("작업 인원 (명)",     nowStaff+"명", tgtStaff+"명", tgtStaff >= nowStaff)
+    + kpiRow("시간당 취급 (PL/h)", fmt(tp.perHr)+" 필요", fmt(capOk)+" 능력", capOk < tp.perHr);
 
   $("#result").innerHTML = `
     <div class="result-hero">
@@ -2054,6 +2118,8 @@ function renderResult(){
       </div>
       <div class="note">'공간 최대 수용'은 면적·층고를 가득 채울 때의 한도입니다. '권장 구축 규모'는 ① 현 재고(재고×1.2)와 ② 월 물동량(×보관일수)을 각각 환산한 값으로, 재고 입력 시 재고 기준을, 없으면 물동량 기준을 재무계산에 적용합니다(✓ 표시). 둘 다 면적 한도 내 개략값이며 Bay×(앞+뒤Deep)×Tier 설계·시뮬레이션으로 확정합니다.</div>
     </div>
+
+    ${cappedWarn}
 
     <div class="card">
       <div class="h mono">제안 가능 범위<span class="ln"></span></div>
@@ -2127,6 +2193,7 @@ function renderResult(){
         <div class="roi-panel-inner kpi2">
           <div class="kpi2-head"><span>현재</span><span style="min-width:10px"></span><span>목표</span></div>
           ${improveRows}
+          ${roi.capped?`<div class="note" style="border-color:#E8B21F;color:#E8B21F;margin-bottom:8px">현 공간 한계로 <b>보관량이 현재보다 줄어듭니다</b>. 이 표는 개선안이 아니라 <b>현 조건의 한계</b>를 보여줍니다. 면적·층고 확보가 선행돼야 합니다. (보관 바닥면적 비교는 성립하지 않아 생략)</div>`:""}
           <div class="note">현재값은 일반 랙 ${CONFIG.CONV_RACK_TIERS}단 운영을 기준으로 환산한 비교치입니다. 작업 인원은 물동량·면적에서 추정한 값이며 실제 인원과 다를 수 있습니다. <b>절감 금액과 투자 회수기간은 임대료·인건비 가정에 크게 좌우되므로 이 화면에서는 제시하지 않습니다</b> — 상세 제안 단계에서 고객사 실제 단가로 산출합니다.</div>
         </div>
       </div>
@@ -4078,6 +4145,13 @@ const GL3D = {
     const D=this.D, roi=window.roi_data, d=D.d;
     if(!roi) return "";
     const S='color:var(--accent-2)';
+    /* 공간 한도에 잘렸는데 '여유'라고 쓰면 정반대를 말하게 된다 */
+    const W = 'color:#E8B21F';
+    if(roi.capped)
+      return `<span style="${W}">규모 결정: 면적 ${fmt(d.area)}평 한도에 잘림</span>`
+        + ` — 필요 ${fmt(roi.needCells)}셀 대비 수용 ${fmt(roi.areaCapacity)}셀`
+        + (roi.overMax ? ` (면적 전부를 랙으로 써도 ${fmt(roi.maxCellsShown||0)||fmt(roi.areaCapacity)}셀 한계)` : ``)
+        + `. <b>면적·층고를 확보해야 규모가 커집니다.</b>`;
     if(roi.targetDriver==='stock')
       return `<span style="${S}">규모 결정: 현 재고 ${fmt(d.stock)}매 × 1.2</span>`
         + ` — 면적 ${fmt(d.area)}평은 최대 ${fmt(roi.areaCapacity)}셀까지 수용 가능(여유). `
@@ -4137,9 +4211,13 @@ const GL3D = {
         `<b>${fmt(D.cellsShown)} Cells</b> 배치 — 통로 ${D.aisles}열 × (${D.sBay}Bay × ${D.sDF}+${D.sDB}Deep × ${D.sTier}단)`+
         ` = 총 ${fmt(totBay)}Bay`+
         `<br>셔틀 ${D.qty.shuttleQty||0}대 · 리프트 ${D.qty.lifterQty||0}대 · 창고 약 ${fw}m × ${fd}m × H${D.rackH.toFixed(1)}m`+
+        /* 격자는 Bay 단위로만 만들 수 있어 권장 셀 수와 정확히 같아지지 않는다.
+           '권장 N셀을 표시'라고 쓰면 화면(240)과 숫자(223)가 어긋나 보인다. */
         (D.lod
           ? ` <span style="color:var(--accent-2)">(표시 축약 — 권장 ${fmt(r.cells)}셀)</span>`
-          : ` <span style="color:var(--accent-2)">· 권장 ${fmt(r.cells)}셀을 실제 축척으로 표시</span>`)+
+          : (D.cellsShown === r.cells
+              ? ` <span style="color:var(--accent-2)">· 권장 ${fmt(r.cells)}셀과 동일</span>`
+              : ` <span style="color:var(--accent-2)">· 권장 ${fmt(r.cells)}셀 → Bay 정수 배치로 ${fmt(D.cellsShown)}셀 (${D.cellsShown>r.cells?'+':''}${fmt(D.cellsShown-r.cells)})</span>`))+
         `<br>${this.driverNote()}`+
         `<br>바닥 격자 1칸 = 2m · 서 있는 작업자(키 1.7m)가 크기 기준입니다.`+
         `<br>드래그 = 회전 · 위아래 드래그 = 시점 높이 · 핀치/휠 = 줌 · 더블탭 = 초기화 · ⛶ 전체화면. 개략 배치 개념도입니다.`;
