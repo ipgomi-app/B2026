@@ -501,9 +501,26 @@ body.fs-lock{overflow:hidden}
         </div>
       </div>
 
-      <div class="result-actions">
-        <button class="btn soft" onclick="showDocPicker()">📄 회사소개서</button>
-        <button class="btn soft" onclick="showIntroResources()">🔗 소개자료</button>
+      <div class="card">
+        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">📄 회사소개서<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+        <div class="roi-panel">
+          <div class="roi-panel-inner" id="docList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">🔗 소개자료<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+        <div class="roi-panel tall">
+          <div class="roi-panel-inner">
+            <div class="res-tabs">
+              <button class="res-tab on" data-c="tspg" onclick="renderResList('tspg')">TSPG</button>
+              <button class="res-tab" data-c="eng" onclick="renderResList('eng')">로지스올엔지니어링</button>
+            </div>
+            <div class="cm-sub mono" id="resSub" style="margin:8px 0 4px">// TSPG 회사소개 영상 · 공식 블로그</div>
+            <div id="resList"></div>
+            <div class="note">링크를 누르면 새 창에서 열립니다. 미팅 중 고객에게 바로 보여주세요.</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -656,15 +673,7 @@ body.fs-lock{overflow:hidden}
     <div class="cm-box" id="objModalBox"></div>
   </div>
 
-  <!-- TSPG 소개자료 모달 -->
-  <div class="calc-modal" id="resModal">
-    <div class="cm-box" id="resModalBox"></div>
-  </div>
 
-  <!-- 회사소개서 선택 모달 -->
-  <div class="calc-modal" id="docModal">
-    <div class="cm-box" id="docModalBox"></div>
-  </div>
 
   <!-- 앱 내장 PDF 뷰어 -->
   <div class="pdf-viewer" id="pdfViewer">
@@ -1813,7 +1822,6 @@ async function shareDoc(key){
   if(navigator.share){
     try{
       await navigator.share({ title:doc.title, text:`${doc.title}입니다.`, url });
-      document.getElementById('docModal').classList.remove('show');
       return;
     }catch(e){
       if(e && e.name === "AbortError") return;
@@ -1826,7 +1834,6 @@ let PDF_DOC = null, PDF_KEY = null, PDF_IO = null;
 async function viewDoc(key){
   const doc = DOCS[key]; if(!doc) return;
   PDF_KEY = key;
-  document.getElementById('docModal').classList.remove('show');
   const v = document.getElementById('pdfViewer');
   document.getElementById('pvTitle').textContent = doc.label;
   document.getElementById('pvShare').onclick = ()=>shareDoc(key);
@@ -1912,7 +1919,10 @@ function closePdf(){
 }
 
 /* 회사소개서 선택 모달 — 문서별 [보기] / [카톡 전달] */
-function showDocPicker(){
+/* 회사소개서 — 모달 없이 STEP1 카드 안에 바로 펼친다 */
+function renderDocList(){
+  const el = document.getElementById('docList');
+  if(!el) return;
   const rows = Object.keys(DOCS).map(k=>{
     const d = DOCS[k];
     return `<div class="doc-row">
@@ -1923,17 +1933,9 @@ function showDocPicker(){
       </div>
     </div>`;
   }).join("");
-  document.getElementById('docModalBox').innerHTML = `
-    <div class="cm-title">회사소개서</div>
-    <div class="cm-sub mono">// 앱에 저장된 소개서 · 보기 또는 전달</div>
-    ${rows}
-    <div style="font-size:10.5px;color:var(--muted);margin-top:12px;line-height:1.6">‘보기’는 앱 안에서 바로 소개서를 펼칩니다. ‘카톡 전달’은 소개서 링크를 보내며, 받는 분이 링크를 눌러 열람·저장할 수 있습니다.</div>
-    <button class="cm-close-btn" onclick="document.getElementById('docModal').classList.remove('show')">닫기</button>`;
-  document.getElementById('docModal').classList.add('show');
+  el.innerHTML = rows +
+    `<div class="note">‘보기’는 앱 안에서 바로 소개서를 펼칩니다. ‘카톡 전달’은 소개서 링크를 보내며, 받는 분이 링크를 눌러 열람·저장할 수 있습니다.</div>`;
 }
-document.getElementById('docModal').addEventListener('click', function(e){
-  if(e.target===this) this.classList.remove('show');
-});
 
 const TEMP_LABEL={ambient:"상온",chilled:"냉장 0~10℃",frozen:"냉동 -20℃↓",hot:"항온/고온",clean:"클린/방폭"};
 const BUILD_LABEL={new:"신설",existing:"기존건물 개조",extend:"증축"};
@@ -4553,29 +4555,14 @@ function toggleResGroup(head){
   const open = body.classList.toggle('show');
   head.classList.toggle('open', open);
 }
+/* 소개자료 — 모달 없이 STEP1 카드 안에서 탭 전환 */
 function renderResList(which){
-  document.querySelectorAll('#resModalBox .res-tab').forEach(b=>b.classList.toggle('on', b.dataset.c===which));
-  const sub = which==='eng' ? '// 로지스올엔지니어링 공식 홈페이지' : '// TSPG 회사소개 영상 · 공식 블로그';
-  document.getElementById('resSub').textContent = sub;
-  document.getElementById('resList').innerHTML = resGroupsHtml(which==='eng' ? RES_ENG : RES_TSPG);
+  document.querySelectorAll('.res-tabs .res-tab').forEach(b=>b.classList.toggle('on', b.dataset.c===which));
+  const sub = document.getElementById('resSub');
+  if(sub) sub.textContent = which==='eng' ? '// 로지스올엔지니어링 공식 홈페이지' : '// TSPG 회사소개 영상 · 공식 블로그';
+  const el = document.getElementById('resList');
+  if(el) el.innerHTML = resGroupsHtml(which==='eng' ? RES_ENG : RES_TSPG);
 }
-function showIntroResources(){
-  document.getElementById('resModalBox').innerHTML = `
-    <div class="cm-title">소개자료</div>
-    <div class="cm-sub mono" id="resSub">// 회사를 선택하세요</div>
-    <div class="res-tabs">
-      <button class="res-tab on" data-c="tspg" onclick="renderResList('tspg')">TSPG</button>
-      <button class="res-tab" data-c="eng" onclick="renderResList('eng')">로지스올엔지니어링</button>
-    </div>
-    <div id="resList"></div>
-    <div style="font-size:10.5px;color:var(--muted);margin-top:12px;line-height:1.6">링크를 누르면 새 창에서 열립니다. 미팅 중 고객에게 바로 보여주세요.</div>
-    <button class="cm-close-btn" onclick="document.getElementById('resModal').classList.remove('show')">닫기</button>`;
-  renderResList('tspg');
-  document.getElementById('resModal').classList.add('show');
-}
-document.getElementById('resModal').addEventListener('click', function(e){
-  if(e.target===this) this.classList.remove('show');
-});
 
 /* 복사: HTTPS면 clipboard API 시도, 실패하면 항상 선택 모달을 띄움(모바일 안전) */
 function copyText(text, okMsg){
@@ -5008,6 +4995,8 @@ function showTargetModal(){
 /* ----- init ----- */
 renderIntroStats();
 renderIntake();
+renderDocList();
+renderResList('tspg');
 buildProgress();
 showStep(0);
 
