@@ -354,18 +354,6 @@ body.fs-lock{overflow:hidden}
 .capex-total .v{font-size:22px;font-family:'IBM Plex Mono',monospace;color:var(--accent-2)}
 .li .v.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px}
 
-/* precise cell mode toggle */
-.precise-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;padding:14px 15px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel)}
-.precise-toggle .pt-t{font-size:14px;font-weight:600}
-.precise-toggle .pt-d{font-size:11.5px;color:var(--muted);margin-top:2px}
-.switch{flex:0 0 46px;width:46px;height:26px;border-radius:30px;background:var(--line-2);position:relative;cursor:pointer;transition:.2s}
-.switch i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
-.switch.on{background:var(--accent)}
-.switch.on i{left:23px}
-.precise-panel{display:none;margin-top:12px;padding:15px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg-2);animation:slideIn .3s ease}
-.precise-panel.show{display:block}
-.pp-formula{font-size:11.5px;color:var(--accent-2);background:rgba(92,132,230,.08);padding:9px 12px;border-radius:8px;margin-bottom:14px;text-align:center}
-.pp-live{font-size:18px;font-weight:600;color:var(--accent-2);text-align:center;padding:11px;border:1px dashed var(--line-2);border-radius:8px;margin-top:4px}
 
 /* reference cards (feature 4) */
 .ref{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px dashed var(--line)}
@@ -536,8 +524,6 @@ body.fs-lock{overflow:hidden}
           <span class="chip on" data-v="ambient">상온</span>
           <span class="chip" data-v="chilled">냉장 (0~10℃)</span>
           <span class="chip" data-v="frozen">냉동 (-20℃↓)</span>
-          <span class="chip" data-v="hot">항온/고온</span>
-          <span class="chip" data-v="clean">클린/방폭</span>
         </div>
       </div>
       <div class="field">
@@ -585,20 +571,11 @@ body.fs-lock{overflow:hidden}
         <div class="hint" style="margin-top:8px">입·출고 합산 월간 파렛트 수. 위에 하루 입·출고를 넣으면 이 값은 무시되고 (입고+출고)×26일로 환산합니다.</div>
       </div>
 
-      <div class="row2" style="margin-bottom:12px">
-        <div class="field">
-          <label>파렛트 가로</label>
-          <div class="suffix">
-            <input type="number" id="f_palletW" placeholder="예: 1100" inputmode="numeric">
-            <span class="u mono">mm</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>파렛트 세로</label>
-          <div class="suffix">
-            <input type="number" id="f_palletL" placeholder="예: 1100" inputmode="numeric">
-            <span class="u mono">mm</span>
-          </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>파렛트 규격 (가로 × 세로)</label>
+        <div class="suffix">
+          <input type="text" id="f_palletSize" placeholder="예: 1100 × 1100" inputmode="numeric">
+          <span class="u mono">mm</span>
         </div>
       </div>
       <div class="row2">
@@ -633,31 +610,6 @@ body.fs-lock{overflow:hidden}
       </div>
       <div class="hint" style="margin-bottom:18px">평균 보관일수 = 입고~출고 평균 체류일. 권장 구축 규모(물동량 기반 수요) 산출에 사용(미입력 시 15일로 계산).</div>
 
-
-      <!-- 정밀 셀 계산 모드 (핸드북 4장) -->
-      <div class="precise-toggle" id="preciseToggle">
-        <div>
-          <div class="pt-t">셀 정밀 계산 모드(수기 입력)</div>
-          <div class="pt-d">Bay·Deep·Tier를 직접 입력 (선택)</div>
-        </div>
-        <div class="switch" id="preciseSwitch"><i></i></div>
-      </div>
-      <div class="precise-panel" id="precisePanel">
-        <div class="pp-formula mono">Cells = Bay × (앞Deep + 뒤Deep) × Tier − 차감</div>
-        <div class="row2" style="margin-bottom:12px">
-          <div class="field"><label>Bay (수평 칸)</label><input type="number" id="f_bay" placeholder="예: 17" inputmode="numeric"></div>
-          <div class="field"><label>Tier (단)</label><input type="number" id="f_tier" placeholder="예: 6" inputmode="numeric"></div>
-        </div>
-        <div class="row2" style="margin-bottom:12px">
-          <div class="field"><label>앞 Deep</label><input type="number" id="f_deepFront" placeholder="예: 6" inputmode="numeric"></div>
-          <div class="field"><label>뒤 Deep</label><input type="number" id="f_deepBack" placeholder="예: 4" inputmode="numeric"></div>
-        </div>
-        <div class="field">
-          <label>차감 셀 수 (통로·설비 점유)</label>
-          <input type="number" id="f_aisleLoss" placeholder="예: 172" inputmode="numeric">
-        </div>
-        <div class="pp-live mono" id="preciseLive">— Cells</div>
-      </div>
     </section>
 
     <!-- STEP 3 : 결과 -->
@@ -886,7 +838,7 @@ const DETAIL_REQ = [
 
 /* 초동 확인 질문 — f 는 이동할 입력 필드 id (null = 구두 확인) */
 const INTAKE = [
-  {q:"파렛트 규격은 어떻게 되나요? 가로·세로·적재 최대높이",  f:"f_palletW"},
+  {q:"파렛트 규격은 어떻게 되나요? 가로·세로·적재 최대높이",  f:"f_palletSize"},
   {q:"화물 포함 파렛트 1매 최대중량은?",                    f:"f_palletKg"},
   {q:"동시에 보관하는 최대 파렛트 수는?",                    f:"f_stock"},
   {q:"하루 입고량과 출고량은 각각 몇 파렛트인가요?",          f:"f_inDay"},
@@ -999,12 +951,11 @@ const SYS_REF_CATS = {
    [STATE]
    ============================================================ */
 const STATE = {
-  step:0, total:3, precise:false,
+  step:0, total:3,
   data:{ temp:"ambient", build:"new",
          area:0, height:0, volume:0, palletH:0, stock:0, storeDays:0, staff:0,
          /* v2 신규 — 일 입고/출고 분리(주력) · 파렛트 제원 */
-         inDay:0, outDay:0, palletW:0, palletL:0, palletKg:0,
-         bay:0, deepFront:0, deepBack:0, tier:0, aisleLoss:0 }
+         inDay:0, outDay:0, palletSize:"", palletKg:0 }
 };
 
 /* ============================================================
@@ -1450,21 +1401,12 @@ const Engine = {
   estimateCells(d){
     // 파렛트 적재높이: STEP1 입력값 사용, 미입력 시 폴백
     const loadH = d.palletH>0 ? d.palletH : CONFIG.DEFAULT_PALLET_LOAD_H;
-    // 정밀 모드: Bay×(앞+뒤Deep)×Tier − 차감 (핸드북 4장 공식)
-    if(d.bay>0 && (d.deepFront>0||d.deepBack>0) && d.tier>0){
-      const deep = (d.deepFront||0) + (d.deepBack||0);
-      const gross = d.bay * deep * d.tier;
-      const loss = d.aisleLoss>0 ? d.aisleLoss : 0;  // 차감 셀 수(통로·설비)
-      const cells = Math.max(0, gross - loss);
-      return { cells, tiers: d.tier, areaM2:0, precise:true, loadH,
-               formula:`${d.bay}Bay × (${d.deepFront}+${d.deepBack})Deep × ${d.tier}Tier − ${loss}` };
-    }
     // 면적·층고 기반 추정
     const areaM2 = (d.area||0) * CONFIG.PYEONG_M2;
     const tiers = Math.max(1, Math.floor((d.height||0) / (loadH + CONFIG.RACK_BEAM_M)));
     const grossCells = (areaM2 / CONFIG.CELL_FOOTPRINT_M2) * tiers;
     const cells = Math.round(grossCells * (1 - CONFIG.AISLE_LOSS));
-    return { cells: Math.max(0,cells), tiers, areaM2:Math.round(areaM2), precise:false, loadH };
+    return { cells: Math.max(0,cells), tiers, areaM2:Math.round(areaM2), loadH };
   },
   // 레퍼런스 매칭: 온도대 일치 우선 + 보관량·높이 근접도 점수
   matchReferences(d, targetCells, sysKey){
@@ -1548,18 +1490,18 @@ const Engine = {
     const demandFromStock = d.stock ? Math.round(d.stock * 1.2) : 0;
     const demandFromVolume = vol ? Math.round(vol * (storeDays / 30) * 1.2) : 0;
     // 정밀 모드면 입력한 셀이 곧 실제 구축 규모 → BUILD_RATIO 미적용
-    const areaCapacity = est.precise ? est.cells : Math.round(est.cells * CONFIG.BUILD_RATIO);
-    let targetCells = est.precise ? est.cells : (demandFromStock || demandFromVolume || areaCapacity);
+    const areaCapacity = Math.round(est.cells * CONFIG.BUILD_RATIO);
+    let targetCells = demandFromStock || demandFromVolume || areaCapacity;
     targetCells = Math.min(targetCells, areaCapacity);   // 공간이 허용하는 한도 내
     targetCells = Math.max(targetCells, 100);            // 하한
     // 재고 기반 / 물동량 기반 권장 규모를 각각 산출 (둘 다 면적 한도 내 · 최소 100, 미입력 시 0)
     const clampTarget = v => v>0 ? Math.max(100, Math.min(v, areaCapacity)) : 0;
-    const targetFromStock  = est.precise ? 0 : clampTarget(demandFromStock);
-    const targetFromVolume = est.precise ? 0 : clampTarget(demandFromVolume);
+    const targetFromStock  = clampTarget(demandFromStock);
+    const targetFromVolume = clampTarget(demandFromVolume);
     // 재무 계산에 적용된 기준: 재고 우선 → 물동량 → 면적
-    const targetDriver = est.precise ? 'precise' : (demandFromStock ? 'stock' : (demandFromVolume ? 'volume' : 'area'));
+    const targetDriver = demandFromStock ? 'stock' : (demandFromVolume ? 'volume' : 'area');
     // 현 보관량(공간 절감 비교용): 정밀 모드면 구축 셀 기준
-    const stock = est.precise ? targetCells : (d.stock || Math.round(targetCells / 1.2));
+    const stock = d.stock || Math.round(targetCells / 1.2);
     // 인력
     const staffRaw = d.staff || Math.max(3,
       Math.round(vol/CONFIG.STAFF_PER_VOLUME),
@@ -1780,24 +1722,13 @@ function collect(){
   d.inDay=+$("#f_inDay").value||0;
   d.outDay=+$("#f_outDay").value||0;
   d.volume=+$("#f_volume").value||0;       // 일 입출고 미입력 시 폴백
-  d.palletW=+$("#f_palletW").value||0;
-  d.palletL=+$("#f_palletL").value||0;
+  d.palletSize=($("#f_palletSize").value||"").trim();
   d.palletKg=+$("#f_palletKg").value||0;
   d.palletH=+$("#f_palletH").value||0;
   d.stock=+$("#f_stock").value||0;
   d.storeDays=+$("#f_storeDays").value||0;
   // 현 운영 인력 입력은 v2에서 제거 — Engine.roi 의 staffRaw 폴백이 물동량·면적으로 추정
   d.staff=0;
-  // 정밀 셀 모드 입력 (토글 ON일 때만 반영)
-  if(STATE.precise){
-    d.bay=+$("#f_bay").value||0;
-    d.tier=+$("#f_tier").value||0;
-    d.deepFront=+$("#f_deepFront").value||0;
-    d.deepBack=+$("#f_deepBack").value||0;
-    d.aisleLoss=+$("#f_aisleLoss").value||0;
-  } else {
-    d.bay=0; d.tier=0; d.deepFront=0; d.deepBack=0; d.aisleLoss=0;
-  }
 }
 
 function validateStep(){
@@ -2028,11 +1959,6 @@ function renderResult(){
       </div>
     </div>`;}).join("");
 
-  // 정밀 모드 안내 (feature 3)
-  const preciseNote = est.precise
-    ? `<div class="note" style="border-color:var(--accent);color:var(--accent-2)">정밀 셀 계산 적용: <b>${est.formula} = ${fmt(est.cells)} Cells</b></div>`
-    : "";
-
   // 개략 투자비(CAPEX) — 실제 견적서와 동일한 항목별 구성 (회수기간은 표시하지 않음)
   const cx = roi.capex;
   const capexWarn = cx.warn
@@ -2065,13 +1991,7 @@ function renderResult(){
 
   // 권장 구축 규모: 재고 기반 / 물동량 기반 각각 표시 (재무계산 적용 기준은 ✓ + 강조)
   const tapHint = `<span style="font-size:9px;color:var(--accent-2);font-family:'IBM Plex Mono',monospace;display:block;margin-top:2px">탭 → 계산 근거 ▼</span>`;
-  const targetTiles = est.precise
-    ? `<div class="stat calc-tap" onclick="showTargetModal()" style="cursor:pointer;grid-column:1/-1">
-         <div class="l">권장 구축 규모 (정밀 입력) ${tapHint}</div>
-         <div class="v">${fmt(roi.targetCells)}<small>Cells</small></div>
-         <div class="sub">Bay×(앞+뒤Deep)×Tier 입력값 그대로 적용</div>
-       </div>`
-    : `<div class="stat calc-tap" onclick="showTargetModal()" style="cursor:pointer">
+  const targetTiles = `<div class="stat calc-tap" onclick="showTargetModal()" style="cursor:pointer">
          <div class="l">권장 규모 · 재고 기반 ${tapHint}</div>
          <div class="v">${roi.targetFromStock?fmt(roi.targetFromStock):'—'}<small>Cells</small></div>
          <div class="sub">${d.stock?'현 재고 '+fmt(d.stock)+'매 ×1.2'+(roi.targetDriver==='stock'?' · ✓ 적용':''):'재고 미입력'}</div>
@@ -2126,7 +2046,6 @@ function renderResult(){
         <div class="stat hl"><div class="l">시간당 취급</div><div class="v">${fmt(tp.perHr)}<small>PL/h</small></div><div class="sub">${tp.opHours}시간 가동 · 입 ${tp.inHr} + 출 ${tp.outHr}</div></div>
       </div>
       <div class="note">'공간 최대 수용'은 면적·층고를 가득 채울 때의 한도입니다. '권장 구축 규모'는 ① 현 재고(재고×1.2)와 ② 월 물동량(×보관일수)을 각각 환산한 값으로, 재고 입력 시 재고 기준을, 없으면 물동량 기준을 재무계산에 적용합니다(✓ 표시). 둘 다 면적 한도 내 개략값이며 Bay×(앞+뒤Deep)×Tier 설계·시뮬레이션으로 확정합니다.</div>
-      ${preciseNote}
     </div>
 
     <div class="card">
@@ -2347,7 +2266,7 @@ const SIM2D = {
 
   /* ---------- 씬 구성 ---------- */
   buildScene(){
-    const d=window.d_data||STATE.data, est=window.est_data||{cells:500,tiers:3,precise:false};
+    const d=window.d_data||STATE.data, est=window.est_data||{cells:500,tiers:3};
     const roi=window.roi_data, sysKey=Engine.matchSystem(d);
     const qty=(roi&&roi.capex&&roi.capex.qty)||{shuttleQty:2,lifterQty:1};
 
@@ -2355,15 +2274,14 @@ const SIM2D = {
     let bay,dF,dB,tier, cellW=1.4, cellD=1.4;
     const cellH=Math.max(1.2,(d.palletH||1.8)+0.25);
     const DEEP={shuttle4way:[4,4], mdps:[6,6], stc:[2,2], mini:[3,3], hybrid:[3,3]};
-    if(est.precise && d.bay>0){ bay=d.bay; dF=d.deepFront||0; dB=d.deepBack||0; tier=d.tier||1; }
-    else{
+    {
       tier=Math.max(1,est.tiers||3);
       [dF,dB]=DEEP[sysKey]||[4,4];
       const target=(roi&&roi.targetCells)||est.cells||500;
       bay=Math.max(3, Math.ceil(target/((dF+dB)*tier)));
     }
     if(sysKey==="mini"){ cellW=0.9; cellD=0.9; }
-    const real={bay,dF,dB,tier,cells:(est.precise?est.cells:((roi&&roi.targetCells)||est.cells))};
+    const real={bay,dF,dB,tier,cells:((roi&&roi.targetCells)||est.cells)};
 
     // LOD 캡: 성능·가독성 — 초과분은 축약해서 그림
     const LB=36,LD=10,LT=12;
@@ -2751,27 +2669,25 @@ const GL3D = {
 
   /* ---------- 데이터 도출 (SIM2D.buildScene와 동일 규칙) ---------- */
   buildData(){
-    const d=window.d_data||STATE.data, est=window.est_data||{cells:500,tiers:3,precise:false};
+    const d=window.d_data||STATE.data, est=window.est_data||{cells:500,tiers:3};
     const roi=window.roi_data, sysKey=Engine.matchSystem(d);
     const qty=(roi&&roi.capex&&roi.capex.qty)||{shuttleQty:2,lifterQty:1};
     let bay,dF,dB,tier, cellW=1.4, cellD=1.4;
     const cellH=Math.max(1.2,(d.palletH||1.8)+0.25);
     const DEEP={shuttle4way:[4,4], mdps:[6,6], stc:[2,2], mini:[3,3], hybrid:[3,3]};
     const target=(roi&&roi.targetCells)||est.cells||500;
-    let precise=false;
-    if(est.precise && d.bay>0){ bay=d.bay; dF=d.deepFront||0; dB=d.deepBack||0; tier=d.tier||1; precise=true; }
-    else{
+    {
       tier=Math.max(1,est.tiers||3);
       [dF,dB]=DEEP[sysKey]||[4,4];
       bay=Math.max(3, Math.ceil(target/((dF+dB)*tier)));
     }
     if(sysKey==="mini"){ cellW=0.95; cellD=0.95; }
-    const real={bay,dF,dB,tier,cells:(precise?est.cells:target)};
+    const real={bay,dF,dB,tier,cells:target};
 
     // 통로(모듈) 분할: Bay가 24를 넘으면 여러 통로로 나눠 실물 비례 유지
     // (정밀 입력은 설계 그대로 1개 랙 라인으로 표시)
     let aisles=1, bayM=bay;
-    if(!precise){
+    {
       aisles=Math.max(Math.ceil(bay/24), Math.min(qty.lifterQty||1,4));
       aisles=Math.max(1,Math.min(4,aisles));
       bayM=Math.max(3,Math.ceil(bay/aisles));
@@ -4155,8 +4071,6 @@ const GL3D = {
     const D=this.D, roi=window.roi_data, d=D.d;
     if(!roi) return "";
     const S='color:var(--accent-2)';
-    if(roi.targetDriver==='precise')
-      return `<span style="${S}">규모 결정: Bay×Deep×Tier 직접 입력값</span>`;
     if(roi.targetDriver==='stock')
       return `<span style="${S}">규모 결정: 현 재고 ${fmt(d.stock)}매 × 1.2</span>`
         + ` — 면적 ${fmt(d.area)}평은 최대 ${fmt(roi.areaCapacity)}셀까지 수용 가능(여유). `
@@ -4684,7 +4598,6 @@ ul{margin:4px 0 4px 16px}li{margin-bottom:3px;font-size:10.5px}
 <tr><td>공간 최대 수용</td><td class="r">${fmt(est.cells)} Cells (${est.tiers}단)</td></tr>
 <tr><td>권장 구축 규모</td><td class="r">${fmt(roi.targetCells)} Cells</td></tr>
 <tr><td>일 물동량 / 시간당 처리</td><td class="r">${fmt(tp.perDay)} PLT / ${fmt(tp.perHr)} PLT·h</td></tr>
-${est.precise?`<tr><td>정밀 셀 계산</td><td class="r">${est.formula} = ${fmt(est.cells)}</td></tr>`:""}
 </table>
 
 <div class="sec">3. 유사 구축 레퍼런스</div>
@@ -4704,25 +4617,6 @@ ${est.precise?`<tr><td>정밀 셀 계산</td><td class="r">${est.formula} = ${fm
   setTimeout(()=>{ try{w.focus();}catch(e){} }, 300);
 }
 
-/* ----- precise cell mode (feature 3) ----- */
-function preciseLiveCalc(){
-  const bay=+$("#f_bay").value||0, tier=+$("#f_tier").value||0;
-  const df=+$("#f_deepFront").value||0, db=+$("#f_deepBack").value||0, loss=+$("#f_aisleLoss").value||0;
-  const el=$("#preciseLive");
-  if(bay>0&&(df+db)>0&&tier>0){
-    const cells=Math.max(0, bay*(df+db)*tier - loss);
-    el.textContent=`${fmt(cells)} Cells`;
-    el.style.color="var(--accent-2)";
-  } else { el.textContent="— Cells"; el.style.color="var(--muted)"; }
-}
-$("#preciseSwitch").addEventListener("click",()=>{
-  STATE.precise=!STATE.precise;
-  $("#preciseSwitch").classList.toggle("on",STATE.precise);
-  $("#precisePanel").classList.toggle("show",STATE.precise);
-});
-["f_bay","f_tier","f_deepFront","f_deepBack","f_aisleLoss"].forEach(id=>{
-  $("#"+id).addEventListener("input",preciseLiveCalc);
-});
 
 /* ----- chip / option interactions ----- */
 $("#f_temp").addEventListener("click",e=>{
@@ -4914,7 +4808,11 @@ function copyDetailReq(){
     L.push(`  - 규모 : ${fmt(d.area)}평 · 유효 층고 ${d.height}m`);
     L.push(`  - 물동량 : 일 ${fmt(tp.perDay)} PL (시간당 ${fmt(tp.perHr)} PL/h · 주6일 8시간)`);
     if(d.stock) L.push(`  - 현 보관량 : ${fmt(d.stock)} PL`);
-    if(d.palletW&&d.palletL) L.push(`  - 파렛트 : ${fmt(d.palletW)}×${fmt(d.palletL)}mm${d.palletKg?` · ${fmt(d.palletKg)}kg`:""}${d.palletH?` · 적재 ${d.palletH}m`:""}`);
+    if(d.palletSize||d.palletKg||d.palletH){
+      const ps=[]; if(d.palletSize) ps.push(d.palletSize+"mm");
+      if(d.palletKg) ps.push(fmt(d.palletKg)+"kg"); if(d.palletH) ps.push("적재 "+d.palletH+"m");
+      L.push(`  - 파렛트 : ${ps.join(" · ")}`);
+    }
     L.push("");
     if(roi&&est){
       L.push("■ 1차 개념 제안 결과");
@@ -4947,9 +4845,7 @@ function showTargetModal(){
 
   // 어떤 값이 최종 결정에 쓰였는지 판단
   let driver='';
-  if(est.precise){
-    driver='정밀 모드 입력값 (Bay×Deep×Tier)';
-  } else if(dS && dS<=cap){
+  if(dS && dS<=cap){
     driver='현 재고 기반 (stock × 1.2)';
   } else if(dV && dV<=cap){
     driver='물동량 기반 (월 물동량 × 보관일수)';
