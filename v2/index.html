@@ -375,6 +375,31 @@ body.fs-lock{overflow:hidden}
 .ref .gain i{font-style:normal;font-size:11.5px;color:#3ddc84;line-height:1.45}
 .caseGrp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:var(--muted);margin:14px 0 2px;padding-top:10px;border-top:1px solid var(--line)}
 .caseGrp:first-child{margin-top:4px;padding-top:0;border-top:0}
+.lchip{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:nowrap}
+.lchip b{font-size:13px;font-weight:700}
+.lchip i{font-style:normal;font-size:10.5px;opacity:.62;font-family:'IBM Plex Mono',monospace}
+.lchip em{font-style:normal;font-size:11px;font-weight:700;opacity:.55}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.ba .col{border-radius:9px;padding:8px 9px;border:1px solid var(--line)}
+.ba .col.b{background:rgba(255,255,255,.028)}
+.ba .col.a{background:rgba(61,220,132,.075);border-color:rgba(61,220,132,.26)}
+.ba .lb{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.09em;margin-bottom:5px}
+.ba .col.b .lb{color:var(--muted)}
+.ba .col.a .lb{color:#3ddc84}
+.ba ul{margin:0;padding-left:12px}
+.ba li{font-size:11px;line-height:1.48;margin-bottom:3px}
+.ba .col.b li{color:var(--muted)}
+.ba .col.a li{color:var(--ink-soft)}
+.bawrap{margin-top:9px}
+.bacv{width:100%;height:168px;display:block;border-radius:10px;border:1px solid var(--line);background:linear-gradient(180deg,#0e1526,#0a0f1c)}
+.cmed{margin-top:9px}
+.cmed .ph{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch}
+.cmed .ph img{height:100px;border-radius:8px;border:1px solid var(--line);flex:0 0 auto}
+.cmed .vbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid rgba(255,0,0,.28);background:rgba(255,0,0,.09);color:#ff8080;border-radius:9px;padding:9px 11px;font-size:11.5px;font-weight:600;cursor:pointer}
+.cmed .vbtn:active{transform:scale(.985)}
+.cmed .vwrap{position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.cmed .vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.cmed .mcap{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.45}
 .dbtn{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:var(--accent);border:1px solid var(--line);border-radius:20px;padding:4px 11px;cursor:pointer;user-select:none}
 .dbtn:active{transform:scale(.96)}
 .cdet{margin-top:10px;border-left:2px solid var(--accent);padding:2px 0 2px 11px;display:none}
@@ -888,12 +913,12 @@ const INTAKE = [
      없으면 아래 fn(r) 규칙으로 자동 판정한다. (43건 전부 태그 없이 동작)
    ============================================================ */
 const LINES = [
-  { k:"asrs",    t:"자동창고",      d:"AS/RS · MDPS · Stacker Crane — 보관 공간과 층고를 해결한 사례" },
-  { k:"conv",    t:"이송설비",      d:"Conveyor · Lifter · RGV · Gantry — 공정 간 반복 운반을 자동화한 사례" },
-  { k:"consult", t:"통합 컨설팅",   d:"센터 전체를 다시 설계한 사례 — 개선 효과가 수치로 남아 있습니다" },
-  { k:"pick",    t:"분류·피킹",     d:"Sorter · Mini Load · DAS — 다품종 출고를 자동화한 사례" },
-  { k:"agv",     t:"무인이송",      d:"AGV · AGF · LGV — 지게차 유인 운반을 무인화한 사례" },
-  { k:"dock",    t:"자동상하차",    d:"Devanning · 파렛타이저 — 차량 상하차를 자동화한 사례" }
+  { k:"asrs",    t:"자동창고",    s:"AS/RS·MDPS·S/C",      d:"보관 공간과 층고를 해결한 사례" },
+  { k:"conv",    t:"이송설비",    s:"C/V·Lifter·RGV·Gantry", d:"공정 간 반복 운반을 자동화한 사례" },
+  { k:"consult", t:"통합 컨설팅", s:"센터 전체 재설계",     d:"개선 효과가 수치로 남아 있는 사례" },
+  { k:"pick",    t:"분류·피킹",   s:"Sorter·Mini Load·DAS", d:"다품종 출고를 자동화한 사례" },
+  { k:"agv",     t:"무인이송",    s:"AGV·AGF·LGV",          d:"지게차 유인 운반을 무인화한 사례" },
+  { k:"dock",    t:"자동상하차",  s:"Devanning·파렛타이저", d:"차량 상하차를 자동화한 사례" }
 ];
 /* 설비 실적 1건이 어느 계열인지 (컨설팅 사례는 line 필드로 직접 지정) */
 function lineOf(r){
@@ -915,7 +940,10 @@ const CASE_CAT = { logi:"스마트 로지스틱스", factory:"스마트팩토리
 const CASES = [
   {cat:"logi", co:"H 식품 제조사", line:"agv", cells:0,
    title:"완제품 이송 프로세스 무인화를 통한 효율적이고 안전한 물류 환경 구축",
-   build:["AGF 5대","충전소 3개","RCS 관제"], gain:[]},
+   build:["AGF 5대","충전소 3개","RCS 관제"], gain:[],
+   ba:{scene:"agv", opt:{units:2, rackB:3, rackA:3},
+     before:["완제품 이송을 지게차 유인 운반","작업자·지게차 동선 교차"],
+     after:["AGF 5대 무인 이송 · 충전소 3개","RCS 관제로 경로 자동 배차"]}},
   {cat:"logi", co:"S 전자 제조사", line:"dock", cells:0,
    title:"Bulk Box 하차 자동화를 위한 Devanning System 솔루션 구축",
    build:["Devanning Robot 2대","Spiral 파렛타이저","랩핑기","C/V"], gain:[]},
@@ -938,6 +966,9 @@ const CASES = [
   {cat:"factory", co:"B 부품 제조사", line:"agv", cells:576,
    title:"전기차 부품 생산 신축공장 고도화를 위한 무인화 솔루션 도입",
    build:["AGV 13대","3Way-AGF 2대","High Rack 576 Cell","소물 분류 DAS"], gain:[],
+   ba:{scene:"agv", opt:{units:3, rackB:2, rackA:4},
+     before:["설비 라인 부품을 지게차 유인 이송","이송 인력 관리 비용 부담"],
+     after:["AGV 13대·3Way-AGF 2대 무인 이송","MES↔WCS·ACS 연동 자동 지시"]},
    detail:{
      biz:"차량 부품 · 액세서리",
      needs:[
@@ -1834,11 +1865,127 @@ function toggleCardPanel(head){
 function renderNeedChips(){
   const box = $("#needChips"); if(!box) return;
   box.innerHTML = LINES.map((n,i)=>
-    `<span class="chip${i===0?' on':''}" data-v="${n.k}">${n.t} <b style="opacity:.65">${
+    `<span class="chip lchip${i===0?' on':''}" data-v="${n.k}"><b>${n.t}</b><i>${n.s}</i><em>${
       CASES.filter(c=>c.line===n.k).length + REFERENCES.filter(r=>lineOf(r)===n.k).length
-    }</b></span>`
+    }</em></span>`
   ).join("");
 }
+/* ============================================================
+   [BA2D] 전 / 후 비교 애니메이션
+   좌 = 도입 전(현재 방식), 우 = 구축 후. 같은 작업을 같은 화면에서 동시에 돌려
+   "무엇이 달라지는지"를 말이 아니라 움직임으로 보여준다.
+   외부 영상·이미지 파일을 쓰지 않는다 — 앱 전체가 절차적 렌더이고,
+   고객 현장 실사진이 아닌 것을 현장인 척 붙이지 않기 위해서다.
+   ============================================================ */
+const BA_COL = { dim:"#7A879E", warn:"#E8B21F", ok:"#3DDC84", rack:"#2A3550", rackTop:"#3A4A6E", plt:"#C89B5A", agv:"#4D8BFF" };
+
+function baRound(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function baPallet(g,x,y,s,col){ g.fillStyle=col||BA_COL.plt; g.fillRect(x-s*0.5,y-s*0.34,s,s*0.34); g.fillStyle="rgba(0,0,0,.28)"; g.fillRect(x-s*0.5,y-s*0.10,s,s*0.10); }
+
+/* 유인 지게차 — 운전석과 사람 머리를 그려 "사람이 탄다"를 명확히 */
+function baForklift(g,x,y,s,carry){
+  g.fillStyle=BA_COL.warn; baRound(g,x-s*0.55,y-s*0.62,s*1.05,s*0.62,3); g.fill();
+  g.fillStyle="rgba(0,0,0,.35)"; g.fillRect(x-s*0.5,y-s*0.98,s*0.10,s*0.40); // 마스트
+  g.fillStyle="#0B0F1A"; g.beginPath(); g.arc(x-s*0.30,y,s*0.15,0,7); g.arc(x+s*0.34,y,s*0.15,0,7); g.fill();
+  g.fillStyle="#F2C9A0"; g.beginPath(); g.arc(x+s*0.16,y-s*0.80,s*0.14,0,7); g.fill();   // 기사 머리
+  g.strokeStyle=BA_COL.warn; g.lineWidth=1.6; g.beginPath(); g.moveTo(x-s*0.46,y-s*0.14); g.lineTo(x-s*0.95,y-s*0.14); g.stroke();
+  if(carry) baPallet(g,x-s*0.72,y-s*0.18,s*0.62);
+}
+/* 무인 AGV — 기사 없음, 주행 표시등만 */
+function baAgv(g,x,y,s,t,carry){
+  g.fillStyle=BA_COL.agv; baRound(g,x-s*0.52,y-s*0.34,s*1.04,s*0.34,3); g.fill();
+  g.fillStyle="#0B0F1A"; g.fillRect(x-s*0.42,y,s*0.22,s*0.10); g.fillRect(x+s*0.20,y,s*0.22,s*0.10);
+  g.fillStyle=`rgba(61,220,132,${0.45+0.55*Math.abs(Math.sin(t*4))})`; g.beginPath(); g.arc(x,y-s*0.44,s*0.09,0,7); g.fill();
+  if(carry) baPallet(g,x,y-s*0.52,s*0.68);
+}
+function baRack(g,x,y,w,tiers,th){
+  for(let i=0;i<tiers;i++){
+    const yy=y-i*th;
+    g.fillStyle=BA_COL.rack; g.fillRect(x,yy-th+2,w,th-3);
+    g.fillStyle=BA_COL.rackTop; g.fillRect(x,yy-th+2,w,2);
+  }
+}
+function baLabel(g,x,y,txt,col){
+  g.font="600 9.5px 'IBM Plex Mono',monospace"; g.fillStyle=col; g.textAlign="left"; g.fillText(txt,x,y);
+}
+
+/* 장면 정의 — 계열마다 하나. side:'b'(전) / 'a'(후) */
+const BA_SCENES = {
+  agv(g,W,H,t,side,o){
+    const lane=H*0.72, bx=W*0.03, bw=W*0.17, pickX=W*0.29, dropX=W*0.60,
+          rackX=W*0.66, rackW=W*0.30, ph=H*0.07, A=side==="a";
+    g.fillStyle="rgba(255,255,255,.035)"; g.fillRect(0,lane+5,W,H-lane-5);            // 바닥
+    g.fillStyle="rgba(255,255,255,.05)"; baRound(g,bx,lane-H*0.30,bw,H*0.30,3); g.fill();
+    baLabel(g,bx+4,lane-H*0.13,"생산","rgba(255,255,255,.34)");
+    baLabel(g,bx+4,lane-H*0.05,"라인","rgba(255,255,255,.34)");
+    baRack(g,rackX,lane,rackW,A?(o.rackA||3):(o.rackB||3),H*0.13);
+    g.setLineDash([4,4]); g.strokeStyle="rgba(255,255,255,.10)"; g.lineWidth=1;       // 주행 경로
+    g.beginPath(); g.moveTo(pickX-W*0.05,lane+6); g.lineTo(rackX-3,lane+6); g.stroke(); g.setLineDash([]);
+    if(!A){
+      const T=4.6, p=(t%T)/T;                                                          // 왕복 + 상하차 정지
+      let x, carry;
+      if(p<0.30){ x=pickX+(dropX-pickX)*(p/0.30); carry=true; }
+      else if(p<0.44){ x=dropX; carry=false; }
+      else if(p<0.74){ x=dropX-(dropX-pickX)*((p-0.44)/0.30); carry=false; }
+      else { x=pickX; carry=false; }
+      const sx=pickX-W*0.035;
+      for(let i=0;i<4;i++) baPallet(g,sx,lane-i*ph,W*0.10);                            // 적체
+      baLabel(g,sx-W*0.055,lane-4*ph-5,"대기 ▲",BA_COL.warn);
+      baForklift(g,x,lane,W*0.115,carry);
+    }else{
+      const n=o.units||3;
+      for(let i=0;i<n;i++){
+        const p=((t*0.17)+i/n)%1;
+        const x = p<0.5 ? pickX+(dropX-pickX)*(p/0.5) : dropX-(dropX-pickX)*((p-0.5)/0.5);
+        baAgv(g,x,lane,W*0.105,t+i,p<0.5);
+      }
+      baPallet(g,pickX-W*0.035,lane,W*0.10);
+      g.fillStyle="rgba(61,220,132,.14)"; baRound(g,bx,lane+H*0.07,W*0.13,H*0.14,2); g.fill();
+      baLabel(g,bx+5,lane+H*0.165,"충전소",BA_COL.ok);
+    }
+  }
+};
+
+function baDrawOne(cv,t){
+  const key=cv.dataset.scene, sc=BA_SCENES[key]; if(!sc) return;
+  const o=JSON.parse(cv.dataset.opt||"{}");
+  const dpr=Math.min(2,window.devicePixelRatio||1), w=cv.clientWidth, h=cv.clientHeight;
+  if(!w||!h) return;
+  if(cv.width!==Math.round(w*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); }
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  const hw=(w-1)/2;
+  [["b",0,BA_COL.dim,"도입 전"],["a",hw+1,BA_COL.ok,"구축 후"]].forEach(([side,ox,col,txt])=>{
+    g.save(); g.beginPath(); g.rect(ox,0,hw,h); g.clip(); g.translate(ox,0);
+    sc(g,hw,h,t,side,o);
+    g.fillStyle=col; g.beginPath(); g.arc(9,13,3,0,7); g.fill();
+    baLabel(g,16,16,txt,col);
+    g.restore();
+  });
+  g.strokeStyle="rgba(255,255,255,.13)"; g.lineWidth=1;
+  g.beginPath(); g.moveTo(hw+.5,8); g.lineTo(hw+.5,h-8); g.stroke();
+}
+/* 화면에 보이는 캔버스만 그린다 — 카드가 접혀 있으면 아무것도 돌지 않는다 */
+let baRAF=null;
+function baLoop(ts){
+  const t=ts/1000, list=document.querySelectorAll("canvas.bacv");
+  let live=0;
+  list.forEach(cv=>{ const r=cv.getBoundingClientRect();
+    if(r.bottom>0 && r.top<innerHeight && r.width>0){ baDrawOne(cv,t); live++; } });
+  baRAF = list.length ? requestAnimationFrame(baLoop) : null;
+}
+function baStart(){ if(!baRAF) baRAF=requestAnimationFrame(baLoop); }
+
+function baHTML(c){
+  const b=c.ba; if(!b || !BA_SCENES[b.scene]) return "";
+  return `<div class="bawrap">
+    <canvas class="bacv" data-scene="${b.scene}" data-opt='${JSON.stringify(b.opt||{})}'></canvas>
+    <div class="ba">
+      <div class="col b"><div class="lb">도입 전</div><ul>${b.before.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+      <div class="col a"><div class="lb">구축 후</div><ul>${b.after.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    </div>
+  </div>`;
+}
+
 /* 상세 슬라이드가 있는 사례 — 고객니즈 / 구축내용 / 구축결과 3단 */
 function caseDetailHTML(c){
   const d = c.detail;
@@ -1878,7 +2025,7 @@ function renderNeedCases(key){
         <div class="rc">
           <div class="rh"><b>${c.co}</b><span class="cat ${c.cat}">${CASE_CAT[c.cat]}</span></div>
           <div class="rnote">${c.title}</div>
-          <div class="rspec">${c.build.join(" · ")}</div>
+          ${baHTML(c) || `<div class="rspec">${c.build.join(" · ")}</div>`}
           ${c.gain.length?`<div class="gain">${c.gain.map(g=>`<i>▲ ${g}</i>`).join("")}</div>`:""}
           ${c.detail?`<span class="dbtn" onclick="toggleCaseDetail(this)">상세 보기 ▾</span>${caseDetailHTML(c)}`:""}
         </div>
@@ -1899,6 +2046,7 @@ function renderNeedCases(key){
   if(!csTop.length && !rsTop.length)
     html += `<div class="note">이 니즈에 해당하는 사례가 아직 등록되지 않았습니다.</div>`;
   box.innerHTML = html;
+  baStart();
 }
 
 function buildProgress(){
