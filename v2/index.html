@@ -379,19 +379,19 @@ body.fs-lock{overflow:hidden}
 .lchip b{font-size:13px;font-weight:700}
 .lchip i{font-style:normal;font-size:10.5px;opacity:.62;font-family:'IBM Plex Mono',monospace}
 .lchip em{font-style:normal;font-size:11px;font-weight:700;opacity:.55}
-.ba{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
-.ba .col{border-radius:9px;padding:8px 9px;border:1px solid var(--line)}
-.ba .col.b{background:rgba(255,255,255,.028)}
-.ba .col.a{background:rgba(61,220,132,.075);border-color:rgba(61,220,132,.26)}
-.ba .lb{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.09em;margin-bottom:5px}
-.ba .col.b .lb{color:var(--muted)}
-.ba .col.a .lb{color:#3ddc84}
-.ba ul{margin:0;padding-left:12px}
-.ba li{font-size:11px;line-height:1.48;margin-bottom:3px}
-.ba .col.b li{color:var(--muted)}
-.ba .col.a li{color:var(--ink-soft)}
+.cph{display:flex;gap:8px;overflow-x:auto;margin-top:9px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+.cph .it{flex:0 0 64%;scroll-snap-align:start;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.cph .it img{width:100%;height:120px;object-fit:cover;display:block;background:#0d1424}
+.cph .it .ppl{height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:18px;border-bottom:1px dashed rgba(255,255,255,.16)}
+.cph .it .ppl small{font-size:9.5px;letter-spacing:.04em}
+.cph .it .cp{font-size:10px;color:var(--muted);padding:5px 7px;text-align:center;line-height:1.35}
+.afterbox{margin-top:9px;background:rgba(61,220,132,.055);border:1px solid rgba(61,220,132,.2);border-radius:10px;padding:9px 11px}
+.afterbox .lb{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.09em;color:#3ddc84;margin-bottom:5px}
+.afterbox ul{margin:0;padding-left:13px}
+.afterbox li{font-size:11.5px;line-height:1.5;margin-bottom:3px;color:var(--ink-soft)}
+.eqline{margin-top:8px;background:rgba(127,178,255,.09);border:1px solid rgba(127,178,255,.26);border-radius:9px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9CC4FF;line-height:1.5}
 .bawrap{margin-top:9px}
-.bacv{width:100%;height:168px;display:block;border-radius:10px;border:1px solid var(--line);background:linear-gradient(180deg,#0e1526,#0a0f1c)}
+.bacv{width:100%;height:150px;display:block;border-radius:10px;border:1px solid var(--line);background:linear-gradient(180deg,#0e1526,#0a0f1c)}
 .cmed{margin-top:9px}
 .cmed .ph{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch}
 .cmed .ph img{height:100px;border-radius:8px;border:1px solid var(--line);flex:0 0 auto}
@@ -941,9 +941,8 @@ const CASES = [
   {cat:"logi", co:"H 식품 제조사", line:"agv", cells:0,
    title:"완제품 이송 프로세스 무인화를 통한 효율적이고 안전한 물류 환경 구축",
    build:["AGF 5대","충전소 3개","RCS 관제"], gain:[],
-   ba:{scene:"agv", opt:{units:2, rackB:3, rackA:3},
-     before:["완제품 이송을 지게차 유인 운반","작업자·지게차 동선 교차"],
-     after:["AGF 5대 무인 이송 · 충전소 3개","RCS 관제로 경로 자동 배차"]}},
+   after:{scene:"agv", opt:{units:2, rackA:3},
+     li:["AGF 5대가 완제품을 무인 이송 · 충전소 3개","RCS 관제로 경로 자동 배차","작업자·지게차 동선 분리로 안전 확보"]}},
   {cat:"logi", co:"S 전자 제조사", line:"dock", cells:0,
    title:"Bulk Box 하차 자동화를 위한 Devanning System 솔루션 구축",
    build:["Devanning Robot 2대","Spiral 파렛타이저","랩핑기","C/V"], gain:[]},
@@ -966,9 +965,9 @@ const CASES = [
   {cat:"factory", co:"B 부품 제조사", line:"agv", cells:576,
    title:"전기차 부품 생산 신축공장 고도화를 위한 무인화 솔루션 도입",
    build:["AGV 13대","3Way-AGF 2대","High Rack 576 Cell","소물 분류 DAS"], gain:[],
-   ba:{scene:"agv", opt:{units:3, rackB:2, rackA:4},
-     before:["설비 라인 부품을 지게차 유인 이송","이송 인력 관리 비용 부담"],
-     after:["AGV 13대·3Way-AGF 2대 무인 이송","MES↔WCS·ACS 연동 자동 지시"]},
+   after:{scene:"agv", opt:{units:3, rackA:4},
+     li:["설비 라인 부품(소물·대물)을 AGV가 무인 이송","MES ↔ WCS·ACS 연동으로 이송 지시 자동화","AGV 전용 표준 물류기기로 적재 정밀도 확보"],
+     photos:[{src:"", cap:"AGV 운영 Layout"},{src:"", cap:"AGF 운영 Layout"},{src:"", cap:"AGV 전용 표준 물류기기"}]},
    detail:{
      biz:"차량 부품 · 액세서리",
      needs:[
@@ -1953,16 +1952,9 @@ function baDrawOne(cv,t){
   if(!w||!h) return;
   if(cv.width!==Math.round(w*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); }
   const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
-  const hw=(w-1)/2;
-  [["b",0,BA_COL.dim,"도입 전"],["a",hw+1,BA_COL.ok,"구축 후"]].forEach(([side,ox,col,txt])=>{
-    g.save(); g.beginPath(); g.rect(ox,0,hw,h); g.clip(); g.translate(ox,0);
-    sc(g,hw,h,t,side,o);
-    g.fillStyle=col; g.beginPath(); g.arc(9,13,3,0,7); g.fill();
-    baLabel(g,16,16,txt,col);
-    g.restore();
-  });
-  g.strokeStyle="rgba(255,255,255,.13)"; g.lineWidth=1;
-  g.beginPath(); g.moveTo(hw+.5,8); g.lineTo(hw+.5,h-8); g.stroke();
+  sc(g,w,h,t,"a",o);                                   // 구축 후 상태만 그린다
+  g.fillStyle=BA_COL.ok; g.beginPath(); g.arc(9,13,3,0,7); g.fill();
+  baLabel(g,16,16,"구축 후 · 개념 재현",BA_COL.ok);
 }
 /* 화면에 보이는 캔버스만 그린다 — 카드가 접혀 있으면 아무것도 돌지 않는다 */
 let baRAF=null;
@@ -1975,15 +1967,24 @@ function baLoop(ts){
 }
 function baStart(){ if(!baRAF) baRAF=requestAnimationFrame(baLoop); }
 
-function baHTML(c){
-  const b=c.ba; if(!b || !BA_SCENES[b.scene]) return "";
-  return `<div class="bawrap">
-    <canvas class="bacv" data-scene="${b.scene}" data-opt='${JSON.stringify(b.opt||{})}'></canvas>
-    <div class="ba">
-      <div class="col b"><div class="lb">도입 전</div><ul>${b.before.map(x=>`<li>${x}</li>`).join("")}</ul></div>
-      <div class="col a"><div class="lb">구축 후</div><ul>${b.after.map(x=>`<li>${x}</li>`).join("")}</ul></div>
-    </div>
-  </div>`;
+/* 구축 후 블록 — 사진이 있으면 사진, 없으면 개념 재현 애니메이션.
+   사진 파일이 아직 없는 슬롯은 자리표시로 남긴다(가짜 이미지를 채우지 않는다). */
+function afterHTML(c){
+  const a=c.after; if(!a) return "";
+  let media="";
+  if(a.photos && a.photos.length){
+    media = `<div class="cph">${a.photos.map(p=>`
+      <div class="it">${p.src
+        ? `<img src="${p.src}" alt="${p.cap}" loading="lazy">`
+        : `<div class="ppl">📷<small>사진 준비 중</small></div>`}
+        <div class="cp">${p.cap}</div>
+      </div>`).join("")}</div>`;
+  } else if(a.scene && BA_SCENES[a.scene]){
+    media = `<div class="bawrap"><canvas class="bacv" data-scene="${a.scene}" data-opt='${JSON.stringify(a.opt||{})}'></canvas></div>`;
+  }
+  return media
+    + `<div class="afterbox"><div class="lb">구축 후</div><ul>${a.li.map(x=>`<li>${x}</li>`).join("")}</ul></div>`
+    + `<div class="eqline">주요 설비 : ${c.build.join(" · ")}</div>`;
 }
 
 /* 상세 슬라이드가 있는 사례 — 고객니즈 / 구축내용 / 구축결과 3단 */
@@ -2025,7 +2026,7 @@ function renderNeedCases(key){
         <div class="rc">
           <div class="rh"><b>${c.co}</b><span class="cat ${c.cat}">${CASE_CAT[c.cat]}</span></div>
           <div class="rnote">${c.title}</div>
-          ${baHTML(c) || `<div class="rspec">${c.build.join(" · ")}</div>`}
+          ${afterHTML(c) || `<div class="rspec">${c.build.join(" · ")}</div>`}
           ${c.gain.length?`<div class="gain">${c.gain.map(g=>`<i>▲ ${g}</i>`).join("")}</div>`:""}
           ${c.detail?`<span class="dbtn" onclick="toggleCaseDetail(this)">상세 보기 ▾</span>${caseDetailHTML(c)}`:""}
         </div>
