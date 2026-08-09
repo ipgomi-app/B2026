@@ -391,6 +391,7 @@ body.fs-lock{overflow:hidden}
 .afterbox li{font-size:11.5px;line-height:1.5;margin-bottom:3px;color:var(--ink-soft)}
 .eqline{margin-top:8px;background:rgba(127,178,255,.09);border:1px solid rgba(127,178,255,.26);border-radius:9px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9CC4FF;line-height:1.5}
 .bawrap{margin-top:9px}
+.mcap2{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.45}
 .bacv{width:100%;height:150px;display:block;border-radius:10px;border:1px solid var(--line);background:linear-gradient(180deg,#0e1526,#0a0f1c)}
 .cmed{margin-top:9px}
 .cmed .ph{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch}
@@ -917,7 +918,9 @@ const LINES = [
   { k:"conv",    t:"이송설비",    s:"C/V·Lifter·RGV·Gantry", d:"공정 간 반복 운반을 자동화한 사례" },
   { k:"consult", t:"통합 컨설팅", s:"센터 전체 재설계",     d:"개선 효과가 수치로 남아 있는 사례" },
   { k:"pick",    t:"분류·피킹",   s:"Sorter·Mini Load·DAS", d:"다품종 출고를 자동화한 사례" },
-  { k:"agv",     t:"무인이송",    s:"AGV·AGF·LGV",          d:"지게차 유인 운반을 무인화한 사례" },
+  { k:"agv",     t:"무인이송",    s:"AGV·AGF·LGV",          d:"지게차 유인 운반을 무인화한 사례",
+    scene:"agv", opt:{units:3, rackA:3},
+    scap:"지정 경로를 무인 주행하며 파렛트를 이송합니다 — 계열 개념 재현(특정 현장 아님)" },
   { k:"dock",    t:"자동상하차",  s:"Devanning·파렛타이저", d:"차량 상하차를 자동화한 사례" }
 ];
 /* 설비 실적 1건이 어느 계열인지 (컨설팅 사례는 line 필드로 직접 지정) */
@@ -941,8 +944,7 @@ const CASES = [
   {cat:"logi", co:"H 식품 제조사", line:"agv", cells:0,
    title:"완제품 이송 프로세스 무인화를 통한 효율적이고 안전한 물류 환경 구축",
    build:["AGF 5대","충전소 3개","RCS 관제"], gain:[],
-   after:{scene:"agv", opt:{units:2, rackA:3},
-     li:["AGF 5대가 완제품을 무인 이송 · 충전소 3개","RCS 관제로 경로 자동 배차","작업자·지게차 동선 분리로 안전 확보"]}},
+   after:{li:["AGF 5대가 완제품을 무인 이송 · 충전소 3개","RCS 관제로 경로 자동 배차","작업자·지게차 동선 분리로 안전 확보"]}},
   {cat:"logi", co:"S 전자 제조사", line:"dock", cells:0,
    title:"Bulk Box 하차 자동화를 위한 Devanning System 솔루션 구축",
    build:["Devanning Robot 2대","Spiral 파렛타이저","랩핑기","C/V"], gain:[]},
@@ -965,8 +967,7 @@ const CASES = [
   {cat:"factory", co:"B 부품 제조사", line:"agv", cells:576,
    title:"전기차 부품 생산 신축공장 고도화를 위한 무인화 솔루션 도입",
    build:["AGV 13대","3Way-AGF 2대","High Rack 576 Cell","소물 분류 DAS"], gain:[],
-   after:{scene:"agv", opt:{units:3, rackA:4},
-     li:["설비 라인 부품(소물·대물)을 AGV가 무인 이송","MES ↔ WCS·ACS 연동으로 이송 지시 자동화","AGV 전용 표준 물류기기로 적재 정밀도 확보"],
+   after:{li:["설비 라인 부품(소물·대물)을 AGV가 무인 이송","MES ↔ WCS·ACS 연동으로 이송 지시 자동화","AGV 전용 표준 물류기기로 적재 정밀도 확보"],
      photos:[{src:"", cap:"AGV 운영 Layout"},{src:"", cap:"AGF 운영 Layout"},{src:"", cap:"AGV 전용 표준 물류기기"}]},
    detail:{
      biz:"차량 부품 · 액세서리",
@@ -1954,7 +1955,7 @@ function baDrawOne(cv,t){
   const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
   sc(g,w,h,t,"a",o);                                   // 구축 후 상태만 그린다
   g.fillStyle=BA_COL.ok; g.beginPath(); g.arc(9,13,3,0,7); g.fill();
-  baLabel(g,16,16,"구축 후 · 개념 재현",BA_COL.ok);
+  baLabel(g,16,16,(cv.dataset.title||"개념 재현"),BA_COL.ok);
 }
 /* 화면에 보이는 캔버스만 그린다 — 카드가 접혀 있으면 아무것도 돌지 않는다 */
 let baRAF=null;
@@ -1979,8 +1980,6 @@ function afterHTML(c){
         : `<div class="ppl">📷<small>사진 준비 중</small></div>`}
         <div class="cp">${p.cap}</div>
       </div>`).join("")}</div>`;
-  } else if(a.scene && BA_SCENES[a.scene]){
-    media = `<div class="bawrap"><canvas class="bacv" data-scene="${a.scene}" data-opt='${JSON.stringify(a.opt||{})}'></canvas></div>`;
   }
   return media
     + `<div class="afterbox"><div class="lb">구축 후</div><ul>${a.li.map(x=>`<li>${x}</li>`).join("")}</ul></div>`
@@ -2017,6 +2016,10 @@ function renderNeedCases(key){
   const more = (all,top)=> all.length>top.length ? ` <span style="opacity:.6">(총 ${all.length}건 중 ${top.length}건)</span>` : "";
 
   let html = `<div class="note" style="margin-bottom:6px">${n.d} — 관련 사례 <b>${cs.length+rs.length}건</b></div>`;
+  if(n.scene && BA_SCENES[n.scene]){
+    html += `<div class="bawrap"><canvas class="bacv" data-title="${n.t} · 개념 재현" data-scene="${n.scene}" data-opt='${JSON.stringify(n.opt||{})}'></canvas>`
+          + `<div class="mcap2">${n.scap||""}</div></div>`;
+  }
 
   if(csTop.length){
     html += `<div class="caseGrp">컨설팅 &amp; 구축 사례${more(cs,csTop)}</div>`
