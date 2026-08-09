@@ -492,11 +492,12 @@ body.fs-lock{overflow:hidden}
       </div>
 
       <div class="card">
-        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">공급 실적<span class="ln"></span><span class="obj-caret mono">▼</span></div>
-        <div class="roi-panel">
+        <div class="h mono obj-toggle" onclick="toggleCardPanel(this)" style="cursor:pointer">니즈 &amp; 구축사례<span class="ln"></span><span class="obj-caret mono">▼</span></div>
+        <div class="roi-panel tall">
           <div class="roi-panel-inner">
-            <div class="stats" id="introStats"></div>
-            <div class="note">식품·의약·화장품·생수·2차전지 등 전 업종 구축 실적이며, 이스라엘 수출 사례를 포함합니다.</div>
+            <div class="hint" style="margin-bottom:10px">고객이 말한 문제를 고르면 <b>그 문제를 해결한 구축 사례</b>를 보여줍니다.</div>
+            <div class="chips" id="needChips"></div>
+            <div id="needCases" style="margin-top:12px"></div>
           </div>
         </div>
       </div>
@@ -861,6 +862,34 @@ const INTAKE = [
   {q:"평면도(DWG 또는 PDF)를 받을 수 있을까요?",             f:null},
   {q:"지금 가장 불편한 점은 무엇입니까? (공간·인력·출고속도·재고정확도)", f:null}
 ];
+
+/* ============================================================
+   [DATA v2] 고객 니즈 → 구축사례 매칭
+   - 고객이 말한 문제를 고르면 그 문제를 해결한 실적을 보여준다.
+   - 레퍼런스에 needs:["space","cold"] 처럼 직접 태그를 달면 그 값이 우선이고,
+     없으면 아래 fn(r) 규칙으로 자동 판정한다. (43건 전부 태그 없이 동작)
+   ============================================================ */
+const NEEDS = [
+  { k:"space",  t:"보관 공간 부족",   d:"랙이 포화돼 외부 창고를 임차하거나 증축을 검토 중",
+    fn:r => (r.cells||0) >= 2000 },
+  { k:"height", t:"층고를 못 쓰고 있다", d:"천장은 높은데 3~4단까지밖에 못 쌓는 상황",
+    fn:r => (r.height||0) >= 15 },
+  { k:"cold",   t:"냉동·냉장 관리",    d:"저온 창고의 전력비·결로·작업환경 문제",
+    fn:r => r.temp === "frozen" || r.temp === "chilled" },
+  { k:"clean",  t:"클린·항온 환경",    d:"의약·전자 등 청정도·온습도 조건이 붙는 창고",
+    fn:r => r.temp === "clean" || r.temp === "hot" },
+  { k:"multi",  t:"다품종 피킹",       d:"SKU가 많아 피킹 동선·오출고가 문제",
+    fn:r => /Mini|Sorting|Picking/i.test(r.sys) },
+  { k:"flow",   t:"입출고·이송 자동화", d:"공정 간 반복 운반과 상하차가 병목",
+    fn:r => /Conveyor|Lifter|RGV|Sorting/i.test(r.sys) },
+  { k:"hybrid", t:"단계적·복합 구축",   d:"한 번에 다 못 바꾸고 나눠서 진행해야 하는 경우",
+    fn:r => /\+|하이브리드/i.test(r.sys) || /하이브리드|단계/.test(r.note||"") }
+];
+/* 레퍼런스 1건이 어떤 니즈를 해결했는지 */
+function needsOf(r){
+  if(Array.isArray(r.needs) && r.needs.length) return r.needs;
+  return NEEDS.filter(n => n.fn(r)).map(n => n.k);
+}
 
 /* ============================================================
    [DATA] TSPG 공급 레퍼런스 — 소개서 공급실적 List 전체 43건
@@ -1715,17 +1744,32 @@ function toggleCardPanel(head){
 }
 
 /* 소개 화면 공급 실적 타일 — REFERENCES에서 동적 산출 */
-function renderIntroStats(){
-  const box = $("#introStats"); if(!box) return;
-  const maxCells  = Math.max(...REFERENCES.map(r=>r.cells||0));
-  const maxHeight = Math.max(...REFERENCES.map(r=>r.height||0));
-  box.innerHTML = `
-    <div class="stat"><div class="l">공급 실적</div><div class="v">${fmt(REFERENCES.length)}<small>건</small></div><div class="sub">자동창고·물류설비</div></div>
-    <div class="stat"><div class="l">최대 보관량</div><div class="v">${fmt(maxCells)}<small>Cells</small></div><div class="sub">단일 창고 기준</div></div>
-    <div class="stat"><div class="l">최고 설치높이</div><div class="v">${maxHeight}<small>m</small></div><div class="sub">고단 랙 구축</div></div>
-    <div class="stat"><div class="l">대응 온도대</div><div class="v">-30~55<small>℃</small></div><div class="sub">냉동·냉장·항온·고온</div></div>
-    <div class="stat"><div class="l">그룹 연매출</div><div class="v">2<small>조원</small></div><div class="sub">로지스올그룹 (2023)</div></div>
-    <div class="stat"><div class="l">풀링 네트워크</div><div class="v">40<small>년</small></div><div class="sub">1984 창립 · 파렛트 풀</div></div>`;
+/* 니즈 칩 — 사례 건수를 함께 표기해 실적이 없는 니즈를 고르지 않게 한다 */
+function renderNeedChips(){
+  const box = $("#needChips"); if(!box) return;
+  box.innerHTML = NEEDS.map((n,i)=>
+    `<span class="chip${i===0?' on':''}" data-v="${n.k}">${n.t} <b style="opacity:.65">${REFERENCES.filter(r=>needsOf(r).includes(n.k)).length}</b></span>`
+  ).join("");
+}
+/* 선택한 니즈를 해결한 구축사례 — 규모 큰 순으로 상위 4건 */
+function renderNeedCases(key){
+  const box = $("#needCases"); if(!box) return;
+  const n = NEEDS.find(x=>x.k===key) || NEEDS[0];
+  const list = REFERENCES.filter(r=>needsOf(r).includes(n.k))
+                         .sort((a,b)=>(b.cells||0)-(a.cells||0));
+  const top = list.slice(0,4);
+  box.innerHTML =
+    `<div class="note" style="margin-bottom:10px">${n.d} — 해당 구축사례 <b>${list.length}건</b>${list.length>top.length?` 중 규모 상위 ${top.length}건`:""}</div>`
+    + (top.length ? top.map(r=>`
+      <div class="ref">
+        <span class="rdot"></span>
+        <div class="rc">
+          <div class="rh"><b>${r.co}</b><span class="loc">${r.loc}</span></div>
+          <div class="rspec">${r.cells>0?fmt(r.cells)+" Cells":"물류설비"}${r.height>0?" · 설치 "+r.height+"m":""} · ${r.sys}</div>
+          <div class="rnote">${r.note}</div>
+        </div>
+      </div>`).join("")
+      : `<div class="note">이 니즈에 해당하는 사례가 아직 등록되지 않았습니다.</div>`);
 }
 
 function buildProgress(){
@@ -4689,6 +4733,11 @@ ul{margin:4px 0 4px 16px}li{margin-bottom:3px;font-size:10.5px}
 
 
 /* ----- chip / option interactions ----- */
+$("#needChips").addEventListener("click",e=>{
+  const c=e.target.closest(".chip"); if(!c) return;
+  $$("#needChips .chip").forEach(x=>x.classList.remove("on"));
+  c.classList.add("on"); renderNeedCases(c.dataset.v);
+});
 $("#f_temp").addEventListener("click",e=>{
   const c=e.target.closest(".chip"); if(!c) return;
   $$("#f_temp .chip").forEach(x=>x.classList.remove("on"));
@@ -4991,7 +5040,8 @@ function showTargetModal(){
 }
 
 /* ----- init ----- */
-renderIntroStats();
+renderNeedChips();
+renderNeedCases(NEEDS[0].k);
 renderIntake();
 renderDocList();
 renderResList('tspg');
