@@ -944,22 +944,196 @@ const CASES = [
   {cat:"logi", co:"H 식품 제조사", line:"agv", cells:0,
    title:"완제품 이송 프로세스 무인화를 통한 효율적이고 안전한 물류 환경 구축",
    build:["AGF 5대","충전소 3개","RCS 관제"], gain:[],
-   after:{li:["AGF 5대가 완제품을 무인 이송 · 충전소 3개","RCS 관제로 경로 자동 배차","작업자·지게차 동선 분리로 안전 확보"]}},
+   after:{li:["Vision 기반 자율주행 AGF 5대가 완제품 무인 이송",
+              "유인 지게차와 혼용 운영 대응 안전 솔루션 적용",
+              "WET 구간 부식방지 커스텀 설계 · 무선 충전 신규 개발"],
+     photos:[{src:"", cap:"AGF 운영 Layout"},{src:"", cap:"AGF"},{src:"", cap:"AGF 무선 충전소"}]},
+   detail:{
+     biz:"육계 가공 및 사료 제조업",
+     needs:[
+       {t:"효율적인 물류 Process 수립", li:[
+         "물류·센터 특성을 반영한 적합한 Process 설계",
+         "Data 분석 결과 기준 합리적 운영 대수 산출",
+         "물동량 기준 시뮬레이션 · 레이아웃 기준 최적화 동선 반영"]},
+       {t:"물류창고 자동화 설비 도입", li:[
+         "Vision 기반 자율주행 솔루션 도입",
+         "이송 무인화(추가 작업 불필요) 서비스 제공",
+         "단계별 솔루션 도입을 통한 투자 효율성 극대화"]}
+     ],
+     work:[
+       {t:"설계 요건 정의 및 Layout", li:[
+         "안전 솔루션 도입 — 유인 지게차 &amp; AGF 혼용 사용 대응",
+         "부식방지 방안 검토 — WET 구간 내 주행부 커스텀 설계 반영",
+         "동선 최적화 검토 — 협소한 통로 이송 효율화"]},
+       {t:"물류창고 이송 효율화를 위한 AGF 솔루션 구축", li:[
+         "전체 설비 구축 완료 (AGF · 무선 충전소 등)",
+         "2차 전기 및 통신 등 시스템 Infra 공사 포함",
+         "기존 접촉식 충전 → 무선 충전 신규 개발 적용"]}
+     ],
+     result:"AGF 5대 · 충전소 3개 · RCS"
+   }},
   {cat:"logi", co:"S 전자 제조사", line:"dock", cells:0,
-   title:"Bulk Box 하차 자동화를 위한 Devanning System 솔루션 구축",
-   build:["Devanning Robot 2대","Spiral 파렛타이저","랩핑기","C/V"], gain:[]},
+   title:"Bulk Box 하차 자동화를 위한 혁신적인 Devanning System 솔루션 구축",
+   build:["Devanning Robot 2대","Spiral Conveyor","Box/Pallet Conveyor","랩핑기","파렛타이저"], gain:[],
+   after:{li:["Devanning ~ 이송 ~ 파렛타이징 ~ AS/RS 입고 전 영역 자동화 프로세스 설계",
+              "요구 Capa. 고려한 최적 자동화 설비 선정 및 투자비 제안",
+              "시뮬레이션으로 시간당 Capa.·가동률·Idle 검증"],
+     photos:[{src:"", cap:"Devanning System"},{src:"", cap:"Spiral C/V"},{src:"", cap:"랜덤 파렛타이저"},
+             {src:"", cap:"자동 랩핑기"},{src:"", cap:"자동화설비 프로세스 설계"}]},
+   detail:{
+     biz:"가전 제품 · 디스플레이 패널 · 휴대폰 · 컴퓨터 등",
+     needs:[
+       {t:"컨테이너 하차 효율성 향상", li:[
+         "하역작업 시간 단축 · 오류 최소화를 통한 물류 효율성 기여",
+         "자동화 도입으로 노동강도 감소 · 물류정보 디지털화"]},
+       {t:"노동 비용 및 인력 관리 문제 개선", li:[
+         "자동화된 하역 작업을 통한 인건비 부담 감소",
+         "단순 수작업 근로자 피로도 증가 · 고중량 안전사고 위험"]}
+     ],
+     workLabel:"설계 제안",
+     work:[
+       {t:"Devanning · 제품 이송 · 적재 자동화 솔루션 설계", li:[
+         "Devanning ~ 이송 ~ 파렛타이징 ~ AS/RS 입고 전 영역 자동화 프로세스",
+         "요구 Capa. 고려 최적 자동화 설비 선정 및 투자비 제안"]},
+       {t:"시뮬레이션 Capa. 검증 진행", li:[
+         "Robot #1 · #2호기 등 자동화 설비 관련 시간당 Capa. 확인",
+         "전체 가동률 · Idle · Unloading · Loading 등 검증"]}
+     ],
+     resultLabel:"검토 내용",
+     result:"Devanning Robot 2대 · Spiral Conveyor · Box/Pallet Conveyor · 랩핑기 · 파렛타이저"
+   }},
   {cat:"logi", co:"C 필터 제조사", line:"consult", cells:0,
    title:"통합 센터 물류 자동화 시스템 구축을 통한 차별화된 물류 역량 확보",
-   build:["통합센터 물류자동화 시스템"], gain:["인시당 출고 생산성 77% 개선","비용 35% 절감"]},
+   build:["DPS 연계 Flow Rack","OTP 모바일 로봇","시퀀스버퍼 컨베이어/소터","비전 기반 로봇 팔레타이저"],
+   gain:["인시당 출고 생산성 77% 개선","인건비 35% 절감"],
+   after:{li:["융·복합 로봇·설비 기반으로 피킹/분류/출고 처리 Capa. 극대화",
+              "3D Modeling Layout — 작업동선 효율화와 설비 확장 유연성 반영",
+              "통합 물량을 안정적으로 처리 가능한 자동화 솔루션 구축"],
+     photos:[{src:"", cap:"융·복합 자동화설비 Solution"},{src:"", cap:"자동화설비 배치 Layout"}]},
+   detail:{
+     biz:"필터 · 정수기 · 비데 · 가정용 기기",
+     needs:[
+       {t:"센터 통합에 따른 안정적 운영 및 CAPA 확보", li:[
+         "통합 운영 대응을 위한 안정적 운영 환경 구축",
+         "운영체계 표준화를 통한 안정적인 센터 운영",
+         "주문 상황에 따른 WES의 능동적 운영 대응"]},
+       {t:"인력 의존적 작업 환경 개선 및 효율화", li:[
+         "작업자 숙련도에 따른 높은 생산성 편차",
+         "자동화 설비 기반의 표준 생산성 수립 운영",
+         "인력 수급 리스크 최소화 및 작업 안전성 확보"]}
+     ],
+     workLabel:"설계 제안",
+     work:[
+       {t:"피킹 / 분류 / 출고 자동화 설비 System 설계", li:[
+         "융·복합 로봇·설비 기반 처리 Capa. 극대화",
+         "통합 물량 안정적 처리 가능한 자동화 솔루션 구축",
+         "재고보충 DPS 연계 Flow Rack · 피킹분류 OTP 모바일 로봇",
+         "지국분류 시퀀스버퍼 컨베이어·소터 · 출고적재 비전 기반 로봇 팔레타이저"]},
+       {t:"3D Modeling을 통한 Layout 설계", li:[
+         "운영 프로세스상 작업동선 효율화를 위한 설비 레이아웃 고려",
+         "자동화설비 적용 제품군의 확대를 고려한 설비 확장 유연성"]}
+     ],
+     resultLabel:"개선 효과",
+     result:"인시당 출고 생산성 77% 개선 · 인건비 35% 절감"
+   }},
   {cat:"logi", co:"I 복합물류센터", line:"consult", cells:0,
-   title:"고객사 Innovation Center 구축을 통한 대내외 운영 및 자동화 영업 확대 거점 활용",
-   build:["Innovation Center 자동화 물류센터"], gain:["보관 Capa. 121% 개선","피킹 생산성 33.6% 개선"]},
+   title:"로지스올 그룹을 대표하는 Innovation Center 구축을 통한 대내외 운영 및 자동화 영업 확대 거점 활용",
+   build:["DAS 336 Cell","Mobile Robot 9 Set","Palletizer 2 Set","Pallet Stacker 1 Set","AGF 10 Set"],
+   gain:["보관 Capa. 121% 향상","피킹 생산성 33.6% 향상","인건비 연 11.8억원 절감"],
+   after:{li:["상품을 배송지별로 분류하는 피킹시스템 + 출고 박스·파렛트 적재 자동화",
+              "Rack·피킹시스템 외 Robot System을 통한 고도화 센터 구축",
+              "고도화 WCS 연동으로 물류 프로세스 최적화 및 재고·주문 관리"],
+     photos:[{src:"", cap:"융·복합자동화설비 Solution"},{src:"", cap:"자동화설비 배치 Layout"}]},
+   detail:{
+     biz:"3PL · 풀필먼트",
+     needs:[
+       {t:"센터 內 물류 프로세스 개선", li:[
+         "출고분류 작업 효율화 · 수동 작업 프로세스 개선",
+         "재고 배치 전략 강화 · 인력/동선 효율화"]},
+       {t:"센터 자동화를 통한 작업 난이도 개선", li:[
+         "피킹 · 동선 · 보충 개선을 통한 작업 Capa. 향상",
+         "자동화 도입을 통한 작업 난이도 · 작업 강도 개선"]}
+     ],
+     workLabel:"설계 제안",
+     work:[
+       {t:"융·복합 자동화 설비를 통한 센터 설계", li:[
+         "상품을 배송지별로 분류할 수 있는 피킹시스템",
+         "출고 박스·파렛트 적재 및 파렛트 이송을 위한 출고시스템"]},
+       {t:"입고 · 보관 · 출고 이동 자동화 Layout 설계", li:[
+         "Rack · 피킹시스템 외 Robot System을 통한 고도화 센터 구축",
+         "고도화 WCS 연동을 통한 물류 프로세스 최적화 및 재고/주문 관리"]}
+     ],
+     resultLabel:"개선 효과",
+     result:"보관 Capa. 121% 향상 · 피킹 생산성 33.6% 향상 · 인건비 11.8억원/년 절감"
+   }},
   {cat:"logi", co:"E 유통사", line:"consult", cells:0,
    title:"첨단 자동화 설비·로봇 솔루션 도입을 통한 센터 운영 효율 및 프로세스 개선",
    build:["자동화 설비","로봇 솔루션"], gain:["인시당 출고 생산성 67% 개선","인건비 연 44억원 절감"]},
   {cat:"logi", co:"N 어패럴", line:"consult", cells:0,
    title:"2개 센터(안성·인천) 통합 운영 전략 수립 및 솔루션 기반 통합 자동화 센터 구축",
    build:["2개 센터 통합 자동화"], gain:["최적배치로 사용면적 64% 감소","작업 인원 31명(28%) 감소"]},
+  {cat:"logi", co:"C 유통사", line:"agv", cells:0,
+   title:"신규 물류센터 피킹 및 분류 프로세스 효율화를 위한 자동화 설비 구축 및 CS 업무 대응",
+   build:["AGV 200대","POD Rack 2,100개","충전소 30개","Work Station 30개소"], gain:[],
+   after:{li:["AGV · POD Rack · Charger · Work Station 전체 설비 구축 완료",
+              "2차 전기 및 통신 등 시스템 Infra 공사 포함",
+              "Go-Live 이후 24시간 콜센터 · 월간 리뷰까지 CS 대응"],
+     photos:[{src:"", cap:"AGV 운영 Layout"},{src:"", cap:"AGV 장애물 감지 Test"},{src:"", cap:"CS 대응 업무범위"}]},
+   detail:{
+     biz:"온라인몰 · 3PL 풀필먼트",
+     needs:[
+       {t:"로봇 자동화 기반 신규 물류센터 구축", li:[
+         "고객 물류 특성 고려 물류센터 레이아웃 설계",
+         "업무 프로세스 및 작업 효율 개선으로 시간당 주문처리량 개선",
+         "로봇 · 제어 S/W 및 2차 Infra(전기·통신) · 설비 구축 대응"]},
+       {t:"Go-Live 이후 CS 요구사항 대응", li:[
+         "24시간 콜센터 운영 대응 — H/W·S/W 현장 Issue 조치 및 운영 정상화",
+         "센터 확장에 따른 동시 수행 가능 인력 운영 필요",
+         "고객 경험 기반의 Training 센터 운영 방안 제시"]}
+     ],
+     work:[
+       {t:"물류센터 피킹 및 분류 효율화를 위한 AGV 솔루션 구축", li:[
+         "전체 설비 구축 완료 (AGV · POD Rack · Charger · Work Station 등)",
+         "2차 전기 및 통신 등 시스템 Infra 공사 포함",
+         "AGV 주행 및 안전 기능 Test 진행 완료"]},
+       {t:"운영 안정화 CS 대응", li:[
+         "로봇 실행 조직 및 로지스올 계열사 협력·지원",
+         "자동화 시스템 유지보수 · 시스템 이슈 현장 대응",
+         "고객사 트레이닝 · CS 결과 보고 및 월간 리뷰"]}
+     ],
+     result:"AGV 200대 · POD Rack 2,100개 · 충전소 30개 · Work Station 30개소"
+   }},
+  {cat:"logi", co:"O 유통사", line:"agv", cells:0,
+   title:"피킹 작업 생산성 효율화를 위한 Pilot Test 및 자동화 설비 구축",
+   build:["AGV 6대","충전소 6개","FMS","MCS"], gain:[],
+   after:{li:["Pilot Test로 시나리오2(Zone Picking) 적합 검증",
+              "작업자 : 로봇 비율 1:2 ~ 1:3 최적 산출",
+              "AGV 전용 토트박스 자체 개발 적용"],
+     photos:[{src:"", cap:"AGV 운영 Layout"},{src:"", cap:"AGV Picking"},{src:"", cap:"AGV 및 전용 토트박스"}]},
+   detail:{
+     biz:"온라인몰 · 3PL 풀필먼트",
+     needs:[
+       {t:"AGV Pilot Test", li:[
+         "물류로봇 기능 검증",
+         "시나리오 별 운영 효율 검증",
+         "피킹 방식 비교 (수작업 피킹 – 로봇 피킹)"]},
+       {t:"물류센터 자동화 설비 도입", li:[
+         "고객 물류 특성 고려 물류센터 자동화 설비 선정 및 검토",
+         "업무 프로세스 및 작업 효율 개선으로 시간당 주문처리량 개선",
+         "로봇 · 제어 S/W 및 2차 Infra(전기·통신) · 설비 구축 대응"]}
+     ],
+     work:[
+       {t:"Pilot Test 검증 결과 및 시사점", li:[
+         "AGV 시나리오 별 주행 및 안전 기능 Test 진행 완료",
+         "본 센터 기준 시나리오2(Zone Picking) 적합",
+         "시나리오2에서 작업자와 로봇의 비율은 1:2 또는 1:3이 적합"]},
+       {t:"물류센터 피킹 효율화를 위한 AGV 솔루션 구축", li:[
+         "전체 설비 구축 완료 (AGV · 충전소 등)",
+         "2차 전기 및 통신 등 시스템 Infra 공사 포함",
+         "AGV 전용 토트박스 개발 (기술연구소 · LE)"]}
+     ],
+     result:"AGV 6대 · 충전소 6개 · FMS · MCS"
+   }},
   {cat:"logi", co:"S 식품사", line:"consult", cells:0,
    title:"기존 생산공장 내 물류 효율화 및 신규 공장 내 물류센터 설계",
    build:["기존공장 효율화 + 신규센터 설계"], gain:["수출 포장 비용 35% 개선","총 물류비 9% 개선"]},
@@ -1990,11 +2164,13 @@ function afterHTML(c){
 function caseDetailHTML(c){
   const d = c.detail;
   const blk = (arr)=> arr.map(s=>`<div class="st">${s.t}</div><ul>${s.li.map(x=>`<li>${x}</li>`).join("")}</ul>`).join("");
+  /* 슬라이드마다 절이 다르다 — 엔지니어링 컨설팅 건은 '설계 제안 / 검토 내용',
+     구축 건은 '구축 내용 / 구축 결과'. 원문 표기를 그대로 따른다. */
   return `<div class="cdet">
     ${d.biz?`<div class="biz">주요사업 · ${d.biz}</div>`:""}
     <div class="sec">NEEDS — 고객이 풀고자 한 문제</div>${blk(d.needs)}
-    <div class="sec">구축 내용</div>${blk(d.work)}
-    <div class="sec">구축 결과</div><div class="res">${d.result}</div>
+    <div class="sec">${d.workLabel||"구축 내용"}</div>${blk(d.work)}
+    <div class="sec">${d.resultLabel||"구축 결과"}</div><div class="res">${d.result}</div>
   </div>`;
 }
 function toggleCaseDetail(el){
