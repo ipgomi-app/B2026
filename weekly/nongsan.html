@@ -34,8 +34,8 @@ table.cfg input[type=text]{width:80px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 /* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
-table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed;width:max-content}
-table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;vertical-align:middle;mso-number-format:"\@"}
+table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
+table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;overflow:visible;vertical-align:middle;mso-number-format:"\@"}
 table.xl td.b{border:.5pt solid #000}
 table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center;border:.5pt solid #000}
 table.xl td.h2{background:#dce6f1;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
@@ -263,7 +263,7 @@ const cellVal=(c,html)=>{const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls)
 function gridToHtml(G){
   const skipA=cfg.colA==='0';
   const widths=[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
-  let h='<table class="xl" border="0" cellspacing="0" cellpadding="0"><colgroup>'+widths.slice(skipA?1:0).map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
+  const ws=widths.slice(skipA?1:0);let h='<table class="xl" border="0" cellspacing="0" cellpadding="0" style="width:'+ws.reduce((a,b)=>a+b,0)+'px"><colgroup>'+ws.map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
   G.forEach(r=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
     h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(c.cls?' class="'+c.cls+'"':'')+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
   return h+'</table>';
