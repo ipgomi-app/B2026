@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>농산업종 주간회의 자동작성</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1c2430;--mut:#66707d;--line:#d9dee5;--navy:#1f3a93;--accent:#2b6cb0;--warn:#b9770e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;font-size:14px}
+header{background:#111;color:#fff;padding:14px 20px;font-size:20px;font-weight:700}
+header small{font-weight:400;color:#bbb;margin-left:10px;font-size:13px}
+main{padding:16px 20px 60px;max-width:1700px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--navy)}
+textarea{width:100%;min-height:150px;font:12px/1.4 Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre;overflow:auto}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px;min-width:90px}
+input[type=number]{width:105px;text-align:right}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer}
+button.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+button:hover{filter:brightness(1.08)}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+.ok{color:#137333;font-size:12px}
+.bad{color:#b00020;font-size:12px}
+details summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:14px}
+table.cfg{border-collapse:collapse;font-size:12px;margin-top:6px}
+table.cfg th,table.cfg td{border:1px solid var(--line);padding:3px 6px;text-align:center}
+table.cfg input[type=number],table.cfg input[type=text]{width:95px;padding:3px 5px;font-size:12px}
+table.cfg input[type=text]{width:80px}
+#preview{overflow:auto;border:1px solid var(--line);border-radius:6px;padding:10px;background:#fff}
+#log{font-size:12px;white-space:pre-wrap;color:var(--mut)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+/* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
+table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed;width:max-content}
+table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;vertical-align:middle;mso-number-format:"\@"}
+table.xl td.b{border:.5pt solid #000}
+table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center;border:.5pt solid #000}
+table.xl td.h2{background:#dce6f1;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
+table.xl td.hy{background:#fff2cc;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
+table.xl td.t{background:#000;color:#fff;font-weight:700;font-size:13pt;text-align:left}
+table.xl td.st{font-weight:700;text-align:left}
+table.xl td.c{text-align:center}
+table.xl td.n{text-align:right;mso-number-format:"\#\,\#\#0\;\-\#\,\#\#0\;\\-"}
+table.xl td.p{text-align:right;mso-number-format:"0\.0%"}
+table.xl td.sum{background:#e7e6e6;font-weight:700}
+table.xl td.y{background:#fff2cc}
+table.xl td.g{background:#ededed}
+table.xl td.txt{text-align:left}
+</style>
+</head>
+<body>
+<header>농산업종 주간회의 자동작성 <small>영남영업본부 · 26년 농산업종 영업</small></header>
+<main>
+
+<div class="grid">
+<div class="card">
+  <h2>1. 금주 데이터 붙여넣기 (엑셀에서 필터된 행 복사 → 붙여넣기)</h2>
+  <textarea id="src" placeholder="엑셀에서 금주(예: 9월2주) 행을 그대로 복사해서 여기에 붙여넣으세요. 헤더 포함/미포함 모두 가능. (실적)팀/권역 열부터 영업진행사항(A) 열까지."></textarea>
+  <div class="row" style="margin-top:8px">
+    <label>주차 <select id="week"></select></label>
+    <label>주간 실적 기간 <input type="text" id="range" placeholder="9/4~9/10"></label>
+    <label>누계 계산 방식
+      <select id="cummode">
+        <option value="prev">전주 누계 + 금주 실적</option>
+        <option value="all">붙여넣은 전체 데이터로 계산</option>
+      </select></label>
+    <button id="run">자동 작성</button>
+  </div>
+  <div id="detect" class="hint"></div>
+</div>
+
+<div class="card">
+  <h2>2. 기준값 (링크 시트 값으로 초기 설정, 수정 가능 · 브라우저에 저장됨)</h2>
+  <details open><summary>전주 누계 / 2차 타겟업체</summary>
+  <table class="cfg" id="cum"><tr><th>권역</th><th>대상 업체수</th><th>경쟁사 매출</th><th>누계 방문</th><th>누계 견적</th><th>누계 계약완료</th><th>누계 예상매출</th></tr></table>
+  <div class="hint">"전주 누계"는 지난주 회의자료의 누계실적 값입니다. 금주 실적이 더해져 이번주 누계가 됩니다. 방문진행율 = (방문+견적+계약완료) ÷ 대상 업체수.</div>
+  </details>
+  <details><summary>영남본부 전체 현황</summary>
+  <table class="cfg" id="all"><tr><th>권역</th><th>대상 업체수</th><th>경쟁사 매출</th><th>KPP 기계약</th><th>KPP 매출</th><th>계약불가</th><th>계약추진</th><th>경쟁사 매출(추진)</th></tr></table>
+  <div class="hint">합계 행(영남영업본부)과 계약율(=계약추진÷대상업체수... 시트값 기준 KPP기계약÷대상업체수)은 자동 계산됩니다.</div>
+  </details>
+  <details><summary>금주 주요업체 선정 기준</summary>
+  <div class="row">
+    <label>계약 최대 건수 <input type="number" id="capC" value="3"></label>
+    <label>견적 최대 건수 <input type="number" id="capQ" value="4"></label>
+    <label>방문 최대 건수 <input type="number" id="capV" value="2"></label>
+    <label>최소 효과금액 <input type="number" id="minAmt" value="0"></label>
+  </div>
+  <div class="hint">진행단계 순서 계약 → 견적 → 방문, 각 단계 안에서는 효과금액(예상매출) 상위순.</div>
+  </details>
+  <details><summary>붙여넣기 옵션</summary>
+  <div class="row">
+    <label>셀 병합 <select id="merge"><option value="1">병합 포함 (원본과 동일)</option><option value="0">병합 없음 (칸만 유지)</option></select></label>
+    <label>A열 포함 <select id="colA"><option value="1">포함 (A1에 붙여넣기)</option><option value="0">미포함 (B열 셀에 붙여넣기)</option></select></label>
+  </div>
+  </details>
+  <div style="margin-top:10px"><button class="sec" id="reset">기준값 초기화</button></div>
+</div>
+</div>
+
+<div class="card">
+  <h2>3. 결과 <span id="stat" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:10px">
+    <button id="copyHtml">엑셀용 복사 (서식 포함)</button>
+    <button class="sec" id="copyTsv">텍스트(TSV) 복사</button>
+    <button class="sec" id="dl">HTML 파일 저장</button>
+    <span class="hint">복사 후 엑셀에서 시트의 A1(또는 A열 미포함 시 B열 시작 셀)을 선택하고 Ctrl+V. 열 위치가 원본과 동일(B~Q)해서 밀림이 없습니다.</span>
+  </div>
+  <div id="preview"></div>
+  <div class="hint" style="margin-top:8px">금주 인식 행 (권역 | 지점 | 담당자 | 코드 | 업체명 | 단계 | 예상매출 | 진행사항)</div><pre id="log"></pre>
+</div>
+</main>
+
+<script>
+/* ===== 기준값 (링크 시트 2026-09 값) ===== */
+const REG=['경북권역','부산권역','경남권역'];
+const DEF={
+  all:{ '경북권역':[347,2143515,127,1589189,67,153,1982145],
+        '부산권역':[34,366755,12,165822,10,12,339559],
+        '경남권역':[295,2821116,107,1306726,116,72,1184485] },
+  // 대상업체수, 경쟁사매출, 전주누계 방문/견적/계약/예상매출 (9월2주 누계에서 금주분 차감한 값)
+  cum:{ '경북권역':[153,1982145,21,67,5,30000],
+        '부산권역':[12,339559,4,5,1,25000],
+        '경남권역':[72,1184485,15,22,3,43240] },
+  capC:3,capQ:4,capV:2,minAmt:0,merge:'1',colA:'1',range:'9/4~9/10'
+};
+const LS='nongsan_weekly_cfg_v1';
+function loadCfg(){try{return Object.assign(JSON.parse(JSON.stringify(DEF)),JSON.parse(localStorage.getItem(LS)||'{}'))}catch(e){return JSON.parse(JSON.stringify(DEF))}}
+let cfg=loadCfg();
+
+function buildCfgTables(){
+  const cum=document.getElementById('cum');
+  cum.querySelectorAll('tr:not(:first-child)').forEach(r=>r.remove());
+  REG.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+r+'</td>'+cfg.cum[r].map((v,i)=>'<td><input type="number" data-t="cum" data-r="'+r+'" data-i="'+i+'" value="'+v+'"></td>').join('');cum.appendChild(tr)});
+  const all=document.getElementById('all');
+  all.querySelectorAll('tr:not(:first-child)').forEach(r=>r.remove());
+  REG.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+r+'</td>'+cfg.all[r].map((v,i)=>'<td><input type="number" data-t="all" data-r="'+r+'" data-i="'+i+'" value="'+v+'"></td>').join('');all.appendChild(tr)});
+  ['capC','capQ','capV','minAmt','merge','colA','range'].forEach(k=>document.getElementById(k).value=cfg[k]);
+}
+function readCfg(){
+  document.querySelectorAll('table.cfg input').forEach(i=>{cfg[i.dataset.t][i.dataset.r][+i.dataset.i]=+i.value||0});
+  ['capC','capQ','capV','minAmt'].forEach(k=>cfg[k]=+document.getElementById(k).value||0);
+  ['merge','colA','range'].forEach(k=>cfg[k]=document.getElementById(k).value);
+  localStorage.setItem(LS,JSON.stringify(cfg));
+}
+buildCfgTables();
+document.getElementById('reset').onclick=()=>{localStorage.removeItem(LS);cfg=loadCfg();buildCfgTables()};
+
+/* ===== TSV 파싱 (엑셀 복사본: 따옴표 안 줄바꿈 처리) ===== */
+function parseTSV(s){
+  const rows=[];let row=[],cell='',q=false;s=s.replace(/\r\n?/g,'\n');
+  for(let i=0;i<s.length;i++){const ch=s[i];
+    if(q){ if(ch=='"'){ if(s[i+1]=='"'){cell+='"';i++}else q=false } else cell+=ch }
+    else{ if(ch=='"'&&cell===''){q=true}
+      else if(ch=='\t'){row.push(cell);cell=''}
+      else if(ch=='\n'){row.push(cell);rows.push(row);row=[];cell=''}
+      else cell+=ch }
+  }
+  row.push(cell);rows.push(row);
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n};
+const reg=v=>{v=String(v||'').trim();for(const r of REG)if(v.startsWith(r.slice(0,2)))return r;return null};
+const stage=v=>{v=String(v||'');if(v.includes('계약'))return '계약';if(v.includes('견적'))return '견적';if(v.includes('방문'))return '방문';return ''};
+
+/* ===== 열 위치 판별 ===== */
+function detectCols(rows){
+  const isData=r=>r.some(c=>reg(c)&&/권역$/.test(String(c).trim()));
+  const hdr=rows.filter(r=>!isData(r)).slice(0,4);
+  const width=Math.max(...rows.map(r=>r.length));
+  const htxt=Array.from({length:width},(_,i)=>hdr.map(r=>r[i]||'').join(' '));
+  const find=(...keys)=>{for(let i=0;i<width;i++)for(const k of keys)if(htxt[i].includes(k))return i;return -1};
+  const first=rows.find(isData);
+  const base=first?first.findIndex(c=>reg(c)&&/권역$/.test(String(c).trim())):1;
+  const c={region:base,branch:base+1,person:base+2,code:base+4,name:base+5,visit:base+19,stage:base+20,amt:base+21,memo:base+22,ok:base+17};
+  const H={region:['권역'],branch:['지점'],person:['담당자'],code:['코드'],name:['거래처명','업체명'],visit:['최종방문'],stage:['진행단계'],amt:['예상매출'],ok:['계약가능']};
+  let hit=0;for(const k in H){const i=find(...H[k]);if(i>=0){c[k]=i;hit++}}
+  if(hit>=3)c.memo=c.amt+1;
+  return {c,rows:rows.filter(isData),hdrHit:hit};
+}
+
+/* ===== 계산 ===== */
+let out=null;
+function run(){
+  readCfg();
+  const raw=document.getElementById('src').value;
+  if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
+  const {c,rows,hdrHit}=detectCols(parseTSV(raw));
+  const recs=rows.map(r=>({region:reg(r[c.region]),branch:(r[c.branch]||'').trim(),person:(r[c.person]||'').trim(),code:(r[c.code]||'').trim(),name:(r[c.name]||'').trim(),visit:(r[c.visit]||'').trim(),stage:stage(r[c.stage]),amt:num(r[c.amt]),memo:(r[c.memo]||'').trim()})).filter(x=>x.region);
+  // 주차 목록
+  const weeks={};recs.forEach(x=>{if(x.visit)weeks[x.visit]=(weeks[x.visit]||0)+1});
+  const wsel=document.getElementById('week');const prev=wsel.value;
+  const wlist=Object.keys(weeks).sort((a,b)=>weeks[b]-weeks[a]);
+  wsel.innerHTML=wlist.map(w=>'<option>'+w+'</option>').join('');
+  if(wlist.includes(prev))wsel.value=prev;
+  const week=wsel.value||'';
+  document.getElementById('detect').innerHTML='인식: 데이터 '+recs.length+'행, 헤더 '+(hdrHit>=3?'감지됨':'없음(기본 열 위치 적용)')+' · 열 위치(0부터): 권역 '+c.region+', 지점 '+c.branch+', 담당자 '+c.person+', 코드 '+c.code+', 업체명 '+c.name+', 최종방문 '+c.visit+', 진행단계 '+c.stage+', 예상매출 '+c.amt+', 진행사항 '+c.memo;
+  const cur=recs.filter(x=>x.visit===week);
+  const wk={},cm={};
+  REG.forEach(r=>{wk[r]={방문:0,견적:0,계약:0,amt:0};cm[r]={방문:0,견적:0,계약:0,amt:0}});
+  cur.forEach(x=>{if(!x.stage)return;wk[x.region][x.stage]++;if(x.stage=='계약')wk[x.region].amt+=x.amt});
+  const mode=document.getElementById('cummode').value;
+  if(mode==='all'){recs.forEach(x=>{if(!x.stage)return;cm[x.region][x.stage]++;if(x.stage=='계약')cm[x.region].amt+=x.amt})}
+  else REG.forEach(r=>{const p=cfg.cum[r];cm[r]={방문:p[2]+wk[r].방문,견적:p[3]+wk[r].견적,계약:p[4]+wk[r].계약,amt:p[5]+wk[r].amt}});
+  // 주요업체
+  const cap={계약:cfg.capC,견적:cfg.capQ,방문:cfg.capV};const major=[];
+  ['계약','견적','방문'].forEach(s=>{major.push(...cur.filter(x=>x.stage===s&&x.amt>=cfg.minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s]))});
+  out={week,range:cfg.range,wk,cm,major,cur};
+  render();
+  document.getElementById('stat').textContent='작성 완료 ('+week+', 금주 '+cur.length+'건, 주요업체 '+major.length+'건)';
+  document.getElementById('log').textContent=cur.map(x=>[x.region,x.branch,x.person,x.code,x.name,x.stage,x.amt,x.memo].join(' | ')).join('\n');
+}
+document.getElementById('run').onclick=run;
+document.getElementById('week').onchange=()=>{if(document.getElementById('src').value.trim())run()};
+
+/* ===== 표 생성 (17열 A~Q 고정, 병합 위치까지 계산) ===== */
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+const W=17;
+function buildGrid(){
+  const G=[];const occ={}; // occ[col]=rowspan으로 점유된 마지막 행 index
+  let r;
+  const R=()=>{r={cells:[],pos:0,idx:G.length};G.push(r);return r};
+  const next=()=>{while(occ[r.pos]>=r.idx)r.pos++;return r.pos};
+  const add=(v,cls,cs=1,rs=1)=>{const col=next();r.cells.push({v,cls,cs,rs,col});if(rs>1)for(let i=0;i<cs;i++)occ[col+i]=r.idx+rs-1;r.pos=col+cs};
+  const blank=(n=1)=>{for(let i=0;i<n;i++)add('','')};
+  const fill=()=>{while(next()<W)add('','')};
+  const a=cfg.all,cm=out.cm,wk=out.wk,M=cfg.merge==='1';
+  R();blank();add('■ 26년 농산업종 영업 [영남영업본부]','t',11);fill();
+  R();fill();
+  R();blank();add('◎ 영남본부 전체 현황','st');fill();
+  R();blank();['부서','대상 업체수','경쟁사 매출','KPP 기계약','KPP 매출','계약불가','계약추진','경쟁사 매출','계약율'].forEach(h=>add(h,'h'));fill();
+  const tot=[0,0,0,0,0,0,0];
+  REG.forEach(k=>{const v=a[k];v.forEach((x,i)=>tot[i]+=x);R();blank();add(k,'b c');
+    add(v[0],'b n');add(v[1],'b n');add(v[2],'b n g');add(v[3],'b n');add(v[4],'b n');add(v[5],'b n y');add(v[6],'b n y');add(v[0]?v[2]/v[0]:0,'b p');fill()});
+  R();blank();add('영남영업본부','b c sum');tot.forEach(x=>add(x,'b n sum'));add(tot[0]?tot[2]/tot[0]:0,'b p sum');fill();
+  R();fill();
+  R();blank();add('▶ 농산업종 2차 타겟 현황','st');blank(2);add(out.week,'c');fill();
+  R();blank();add('부서','h',1,M?2:1);add('2차 타겟업체','h',M?2:1);if(!M)add('','h');
+    add('주간 실적['+out.range+']','h2',M?4:1);if(!M)for(let i=0;i<3;i++)add('','h2');
+    add('2차 타겟 누계실적','hy',M?4:1);if(!M)for(let i=0;i<3;i++)add('','hy');
+    blank(4);add('방문진행율','h',1,M?2:1);fill();
+  R();blank();if(!M)add('부서','h');add('대상 업체수','h');add('경쟁사 매출','h');['방문','견적','계약완료','예상매출'].forEach(h=>add(h,'h2'));['방문','견적','계약완료','예상매출'].forEach(h=>add(h,'hy'));blank(4);if(!M)add('방문진행율','h');fill();
+  const T={n:0,s:0,v:0,q:0,c:0,am:0,cv:0,cq:0,cc:0,cam:0};
+  REG.forEach(k=>{const p=cfg.cum[k],w=wk[k],c=cm[k];const rate=p[0]?(c.방문+c.견적+c.계약)/p[0]:0;
+    T.n+=p[0];T.s+=p[1];T.v+=w.방문;T.q+=w.견적;T.c+=w.계약;T.am+=w.amt;T.cv+=c.방문;T.cq+=c.견적;T.cc+=c.계약;T.cam+=c.amt;
+    R();blank();add(k,'b c');add(p[0],'b n y');add(p[1],'b n y');add(w.방문,'b n');add(w.견적,'b n');add(w.계약,'b n');add(w.amt,'b n');
+    add(c.방문,'b n');add(c.견적,'b n');add(c.계약,'b n');add(c.amt,'b n');blank(4);add(rate,'b p');fill()});
+  R();blank();add('영남영업본부','b c sum');[T.n,T.s,T.v,T.q,T.c,T.am,T.cv,T.cq,T.cc,T.cam].forEach(x=>add(x,'b n sum'));blank(4);add(T.n?(T.cv+T.cq+T.cc)/T.n:0,'b p sum');fill();
+  R();blank();add('※ 2차 타겟업체 : 영남본부 676업체 파렛트 사용확인 결과 KPP 계약 사용중인 업체와 계약불가(종료, 미사용 등) 업체를 제외한 추가 영업 가능업체를 2차 타겟으로 설정.','txt');fill();
+  R();fill();
+  R();blank();add('※ 금주 주요업체','st');fill();
+  R();blank();add('팀/지점','h');add('담당자','h');add('코드','h');add('업체명','h',M?2:1);if(!M)add('','h');add('진행단계','h');add('효과금액(年)','h');add('영업 진행사항','h',M?9:1);if(!M)for(let i=0;i<8;i++)add('','h');fill();
+  out.major.forEach(x=>{R();blank();add(x.branch,'b c');add(x.person,'b c');add(x.code,'b c');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.stage,'b c');add(x.amt,'b n');add(x.memo,'b txt',M?9:1);if(!M)for(let i=0;i<8;i++)add('','b');fill()});
+  return G;
+}
+const cellVal=(c,html)=>{const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls);
+  if(isNum)return (c.v===0||c.v==null||c.v==='')?'-':(html?Number(c.v).toLocaleString('en-US'):String(Number(c.v)));
+  if(isP)return (Number(c.v)*100).toFixed(1)+'%';
+  return html?esc(c.v):String(c.v??'').replace(/\t/g,' ').replace(/\r?\n/g,' ')};
+function gridToHtml(G){
+  const skipA=cfg.colA==='0';
+  const widths=[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
+  let h='<table class="xl" border="0" cellspacing="0" cellpadding="0"><colgroup>'+widths.slice(skipA?1:0).map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
+  G.forEach(r=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
+    h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(c.cls?' class="'+c.cls+'"':'')+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
+  return h+'</table>';
+}
+function gridToTsv(G){
+  const skipA=cfg.colA==='0';
+  return G.map(r=>{const cells=new Array(W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
+}
+function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid())}
+['merge','colA','range'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out){out.range=cfg.range;render()}});
+
+/* ===== 복사 ===== */
+function fullHtml(){
+  const css=document.querySelector('style').textContent.split('/* 출력표')[1]||'';
+  return '<html><head><meta charset="utf-8"><style>/* 출력표'+css+'</style></head><body>'+gridToHtml(buildGrid())+'</body></html>';
+}
+async function copy(html,text){
+  try{ if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}
+  }catch(e){}
+  try{const d=document.createElement('div');d.contentEditable=true;d.style.position='fixed';d.style.left='-9999px';d.innerHTML=html;document.body.appendChild(d);
+    const s=window.getSelection(),rg=document.createRange();rg.selectNodeContents(d);s.removeAllRanges();s.addRange(rg);const ok=document.execCommand('copy');s.removeAllRanges();d.remove();return ok}catch(e){return false}
+}
+document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const ok=await copy(fullHtml(),gridToTsv(buildGrid()));document.getElementById('stat').textContent=ok?'복사됨 → 엑셀에서 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'};
+document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid()));document.getElementById('stat').textContent='TSV 복사됨'};
+document.getElementById('dl').onclick=()=>{if(!out)return;const b=new Blob([fullHtml()],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='농산업종_주간회의_'+(out.week||'')+'.html';a.click()};
+</script>
+</body>
+</html>
