@@ -1,0 +1,40 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "HERMES",
+      "hasCanvas": false,
+      "bodyTextLen": 89,
+      "bodyTextHash": "76c4f6b7fd454dab58bd1585123ee8811ef979646353361fbff51118a920b0e9",
+      "bodyTextPrefix": "HERMES PERSONAL AGENT 09:46:54 STANDBY H 대기 화면을 한 번 터치하면 대화를 시작합",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "HERMES",
+      "hasCanvas": false,
+      "bodyTextLen": 80,
+      "bodyTextHash": "3ffd5a6c5910aa6fb0bb2f2fbe41db10b3766c8d4e94d2ae1357267a341a0dfe",
+      "bodyTextPrefix": "HERMES PERSONAL AGENT STANDBY H 대기 화면을 한 번 터치하면 대화를 시작합니다. 한 번 터",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "desktop: body text replaced (similar length, page start changed)"
+  ]
+}

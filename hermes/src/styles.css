@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #07080a;
+  --color-surface: #111318;
+  --color-surface-2: #181b21;
+  --color-fg: #e8e6e1;
+  --color-muted: #8a8d93;
+  --color-subtle: #5c6068;
+  --color-accent: #8fa4b8;
+  --color-accent-fg: #07080a;
+  --color-border: color-mix(in oklab, var(--color-fg) 12%, transparent);
+  --color-border-strong: color-mix(in oklab, var(--color-fg) 22%, transparent);
+  --color-danger: #c45c5c;
+
+  --font-sans: "Outfit", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  --shadow-border: 0 0 0 1px color-mix(in oklab, var(--color-fg) 8%, transparent);
+  --shadow-border-hover: 0 0 0 1px color-mix(in oklab, var(--color-fg) 14%, transparent);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+    color: var(--color-fg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-spin,
+  .orb-breathe,
+  .orb-think {
+    animation: none !important;
+  }
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes orb-think {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.stagger-in {
+  animation: fade-up 400ms var(--ease-out) both;
+}
