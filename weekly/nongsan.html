@@ -400,7 +400,7 @@ function listCompute(id){
   L.out={major,dept:$('dept').value};
   $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
   $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
-  $('preview').innerHTML=gridToHtml(listGrid(id));
+  $('preview').innerHTML=gridToHtml(listGrid(id,$('scope').value==='data'));
 }
 function listGrid(id,dataOnly){
   const L=LISTS[id];const W=LISTW;const G=[];G.W=W;G.widths=[20,60,85,70,75,85,85,80,90,90,90,90,90,90,90,90,90,90];
@@ -455,7 +455,7 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   ['status','gubun','fillRP','hdr','max','start','scope','layout'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
   $('copy1').onclick=async()=>{if(!PR.out)return;const G=prGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
   $('tsv1').onclick=async()=>{if(!PR.out)return;await navigator.clipboard.writeText(gridToTsv(prGrid1()));$('stat1').textContent='TSV 복사됨'};
-  $('copy2').onclick=async()=>{if(!PR.out)return;const G=prGrid2($('scope').value==='data');$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
+  $('copy2').onclick=async()=>{if(!PR.out)return;const G=prGrid2($('scope').value==='data');$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 ('+G.length+'행, 제목·헤더 없음)':'복사 실패'};
   $('tsv2').onclick=async()=>{if(!PR.out)return;await navigator.clipboard.writeText(gridToTsv(prGrid2($('scope').value==='data')));$('stat2').textContent='TSV 복사됨'};
 })();
 function prRun(){
@@ -484,7 +484,7 @@ function prCompute(){
 function prRender(){
   const $=k=>document.getElementById('pr-'+k);
   $('prev1').innerHTML=gridToHtml(prGrid1());$('stat1').textContent='('+PR.out.length+'행)';
-  $('prev2').innerHTML=gridToHtml(prGrid2());$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
+  $('prev2').innerHTML=gridToHtml(prGrid2($('scope').value==='data'));$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
 }
 function prGrid1(){
   const $=k=>document.getElementById('pr-'+k);const M=cfg.merge==='1';
