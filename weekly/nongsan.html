@@ -311,8 +311,8 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.que
 /* ===== 타겟업체 / 경쟁사 : 금주 주요업체 리스트 ===== */
 const LISTW=18; // A~R
 const FIELDS={
-  target:[['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항']],['date','시행일(선택)',['시행일']]],
-  comp:[['branch','팀/지점',['(팀/지점)','팀/지점','지점']],['person','담당자',['(실적)담당자','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계(없으면 자동)',['진행단계']],['cCnt','(계약)건수',['(계약)건수']],['cAmt','(계약)효과금액',['(계약)효과금액']],['qAmt','(견적)효과금액',['(견적)효과금액']],['amt','효과금액(직접)',['효과금액(年)']],['memo','영업진행사항',['영업진행사항','진행사항','현황']],['date','최종방문일(선택)',['최종방문일','시행일']]]
+  target:[['region','부서(권역)',['팀/권역','권역']],['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항']],['date','시행일(선택)',['시행일']]],
+  comp:[['region','부서(권역)',['(팀/권역)','팀/권역','권역']],['branch','팀/지점',['(팀/지점)','팀/지점','지점']],['person','담당자',['(실적)담당자','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계(없으면 자동)',['진행단계']],['cCnt','(계약)건수',['(계약)건수']],['cAmt','(계약)효과금액',['(계약)효과금액']],['qAmt','(견적)효과금액',['(견적)효과금액']],['amt','효과금액(직접)',['효과금액(年)']],['memo','영업진행사항',['영업진행사항','진행사항','현황']],['date','최종방문일(선택)',['최종방문일','시행일']]]
 };
 const LISTS={};
 function listPane(id,title,hint){
@@ -328,7 +328,7 @@ function listPane(id,title,hint){
   <div class="map" id="${id}-map"></div></div>
   <div class="card"><h2>2. 선정 기준</h2>
   <div class="row"><label>계약 최대 <input type="number" id="${id}-capC" value="3"></label><label>견적 최대 <input type="number" id="${id}-capQ" value="4"></label><label>방문 최대 <input type="number" id="${id}-capV" value="2"></label><label>최소 효과금액 <input type="number" id="${id}-minAmt" value="0"></label>
-  <label>부서 열 <select id="${id}-dept"><option value="">비움</option><option value="region">권역</option></select></label></div>
+  <label>부서 열 <select id="${id}-dept"><option value="region">권역</option><option value="">비움</option></select></label></div>
   <div class="hint">계약 → 견적 → 방문 순, 각 단계는 효과금액 상위순. 병합/A열 옵션은 농산업종 탭의 설정을 따릅니다.</div></div></div>
   <div class="card"><h2>3. 결과 <span id="${id}-stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">엑셀용 복사 (서식 포함)</button><button class="sec" id="${id}-copyTsv">텍스트(TSV) 복사</button><button class="sec" id="${id}-dl">HTML 파일 저장</button>
@@ -361,7 +361,7 @@ function listDetect(id){
   if(kind>=0){map.code=kind+1;map.name=[kind+2,kind+3,kind+4].find(i=>L.data.filter(r=>(r[i]||'').trim()&&!isCode(r[i])).length>=L.data.length*0.5)??map.name}
   else{const c=colMatch(isCode);if(c>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code]))))map.code=c}
   const br=colMatch(v=>/지점$/.test(String(v||'').trim()));if(br>=0&&(map.branch<0||!L.data.some(r=>/지점$/.test((r[map.branch]||'').trim()))))map.branch=br;
-  map.region=colMatch(v=>/권역$/.test(String(v||'').trim()));
+  const rg=colMatch(v=>/권역$/.test(String(v||'').trim()));if(rg>=0&&(map.region<0||!L.data.some(r=>/권역$/.test((r[map.region]||'').trim()))))map.region=rg;
   if(map.branch>=0&&(map.person<0||!L.data.some(r=>isName(r[map.person])))){const cand=[map.branch+1,map.branch+2,map.branch+3].find(i=>L.data.filter(r=>isName(r[i])).length>=L.data.length*0.5);if(cand!=null)map.person=cand}
   if(map.code>=0&&(map.name<0||!L.data.some(r=>(r[map.name]||'').trim())))map.name=[map.code+1,map.code+2].find(i=>L.data.filter(r=>(r[i]||'').trim()).length>=L.data.length*0.5)??-1;
   if(map.memo<0||!L.data.some(r=>/[가-힣]{2,}/.test(r[map.memo]||''))){ // 가장 긴 텍스트 열
