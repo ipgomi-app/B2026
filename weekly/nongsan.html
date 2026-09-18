@@ -61,7 +61,7 @@ table.xl td.txt{text-align:left}
 <body>
 <header>농산업종 주간회의 자동작성 <small>영남영업본부 · 26년 농산업종 영업</small></header>
 <main>
-<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button></div>
+<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button></div>
 
 <div class="tabpane on" id="pane-farm">
 <div class="grid">
@@ -126,6 +126,7 @@ table.xl td.txt{text-align:left}
 <!-- ===== 타겟업체 / 경쟁사 탭 ===== -->
 <div class="tabpane" id="pane-target"></div>
 <div class="tabpane" id="pane-comp"></div>
+<div class="tabpane" id="pane-price"></div>
 </main>
 
 <script>
@@ -413,6 +414,100 @@ function listGrid(id){
   return G;
 }
 ['merge','colA'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{Object.keys(LISTS).forEach(id=>{if(LISTS[id].out)listCompute(id)})}));
+
+/* ===== 단가인상 탭 ===== */
+function newGrid(W,widths){const G=[];G.W=W;G.widths=widths;const occ={};let r;
+  const R=()=>{r={cells:[],pos:0,idx:G.length};G.push(r);return r};
+  const next=()=>{while(occ[r.pos]>=r.idx)r.pos++;return r.pos};
+  const add=(v,cls,cs=1,rs=1)=>{const col=next();r.cells.push({v,cls,cs,rs,col});if(rs>1)for(let i=0;i<cs;i++)occ[col+i]=r.idx+rs-1;r.pos=col+cs};
+  const blank=(n=1)=>{for(let i=0;i<n;i++)add('','')};const fill=()=>{while(next()<W)add('','')};
+  return {G,R,add,blank,fill}}
+const PFIELDS=[['region','부서(권역)',['부서'],0],['person','담당자',['담당자'],1],['code','코드',['코드'],3],['name','계약처명',['계약처명'],4],['amt','효과금액(천원)',['효과금액(천원)','효과금액'],7],['kind','추가청구세부',['추가청구세부'],9],['week','회의반영주차',['회의반영주차'],11],['memo1','재고차이사유 및 계약내용',['재고차이사유'],44],['memo2','계약특이사항',['계약특이사항'],65]];
+const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
+(function(){
+  const el=document.getElementById('pane-price');
+  el.innerHTML=`<div class="grid"><div class="card"><h2>1. 단가인상 결재 리스트 붙여넣기</h2>
+  <textarea id="pr-src" placeholder="단가인상 결재 리스트(부서, 담당자, 항목, 코드, 계약처명 … 계약특이사항 …)를 헤더 포함해서 붙여넣기"></textarea>
+  <div class="row" style="margin-top:8px"><button id="pr-run">자동 작성</button></div>
+  <div class="hint" id="pr-detect"></div><div class="map" id="pr-map"></div></div>
+  <div class="card"><h2>2. 옵션</h2>
+  <div class="row">
+    <label>진행여부(관리시트) <input type="text" id="pr-status" value="완료" style="min-width:80px"></label>
+    <label>구분(주요업체) <input type="text" id="pr-gubun" value="진행중" style="min-width:80px"></label>
+    <label>권역·담당자 채움 <select id="pr-fillRP"><option value="1">채움</option><option value="0">비움</option></select></label>
+    <label>관리시트 헤더 <select id="pr-hdr"><option value="1">포함</option><option value="0">미포함(데이터 행만)</option></select></label>
+    <label>주요업체 최대 건수 <input type="number" id="pr-max" value="3"></label>
+    <label>주요업체 시작 열 <select id="pr-start"><option value="N">N열부터 (표만 복사)</option><option value="A">A열부터 (A~M 빈칸 포함)</option></select></label>
+  </div>
+  <div class="hint">비고(내용) = 재고차이사유 및 계약내용 + 계약특이사항 (같은 내용이면 한 번만). 주요업체는 효과금액 상위순.</div></div></div>
+  <div class="card"><h2>3-1. 단가인상 관리시트 행 <span id="pr-stat1" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:10px"><button id="pr-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="pr-tsv1">TSV 복사</button>
+  <span class="hint">팀/권역 ~ 비고(내용) 32열. 관리시트의 팀/권역 열 셀을 선택하고 붙여넣기.</span></div><div id="pr-prev1"></div></div>
+  <div class="card"><h2>3-2. 금주 주요업체 <span id="pr-stat2" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:10px"><button id="pr-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="pr-tsv2">TSV 복사</button>
+  <span class="hint">N 구분, O 코드, V 업체명, X 효과금액, AC~AH 세부내용. 제목 셀(N열)을 선택하고 붙여넣기.</span></div><div id="pr-prev2"></div></div>`;
+  const $=k=>document.getElementById('pr-'+k);
+  $('run').onclick=prRun;
+  ['status','gubun','fillRP','hdr','max','start'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
+  $('copy1').onclick=async()=>{if(!PR.out)return;const G=prGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
+  $('tsv1').onclick=async()=>{if(!PR.out)return;await navigator.clipboard.writeText(gridToTsv(prGrid1()));$('stat1').textContent='TSV 복사됨'};
+  $('copy2').onclick=async()=>{if(!PR.out)return;const G=prGrid2();$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
+  $('tsv2').onclick=async()=>{if(!PR.out)return;await navigator.clipboard.writeText(gridToTsv(prGrid2()));$('stat2').textContent='TSV 복사됨'};
+})();
+function prRun(){
+  const $=k=>document.getElementById('pr-'+k);const raw=$('src').value;if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
+  PR.rows=parseTSV(raw);
+  if(raw!==PR.hash){PR.hash=raw;
+    let first=PR.rows.findIndex(r=>r.some(isCode)&&r.some(c=>/권역$/.test((c||'').trim())));if(first<0)first=0;
+    PR.hdr=PR.rows.slice(0,first);PR.data=PR.rows.slice(first);const width=Math.max(...PR.rows.map(r=>r.length));PR.width=width;
+    const htxt=Array.from({length:width},(_,i)=>PR.hdr.map(r=>(r[i]||'').replace(/\s+/g,'')).join(' '));
+    const map={};PFIELDS.forEach(([k,,keys,def])=>{map[k]=-1;for(const key of keys){const i=htxt.findIndex(t=>t.includes(key.replace(/\s+/g,'')));if(i>=0){map[k]=i;break}}if(map[k]<0&&!PR.hdr.length)map[k]=def});
+    PR.map=map;
+    const sample=PR.data[0]||[];
+    const opts=i=>'<option value="-1">(없음)</option>'+Array.from({length:width},(_,j)=>'<option value="'+j+'"'+(j===i?' selected':'')+'>'+j+': '+((PR.hdr.map(r=>r[j]||'').join(' ').replace(/\s+/g,' ').trim()||sample[j]||'').slice(0,16))+'</option>').join('');
+    $('map').innerHTML=PFIELDS.map(([k,label])=>'<label>'+label+'<select data-k="'+k+'">'+opts(map[k])+'</select></label>').join('');
+    $('map').querySelectorAll('select').forEach(sel=>sel.onchange=()=>{PR.map[sel.dataset.k]=+sel.value;prCompute()});
+    $('detect').textContent='인식: 헤더 '+PR.hdr.length+'줄, 데이터 '+PR.data.length+'행 · 열 매핑은 아래에서 수정 가능';
+  }
+  prCompute();
+}
+function prCompute(){
+  const m=PR.map;const g=(r,k)=>(m[k]>=0?(r[m[k]]||''):'').trim();
+  PR.out=PR.data.map(r=>{const a=g(r,'memo1'),b=g(r,'memo2');const memo=(a&&b&&a!==b)?a+' / '+b:(a||b);
+    return {region:g(r,'region'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),amt:num(g(r,'amt')),kind:g(r,'kind'),week:g(r,'week'),memo}}).filter(x=>x.code||x.name);
+  prRender();
+}
+function prRender(){
+  const $=k=>document.getElementById('pr-'+k);
+  $('prev1').innerHTML=gridToHtml(prGrid1());$('stat1').textContent='('+PR.out.length+'행)';
+  $('prev2').innerHTML=gridToHtml(prGrid2());$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
+}
+function prGrid1(){
+  const $=k=>document.getElementById('pr-'+k);const M=cfg.merge==='1';
+  const {G,R,add,blank,fill}=newGrid(32,[70,70,60,60,65,140,70,60,60,50,55,60,70,55,60,70,70,75,75,70,75,55,60,70,70,75,75,60,60,110,80,320]);
+  if($('hdr').value==='1'){
+    R();['팀/권역','팀/지점','담당자','패드구분','코드','계약처명','연매출(25년)','손익(25년)','수익율(25년)','매출등급','수익율등급','KPP단독/병행','25년 단가인상 진행여부'].forEach(h=>add(h,'h',1,M?2:1));
+    add('상반기 단가인상 계획및 실적','h',M?8:1);if(!M)for(let i=0;i<7;i++)add('','h');add('하반기 단가인상 계획','h',M?6:1);if(!M)for(let i=0;i<5;i++)add('','h');add('26년 단가인상 실적','hy',M?5:1);if(!M)for(let i=0;i<4;i++)add('','hy');
+    R();if(!M)['팀/권역','팀/지점','담당자','패드구분','코드','계약처명','연매출(25년)','손익(25년)','수익율(25년)','매출등급','수익율등급','KPP단독/병행','25년 단가인상 진행여부'].forEach(h=>add(h,'h'));
+    ['계획월','계획구분','추가청구 유형','月효과금액(천원)','예상효과금액(26년)','年환산금액(26년)','실적반영월','年환산금액(26년)','계획월','계획구분','추가청구 유형','月효과금액(천원)','예상효과금액(26년)','年환산금액(26년)'].forEach(h=>add(h,'h'));
+    ['진행여부','적용월','단가인상구분(LPS품의)','년예상효과(천원)','비고(내용)'].forEach(h=>add(h,'hy'));
+  }
+  const fillRP=$('fillRP').value==='1',st=$('status').value;
+  PR.out.forEach(x=>{R();add(fillRP?x.region:'','b c');add('','b');add(fillRP?x.person:'','b c');add('','b');add(x.code,'b c');add(x.name,'b txt');for(let i=0;i<7;i++)add('','b');for(let i=0;i<14;i++)add('','b');
+    add(st,'b c');add(x.week,'b c');add(x.kind,'b c');add(x.amt,'b n');add(x.memo,'b txt');fill()});
+  return G;
+}
+function prGrid2(){
+  const $=k=>document.getElementById('pr-'+k);const M=cfg.merge==='1';const lead=$('start').value==='A'?13:0;
+  const widths=[...Array(lead).fill(20),60,70,50,50,50,50,50,50,130,30,70,50,50,50,50,90,90,90,90,90,90];
+  const {G,R,add,blank,fill}=newGrid(lead+21,widths);
+  const max=+$('max').value||PR.out.length;const rows=[...PR.out].sort((a,b)=>b.amt-a.amt).slice(0,max);
+  R();blank(lead);add('※ 금주 주요업체','st');fill();
+  R();blank(lead);add('구분','h2');add('코드','h2');for(let i=0;i<6;i++)add('','h2');add('업체명','h2 txt',M?2:1);if(!M)add('','h2');add('효과금액','h2');for(let i=0;i<4;i++)add('','h2');add('세부내용','h2 txt',M?6:1);if(!M)for(let i=0;i<5;i++)add('','h2');fill();
+  rows.forEach(x=>{R();blank(lead);add($('gubun').value,'b c');add(x.code,'b c');for(let i=0;i<6;i++)add('','b');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.amt,'b n');for(let i=0;i<4;i++)add('','b');add(x.memo,'b txt',M?6:1);if(!M)for(let i=0;i<5;i++)add('','b');fill()});
+  return G;
+}
+['merge'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{if(PR.out)prRender()}));
 </script>
 </body>
 </html>
