@@ -31,6 +31,13 @@ table.cfg input[type=number],table.cfg input[type=text]{width:95px;padding:3px 5
 table.cfg input[type=text]{width:80px}
 #preview{overflow:auto;border:1px solid var(--line);border-radius:6px;padding:10px;background:#fff}
 #log{font-size:12px;white-space:pre-wrap;color:var(--mut)}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{background:#fff;color:var(--navy);border:1px solid var(--line);border-bottom:3px solid transparent;border-radius:6px 6px 0 0;font-weight:700}
+.tabs button.on{border-bottom-color:var(--navy);background:#e8edf8}
+.tabpane{display:none}.tabpane.on{display:block}
+.map{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.map label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:2px}
+.map select{min-width:140px;font-size:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 /* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
@@ -54,7 +61,9 @@ table.xl td.txt{text-align:left}
 <body>
 <header>농산업종 주간회의 자동작성 <small>영남영업본부 · 26년 농산업종 영업</small></header>
 <main>
+<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button></div>
 
+<div class="tabpane on" id="pane-farm">
 <div class="grid">
 <div class="card">
   <h2>1. 금주 데이터 붙여넣기 (엑셀에서 필터된 행 복사 → 붙여넣기)</h2>
@@ -112,6 +121,11 @@ table.xl td.txt{text-align:left}
   <div id="preview"></div>
   <div class="hint" style="margin-top:8px">금주 인식 행 (권역 | 지점 | 담당자 | 코드 | 업체명 | 단계 | 예상매출 | 진행사항)</div><pre id="log"></pre>
 </div>
+</div>
+
+<!-- ===== 타겟업체 / 경쟁사 탭 ===== -->
+<div class="tabpane" id="pane-target"></div>
+<div class="tabpane" id="pane-comp"></div>
 </main>
 
 <script>
@@ -218,9 +232,8 @@ document.getElementById('week').onchange=()=>{if(document.getElementById('src').
 
 /* ===== 표 생성 (17열 A~Q 고정, 병합 위치까지 계산) ===== */
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-const W=17;
 function buildGrid(){
-  const G=[];const occ={}; // occ[col]=rowspan으로 점유된 마지막 행 index
+  const W=17;const G=[];G.W=W;const occ={}; // occ[col]=rowspan으로 점유된 마지막 행 index
   let r;
   const R=()=>{r={cells:[],pos:0,idx:G.length};G.push(r);return r};
   const next=()=>{while(occ[r.pos]>=r.idx)r.pos++;return r.pos};
@@ -262,7 +275,7 @@ const cellVal=(c,html)=>{const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls)
   return html?esc(c.v):String(c.v??'').replace(/\t/g,' ').replace(/\r?\n/g,' ')};
 function gridToHtml(G){
   const skipA=cfg.colA==='0';
-  const widths=[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
+  const widths=G.widths||[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
   const ws=widths.slice(skipA?1:0);let h='<table class="xl" border="0" cellspacing="0" cellpadding="0" style="width:'+ws.reduce((a,b)=>a+b,0)+'px"><colgroup>'+ws.map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
   G.forEach(r=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
     h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(c.cls?' class="'+c.cls+'"':'')+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
@@ -270,15 +283,15 @@ function gridToHtml(G){
 }
 function gridToTsv(G){
   const skipA=cfg.colA==='0';
-  return G.map(r=>{const cells=new Array(W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
+  return G.map(r=>{const cells=new Array(G.W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
 }
 function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid())}
 ['merge','colA','range'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out){out.range=cfg.range;render()}});
 
 /* ===== 복사 ===== */
-function fullHtml(){
+function fullHtml(G){
   const css=document.querySelector('style').textContent.split('/* 출력표')[1]||'';
-  return '<html><head><meta charset="utf-8"><style>/* 출력표'+css+'</style></head><body>'+gridToHtml(buildGrid())+'</body></html>';
+  return '<html><head><meta charset="utf-8"><style>/* 출력표'+css+'</style></head><body>'+gridToHtml(G||buildGrid())+'</body></html>';
 }
 async function copy(html,text){
   try{ if(navigator.clipboard&&window.ClipboardItem){
@@ -290,6 +303,116 @@ async function copy(html,text){
 document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const ok=await copy(fullHtml(),gridToTsv(buildGrid()));document.getElementById('stat').textContent=ok?'복사됨 → 엑셀에서 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'};
 document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid()));document.getElementById('stat').textContent='TSV 복사됨'};
 document.getElementById('dl').onclick=()=>{if(!out)return;const b=new Blob([fullHtml()],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='농산업종_주간회의_'+(out.week||'')+'.html';a.click()};
+
+/* ===== 탭 전환 ===== */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.tab))});
+
+/* ===== 타겟업체 / 경쟁사 : 금주 주요업체 리스트 ===== */
+const LISTW=18; // A~R
+const FIELDS={
+  target:[['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항']],['date','시행일(선택)',['시행일']]],
+  comp:[['branch','팀/지점',['(팀/지점)','팀/지점','지점']],['person','담당자',['(실적)담당자','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계(없으면 자동)',['진행단계']],['cCnt','(계약)건수',['(계약)건수']],['cAmt','(계약)효과금액',['(계약)효과금액']],['qAmt','(견적)효과금액',['(견적)효과금액']],['amt','효과금액(직접)',['효과금액(年)']],['memo','영업진행사항',['영업진행사항','진행사항','현황']],['date','최종방문일(선택)',['최종방문일','시행일']]]
+};
+const LISTS={};
+function listPane(id,title,hint){
+  const el=document.getElementById('pane-'+id);
+  el.innerHTML=`<div class="grid"><div class="card"><h2>1. ${title} 데이터 붙여넣기</h2>
+  <textarea id="${id}-src" placeholder="${hint}"></textarea>
+  <div class="row" style="margin-top:8px">
+    <label>기간 필터 시작 <input type="text" id="${id}-from" placeholder="20260904" style="min-width:110px"></label>
+    <label>기간 필터 끝 <input type="text" id="${id}-to" placeholder="20260910" style="min-width:110px"></label>
+    <button id="${id}-run">자동 작성</button></div>
+  <div class="hint">기간을 비우면 붙여넣은 행 전체를 대상으로 합니다. 날짜 열은 아래 열 매핑의 "시행일/최종방문일"입니다.</div>
+  <div class="hint" id="${id}-detect"></div>
+  <div class="map" id="${id}-map"></div></div>
+  <div class="card"><h2>2. 선정 기준</h2>
+  <div class="row"><label>계약 최대 <input type="number" id="${id}-capC" value="3"></label><label>견적 최대 <input type="number" id="${id}-capQ" value="4"></label><label>방문 최대 <input type="number" id="${id}-capV" value="2"></label><label>최소 효과금액 <input type="number" id="${id}-minAmt" value="0"></label>
+  <label>부서 열 <select id="${id}-dept"><option value="">비움</option><option value="region">권역</option></select></label></div>
+  <div class="hint">계약 → 견적 → 방문 순, 각 단계는 효과금액 상위순. 병합/A열 옵션은 농산업종 탭의 설정을 따릅니다.</div></div></div>
+  <div class="card"><h2>3. 결과 <span id="${id}-stat" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">엑셀용 복사 (서식 포함)</button><button class="sec" id="${id}-copyTsv">텍스트(TSV) 복사</button><button class="sec" id="${id}-dl">HTML 파일 저장</button>
+  <span class="hint">B열 "부서"부터 시작, 영업진행사항은 J~R 병합. A1(또는 B열 셀)에 붙여넣기.</span></div>
+  <div id="${id}-preview"></div></div>`;
+  const L=LISTS[id]={id,rows:[],hdr:[],map:{},hash:'',out:null};
+  const $=k=>document.getElementById(id+'-'+k);
+  $('run').onclick=()=>listRun(id);
+  $('copyHtml').onclick=async()=>{if(!L.out){alert('먼저 자동 작성을 실행하세요');return}const G=listGrid(id);const ok=await copy(fullHtml(G),gridToTsv(G));$('stat').textContent=ok?'복사됨 → 엑셀에서 붙여넣기':'복사 실패'};
+  $('copyTsv').onclick=async()=>{if(!L.out)return;await navigator.clipboard.writeText(gridToTsv(listGrid(id)));$('stat').textContent='TSV 복사됨'};
+  $('dl').onclick=()=>{if(!L.out)return;const b=new Blob([fullHtml(listGrid(id))],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=title+'_금주주요업체.html';a.click()};
+  ['capC','capQ','capV','minAmt','dept'].forEach(k=>$(k).onchange=()=>{if(L.out)listCompute(id)});
+}
+listPane('target','타겟업체','타겟업체 시트에서 행을 복사해 붙여넣기 (기본NO, 사업구분, 팀/권역, 팀/지점, 담당프로, 코드, 업체명, 예상매출, 신규/점유율확대, 주간적용여부, 시행일, 진행단계, 효과금액, 25년 영업진행사항). 헤더 포함 권장.');
+listPane('comp','경쟁사','경쟁사 시트에서 헤더(3줄)와 행을 함께 복사해 붙여넣기. 진행단계 열이 없으면 (계약)건수/효과금액 → 계약, (견적)효과금액 → 견적, 그 외 → 방문으로 자동 판정.');
+
+const isCode=v=>/^\d{5,7}$/.test(String(v||'').trim());
+function listDetect(id){
+  const L=LISTS[id];const rows=L.rows;const width=Math.max(...rows.map(r=>r.length));
+  // 헤더 = 코드(5~7자리 숫자)가 있는 첫 행 이전
+  let first=rows.findIndex(r=>r.some(isCode));if(first<0)first=0;
+  L.hdr=rows.slice(0,first);L.data=rows.slice(first);
+  const htxt=Array.from({length:width},(_,i)=>L.hdr.map(r=>(r[i]||'').replace(/\s+/g,'')).join(' '));
+  const map={};
+  FIELDS[id].forEach(([k,,keys])=>{map[k]=-1;for(const key of keys){const kk=key.replace(/\s+/g,'');const i=htxt.findIndex(t=>t.includes(kk));if(i>=0){map[k]=i;break}}});
+  // 데이터 기반 보정: 코드, 지점, 담당자, 권역
+  const colMatch=f=>{let best=-1,bs=0;for(let i=0;i<width;i++){const n=L.data.filter(r=>f(r[i])).length;if(n>bs){bs=n;best=i}}return bs>=Math.max(1,L.data.length*0.5)?best:-1};
+  const isName=v=>/^[가-힣]{2,4}$/.test(String(v||'').trim());
+  const kind=colMatch(v=>/^\d\d-/.test(String(v||'').trim())); // 코드구분(01-일반) 바로 뒤가 코드
+  if(kind>=0){map.code=kind+1;map.name=[kind+2,kind+3,kind+4].find(i=>L.data.filter(r=>(r[i]||'').trim()&&!isCode(r[i])).length>=L.data.length*0.5)??map.name}
+  else{const c=colMatch(isCode);if(c>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code]))))map.code=c}
+  const br=colMatch(v=>/지점$/.test(String(v||'').trim()));if(br>=0&&(map.branch<0||!L.data.some(r=>/지점$/.test((r[map.branch]||'').trim()))))map.branch=br;
+  map.region=colMatch(v=>/권역$/.test(String(v||'').trim()));
+  if(map.branch>=0&&(map.person<0||!L.data.some(r=>isName(r[map.person])))){const cand=[map.branch+1,map.branch+2,map.branch+3].find(i=>L.data.filter(r=>isName(r[i])).length>=L.data.length*0.5);if(cand!=null)map.person=cand}
+  if(map.code>=0&&(map.name<0||!L.data.some(r=>(r[map.name]||'').trim())))map.name=[map.code+1,map.code+2].find(i=>L.data.filter(r=>(r[i]||'').trim()).length>=L.data.length*0.5)??-1;
+  if(map.memo<0||!L.data.some(r=>/[가-힣]{2,}/.test(r[map.memo]||''))){ // 가장 긴 텍스트 열
+    let best=-1,bl=0;for(let i=0;i<width;i++){const l=L.data.reduce((a,r)=>a+(r[i]||'').length,0);if(l>bl&&L.data.some(r=>(r[i]||'').length>20)){bl=l;best=i}}map.memo=best}
+  L.map=map;L.width=width;
+}
+function listMapUI(id){
+  const L=LISTS[id];const box=document.getElementById(id+'-map');const sample=L.data[0]||[];
+  const opts=i=>'<option value="-1">(없음)</option>'+Array.from({length:L.width},(_,j)=>'<option value="'+j+'"'+(j===i?' selected':'')+'>'+j+': '+((L.hdr.map(r=>r[j]||'').join(' ').trim()||sample[j]||'').slice(0,18))+'</option>').join('');
+  box.innerHTML=FIELDS[id].map(([k,label])=>'<label>'+label+'<select data-k="'+k+'">'+opts(L.map[k])+'</select></label>').join('');
+  box.querySelectorAll('select').forEach(sel=>sel.onchange=()=>{L.map[sel.dataset.k]=+sel.value;listCompute(id)});
+}
+function listRun(id){
+  const L=LISTS[id];const $=k=>document.getElementById(id+'-'+k);
+  const raw=$('src').value;if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
+  L.rows=parseTSV(raw);
+  if(raw!==L.hash){listDetect(id);listMapUI(id);L.hash=raw}
+  listCompute(id);
+}
+function listCompute(id){
+  const L=LISTS[id];const $=k=>document.getElementById(id+'-'+k);const m=L.map;
+  const g=(r,k)=>(m[k]>=0?(r[m[k]]||''):'').trim();
+  const from=$('from').value.replace(/\D/g,''),to=$('to').value.replace(/\D/g,'');
+  let recs=L.data.map(r=>{
+    let st=stage(g(r,'stage')),amt=num(g(r,'amt'));
+    if(id==='comp'&&!st){const cc=num(g(r,'cCnt')),ca=num(g(r,'cAmt')),qa=num(g(r,'qAmt'));if(cc>0||ca>0){st='계약';amt=ca||amt}else if(qa>0){st='견적';amt=qa||amt}else st='방문'}
+    if(id==='comp'&&st==='계약'&&!amt)amt=num(g(r,'cAmt'));if(id==='comp'&&st==='견적'&&!amt)amt=num(g(r,'qAmt'));
+    return {region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8)}
+  }).filter(x=>x.code||x.name);
+  const total=recs.length;
+  if(from||to)recs=recs.filter(x=>x.date&&(!from||x.date>=from)&&(!to||x.date<=to));
+  const cap={계약:+$('capC').value||0,견적:+$('capQ').value||0,방문:+$('capV').value||0},minAmt=+$('minAmt').value||0;
+  const major=[];['계약','견적','방문'].forEach(s=>major.push(...recs.filter(x=>x.stage===s&&x.amt>=minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s])));
+  L.out={major,dept:$('dept').value};
+  $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
+  $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
+  $('preview').innerHTML=gridToHtml(listGrid(id));
+}
+function listGrid(id){
+  const L=LISTS[id];const W=LISTW;const G=[];G.W=W;G.widths=[20,60,85,70,75,85,85,80,90,90,90,90,90,90,90,90,90,90];
+  const occ={};let r;
+  const R=()=>{r={cells:[],pos:0,idx:G.length};G.push(r);return r};
+  const next=()=>{while(occ[r.pos]>=r.idx)r.pos++;return r.pos};
+  const add=(v,cls,cs=1,rs=1)=>{const col=next();r.cells.push({v,cls,cs,rs,col});if(rs>1)for(let i=0;i<cs;i++)occ[col+i]=r.idx+rs-1;r.pos=col+cs};
+  const blank=(n=1)=>{for(let i=0;i<n;i++)add('','')};const fill=()=>{while(next()<W)add('','')};
+  const M=cfg.merge==='1';
+  R();blank();add('※ 금주 주요업체','st');fill();
+  R();blank();add('부서','h');add('팀/지점','h');add('담당자','h');add('코드','h');add('업체명','h',M?2:1);if(!M)add('','h');add('진행단계','h');add('효과금액(年)','h');add('26년 영업진행사항','h',M?9:1);if(!M)for(let i=0;i<8;i++)add('','h');fill();
+  L.out.major.forEach(x=>{R();blank();add(L.out.dept==='region'?x.region:'','b c');add(x.branch,'b c');add(x.person,'b c');add(x.code,'b c');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.stage,'b c');add(x.amt,'b n');add(x.memo,'b txt',M?9:1);if(!M)for(let i=0;i<8;i++)add('','b');fill()});
+  return G;
+}
+['merge','colA'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{Object.keys(LISTS).forEach(id=>{if(LISTS[id].out)listCompute(id)})}));
 </script>
 </body>
 </html>
