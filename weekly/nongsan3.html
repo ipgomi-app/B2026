@@ -238,7 +238,6 @@ const CODE_RE=/^[A-Z]?\d{5,7}$/;
   </div>
   <div id="${k}-preview" class="prev"></div>
   <div class="legend"><i style="background:#fff2cc"></i>업무일지로 갱신된 셀</div>
-  <div id="${k}-unmatched" class="hint"></div>
 </div>`;
     panes.appendChild(p);
   });
@@ -328,7 +327,6 @@ function renderSheet(k){const st=S[k],ref=st.ref,c=ref.c,W=ref.W;if(!st.out)retu
     r.extra.forEach((x,xi)=>{const isNew=r.chg.appendRow===xi+1;h+=line(x,xi+1,isNew?{[c.date]:1,[c.memo]:1}:null)});
   });
   h+='</table>';$(k+'-preview').innerHTML=h;
-  const u=st.out.unmatched;$(k+'-unmatched').innerHTML=u.length?'<b>참조시트에 없는 업무일지 업체 ('+u.length+'개, 복사 대상 아님):</b> '+esc(u.join(' · ')):'';
 }
 document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const pane=td.closest('.tabpane');if(!pane)return;const k=pane.id.replace('pane-','');S[k].edits[td.dataset.rc]=td.textContent});
 function rowLines(k,r){const st=S[k];const ri=st.out.rows.indexOf(r);const get=(cells,sub)=>cells.map((v,ci)=>{const e=st.edits[ri+','+sub+','+ci];return String(e!=null?e:v).replace(/\t/g,' ').replace(/\r?\n/g,' ')});
@@ -341,9 +339,9 @@ Object.keys(SHEETS).forEach(k=>{
   $(k+'-copyUpd').onclick=async()=>{const st=S[k];if(!st.out)return;const rows=st.out.rows.filter(r=>r.upd);const ok=await copyText(tsv(k,rows));$(k+'-stat').textContent=ok?'업데이트 '+rows.length+'개 업체 값 복사됨':'복사 실패'};
   $(k+'-copyAll').onclick=async()=>{const st=S[k];if(!st.out)return;const ok=await copyText(tsv(k,st.out.rows));$(k+'-stat').textContent=ok?'전체 '+st.out.rows.length+'개 업체 값 복사됨 → 첫 데이터 행의 첫 셀에 붙여넣기':'복사 실패'};
   $(k+'-copyCols').onclick=async()=>{const st=S[k];if(!st.out)return;const cols=updCols(k);if(!cols)return;const ok=await copyText(tsv(k,st.out.rows,cols[0],cols[1]+1));$(k+'-stat').textContent=ok?colName(cols[0])+'~'+colName(cols[1])+'열 값 복사됨 → 첫 데이터 행의 '+colName(cols[0])+'열 셀에 붙여넣기':'복사 실패'};
-  $(k+'-ref').addEventListener('cleared',()=>{S[k].ref=null;S[k].out=null;$(k+'-preview').innerHTML='';$(k+'-refstat').textContent='';$(k+'-stat').textContent='';$(k+'-unmatched').innerHTML=''});
+  $(k+'-ref').addEventListener('cleared',()=>{S[k].ref=null;S[k].out=null;$(k+'-preview').innerHTML='';$(k+'-refstat').textContent='';$(k+'-stat').textContent=''});
 });
-$('diary').addEventListener('cleared',()=>{$('diarystat').textContent='';Object.keys(S).forEach(k=>{S[k].out=null;$(k+'-preview').innerHTML='';$(k+'-stat').textContent='';$(k+'-unmatched').innerHTML=''})});
+$('diary').addEventListener('cleared',()=>{$('diarystat').textContent='';Object.keys(S).forEach(k=>{S[k].out=null;$(k+'-preview').innerHTML='';$(k+'-stat').textContent=''})});
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
 addClearButtons();
