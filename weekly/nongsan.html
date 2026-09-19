@@ -108,8 +108,8 @@ table.xl td.dtl{padding-left:6px}
 <div class="card">
   <h2>3. 결과 <span id="stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:6px;align-items:center">
-    <button id="copySum">주간 실적 복사 (숫자만)</button>
-    <button id="copyHtml">금주 주요업체 복사 (내용만)</button>
+    <button id="copySum">주간 실적 값 복사</button>
+    <button id="copyHtml">금주 주요업체 값 복사</button>
     <span style="display:inline-flex;gap:8px;align-items:center;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 10px;background:#f7f9fc"><b style="color:var(--navy)">주요업체 선정 기준</b>
       <label>계약 최대 <input type="number" id="capC" value="3" style="width:46px"></label>
       <label>견적 최대 <input type="number" id="capQ" value="4" style="width:46px"></label>
@@ -118,7 +118,7 @@ table.xl td.dtl{padding-left:6px}
       <span class="hint" style="margin:0">계약 → 견적 → 방문 순, 효과금액 상위순 · 바꾸면 바로 반영</span></span>
   </div>
   <div class="row" style="margin-bottom:10px">
-    <span class="hint">제목·헤더 없이 값만 복사되고, 엑셀에서 선택한 셀부터 붙습니다. 주간 실적은 경북·부산·경남 3행의 방문~예상매출 4열만(누계·합계는 엑셀 수식 유지), 경북권역 행의 "방문" 셀을 선택하고 붙여넣기. 주요업체는 첫 행의 "팀/지점" 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
+    <span class="hint">제목·헤더 없이 값만 복사되고, 엑셀에서 선택한 셀에 Ctrl+V로 붙이면 값만 들어가고 시트의 서식·병합은 그대로 유지됩니다. 주간 실적은 경북·부산·경남 3행의 방문~예상매출 4열만(누계·합계는 엑셀 수식 유지), 경북권역 행의 "방문" 셀을 선택하고 붙여넣기. 주요업체는 첫 행의 "팀/지점" 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
   </div>
   <div id="preview" data-pid="preview"></div>
 </div>
@@ -299,12 +299,10 @@ function fullHtml(G){
   const css=document.querySelector('style').textContent.split('/* 출력표')[1]||'';
   return '<html><head><meta charset="utf-8"><style>/* 출력표'+css+'</style></head><body>'+gridToHtml(G||buildGrid())+'</body></html>';
 }
+/* 값만 복사: 클립보드에 탭 구분 텍스트만 넣어 엑셀 Ctrl+V 시 창 없이 값만 붙고 시트 서식·병합은 유지 */
 async function copy(html,text){
-  try{ if(navigator.clipboard&&window.ClipboardItem){
-      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}
-  }catch(e){}
-  try{const d=document.createElement('div');d.contentEditable=true;d.style.position='fixed';d.style.left='-9999px';d.innerHTML=html;document.body.appendChild(d);
-    const s=window.getSelection(),rg=document.createRange();rg.selectNodeContents(d);s.removeAllRanges();s.addRange(rg);const ok=document.execCommand('copy');s.removeAllRanges();d.remove();return ok}catch(e){return false}
+  try{await navigator.clipboard.writeText(text);return true}catch(e){}
+  try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}
 }
 async function farmCopy(which){if(!out){alert('먼저 자동 작성을 실행하세요');return}const F=buildGrid();const G=which==='sum'?subGrid(F,F.sumStart,F.sumStart+REG.length,4,8):subGrid(F,F.majStart,F.majEnd);
   const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?(which==='sum'?'주간 실적(방문~예상매출, 권역 3행)':'주요업체')+' 복사됨 ('+G.length+'행) → 엑셀에서 선택한 셀에 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'}
@@ -357,7 +355,7 @@ function listPane(id,title,hint){
   <div class="row"><label>계약 최대 건수 <input type="number" id="${id}-capC" value="3"></label><label>견적 최대 건수 <input type="number" id="${id}-capQ" value="4"></label><label>방문 최대 건수 <input type="number" id="${id}-capV" value="2"></label><label>최소 효과금액 <input type="number" id="${id}-minAmt" value="0"></label></div>
   <div class="hint">진행단계 순서 계약 → 견적 → 방문, 각 단계 안에서는 효과금액 상위순.</div></div></div>
   <div class="card"><h2>3. 결과 <span id="${id}-stat" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">엑셀용 복사 (서식 포함)</button><button class="sec" id="${id}-copyTsv">텍스트(TSV) 복사</button>
+  <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">값 복사 (내용만)</button>
   <span class="hint">복사는 내용(데이터 행)만 됩니다. B 부서 · C 팀/지점 · D 담당자 · E 코드 · F~G 업체명 · H 진행단계 · I 효과금액 · J~R 영업진행사항. 첫 데이터 행의 A열(또는 B열) 셀을 선택하고 붙여넣기.</span></div>
   <div id="${id}-preview" data-pid="${id}-preview"></div></div>`;
   const L=LISTS[id]={id,rows:[],hdr:[],map:{},hash:'',out:null};
@@ -367,7 +365,6 @@ function listPane(id,title,hint){
   $('run').onclick=()=>listRun(id);
   const cg=()=>{const G=listGrid(id,true);const E=EDITS[id+'-preview']||{};const E2={};Object.keys(E).forEach(k=>{const [ri,c]=k.split(',').map(Number);if(ri>=2)E2[(ri-2)+','+c]=E[k]});G.pid=id+'-preview_d';EDITS[id+'-preview_d']=E2;return G};
   $('copyHtml').onclick=async()=>{if(!L.out){alert('먼저 자동 작성을 실행하세요');return}const G=cg();const ok=await copy(fullHtml(G),gridToTsv(G));$('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀 첫 데이터 행의 부서 셀에 붙여넣기':'복사 실패'};
-  $('copyTsv').onclick=async()=>{if(!L.out)return;await navigator.clipboard.writeText(gridToTsv(cg()));$('stat').textContent='TSV 복사됨'};
   ['capC','capQ','capV','minAmt'].forEach(k=>$(k).onchange=()=>{if(L.out)listCompute(id)});
 }
 listPane('target','타겟업체','타겟업체 시트에서 행을 복사해 붙여넣기 (기본NO, 사업구분, 팀/권역, 팀/지점, 담당프로, 코드, 업체명, 예상매출, 신규/점유율확대, 주간적용여부, 시행일, 진행단계, 효과금액, 25년 영업진행사항). 헤더 포함 권장.');
@@ -475,18 +472,16 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   </div>
   <div class="hint">비고(내용) = 재고차이사유 및 계약내용 + 계약특이사항 (같은 내용이면 한 번만). 주요업체는 효과금액 상위순.</div></div></div>
   <div class="card"><h2>3-1. 단가인상 관리시트 행 <span id="pr-stat1" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="pr-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="pr-tsv1">TSV 복사</button>
+  <div class="row" style="margin-bottom:10px"><button id="pr-copy1">값 복사 (진행여부부터 5열)</button>
   <span class="hint">화면에는 코드·계약처명이 보이지만 복사는 진행여부(완료)부터 적용월, 단가인상구분, 년예상효과, 비고 5열만 됩니다. 관리시트의 해당 업체 행 "진행여부" 셀을 선택하고 붙여넣기. 전체 32열 배치로 바꾸면 팀/권역 셀에 붙여넣기.</span></div><div id="pr-prev1" data-pid="pr-prev1"></div></div>
   <div class="card"><h2>3-2. 금주 주요업체 <span id="pr-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="pr-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="pr-tsv2">TSV 복사</button>
+  <div class="row" style="margin-bottom:10px"><button id="pr-copy2">값 복사 (내용만)</button>
   <span class="hint">N 구분, O 코드, V 업체명, X 효과금액, AC~AH 세부내용. 제목 셀(N열)을 선택하고 붙여넣기.</span></div><div id="pr-prev2" data-pid="pr-prev2"></div></div>`;
   const $=k=>document.getElementById('pr-'+k);
   $('run').onclick=prRun;
   ['status','gubun','fillRP','hdr','max','start','scope','layout'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
   $('copy1').onclick=async()=>{if(!PR.out)return;const G=prGrid1(true);$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (진행여부부터 5열, 관리시트 진행여부 셀에 붙여넣기)':'복사 실패'};
-  $('tsv1').onclick=async()=>{if(!PR.out)return;await navigator.clipboard.writeText(gridToTsv(prGrid1(true)));$('stat1').textContent='TSV 복사됨 (진행여부부터 5열)'};
   $('copy2').onclick=async()=>{if(!PR.out)return;const G=prGrid2($('scope').value==='data');$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 ('+G.length+'행, 제목·헤더 없음)':'복사 실패'};
-  $('tsv2').onclick=async()=>{if(!PR.out)return;await navigator.clipboard.writeText(gridToTsv(prGrid2($('scope').value==='data')));$('stat2').textContent='TSV 복사됨'};
 })();
 function prRun(){
   const $=k=>document.getElementById('pr-'+k);const raw=$('src').value;if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
@@ -600,9 +595,9 @@ const SUM={data:{},out:null};
   <div class="row"><label>견적 건수 <input type="number" id="sum-glbQn" value="0"></label><label>견적 매출(천원) <input type="number" id="sum-glbQa" value="0"></label><label>계약 건수 <input type="number" id="sum-glbCn" value="0"></label><label>계약 매출(천원) <input type="number" id="sum-glbCa" value="0"></label></div>
   <div class="hint">금액 단위: PPS 견적은 천원, PPS 계약·SCM·산업자재유통은 원(÷1000), MHE는 월 임대료(원)×12÷1000이 기본입니다. 입력칸 옆에서 바꿀 수 있습니다.</div></div></div>
   <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv1">TSV 복사</button><button class="sec" id="sum-val1">값만 복사 (D5부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
+  <div class="row" style="margin-bottom:10px"><button id="sum-val1">값 복사 (D5부터)</button><button class="sec" id="sum-copy1">표 전체 값 복사 (A1부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
   <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (병합 포함)</button><button id="sum-copy2b">엑셀용 복사 (병합 없음)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약부터 산업자재유통 견적까지 24줄이 복사됩니다. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">값 복사 (D열부터)</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약부터 산업자재유통 견적까지 24줄이 복사됩니다. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
   document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="k"${SUMSPEC[k].unit==='k'?' selected':''}>천원</option><option value="w"${SUMSPEC[k].unit==='w'?' selected':''}>원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option><option value="auto">자동</option></select></label>
     <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
   const $=k=>document.getElementById('sum-'+k);
@@ -617,14 +612,11 @@ const SUM={data:{},out:null};
     $('cuminfo').textContent='적용됨: '+keys.map((k,i)=>k+' '+sel[i][0]+'/'+sel[i][1].toLocaleString()).join(', ')+(mhe?', MHE '+mhe.n+'업체 '+mhe.u+'대/'+mhe.amt.toLocaleString():'');
     if(SUM.out)sumRun();};
   $('copy1').onclick=async()=>{if(!SUM.out)return;const G=sumGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
-  $('tsv1').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid1()));$('stat1').textContent='TSV 복사됨'};
   $('val1').onclick=async()=>{if(!SUM.out)return;const lines=gridToTsv(sumGrid1()).split('\r\n');const off=cfg.colA==='0'?2:3;const t=lines.slice(4).map(l=>l.split('\t').slice(off,off+6).join('\t')).join('\r\n');await navigator.clipboard.writeText(t);$('stat1').textContent='값만 복사됨 (D5에 붙여넣기)'};
   const g2=(noMerge)=>{const keep=cfg.merge;if(noMerge)cfg.merge='0';const G=sumGrid2(true);cfg.merge=keep;
     // 미리보기(제목행·A~C열 포함)에서 수정한 값을 내용만 그리드 좌표(행-1, 열-3)로 옮김
     const E=EDITS['sum-prev2']||{};const E2={};Object.keys(E).forEach(k=>{const [r,c]=k.split(',').map(Number);if(c>=3)E2[(r-1)+','+(c-3)]=E[k]});G.pid='sum-prev2d';EDITS['sum-prev2d']=E2;return G};
-  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (병합 포함, D열에 붙여넣기)':'복사 실패'};
-  $('copy2b').onclick=async()=>{if(!SUM.out)return;const G=g2(true);$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (병합 없음, D열에 붙여넣기)':'복사 실패'};
-  $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(g2(true)));$('stat2').textContent='TSV 복사됨'};
+  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'값 복사됨 (PPS 계약 첫 줄의 건수/금액 셀에 붙여넣기)':'복사 실패'};
 })();
 const norm=v=>String(v||'').replace(/\s+/g,'');
 const weekOf=v=>{v=String(v||'');const w=v.match(/(\d+)\s*주/),m=v.match(/(\d+)\s*월/);return w?{w:+w[1],m:m?+m[1]:null}:null};
