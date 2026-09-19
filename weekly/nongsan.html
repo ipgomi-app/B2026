@@ -39,8 +39,20 @@ table.cfg input[type=text]{width:80px}
 .map{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .map label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:2px}
 .map select{min-width:140px;font-size:12px}
-.range{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:5px;padding:2px 6px;background:#fff}
-.range input[type=date]{border:0;font-size:13px;padding:3px 2px;min-width:130px}
+.rp-wrap{position:relative;display:inline-block}
+.rp{min-width:230px;cursor:pointer;background:#fff}
+.rp-pop{display:none;position:absolute;top:34px;left:0;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.12);padding:10px;width:260px}
+.rp-pop.on{display:block}
+.rp-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
+.rp-head button{background:#fff;color:var(--navy);border:1px solid var(--line);padding:2px 8px}
+.rp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px}
+.rp-grid .dow{color:var(--mut);font-size:11px}
+.rp-grid .d{padding:5px 0;border-radius:4px;cursor:pointer}
+.rp-grid .d:hover{background:#e8edf8}
+.rp-grid .d.sel{background:var(--navy);color:#fff}
+.rp-grid .d.in{background:#dce6f1}
+.rp-foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--mut)}
+.rp-foot button{background:#fff;color:var(--accent);border:1px solid var(--accent);padding:2px 8px;font-size:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 /* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
@@ -250,8 +262,28 @@ async function copy(html,text){
 document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const G=buildGrid(true);const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀에서 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'};
 document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid(true)));document.getElementById('stat').textContent='TSV 복사됨'};
 
+
+/* ===== 기간 선택기 (달력 하나로 시작~끝 선택) ===== */
+function rangePicker(id,onChange){
+  const inp=document.getElementById(id+'-range'),pop=document.getElementById(id+'-pop'),F=document.getElementById(id+'-from'),T=document.getElementById(id+'-to');
+  const pad=n=>String(n).padStart(2,'0');const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  let view=new Date();view.setDate(1);let start=null,end=null,picking=false;
+  const show=()=>{inp.value=start?(ymd(start)+' ~ '+(end?ymd(end):'…')):'';F.value=start?ymd(start):'';T.value=end?ymd(end):''};
+  const render=()=>{const y=view.getFullYear(),m=view.getMonth();const first=new Date(y,m,1),off=first.getDay(),days=new Date(y,m+1,0).getDate();
+    let h='<div class="rp-head"><button data-n="-1">‹</button><span>'+y+'년 '+(m+1)+'월</span><button data-n="1">›</button></div><div class="rp-grid">'+['일','월','화','수','목','금','토'].map(d=>'<div class="dow">'+d+'</div>').join('');
+    for(let i=0;i<off;i++)h+='<div></div>';
+    for(let d=1;d<=days;d++){const dt=new Date(y,m,d);const k=ymd(dt);let cls='d';if(start&&k===ymd(start))cls+=' sel';if(end&&k===ymd(end))cls+=' sel';if(start&&end&&dt>start&&dt<end)cls+=' in';h+='<div class="'+cls+'" data-d="'+k+'">'+d+'</div>'}
+    h+='</div><div class="rp-foot"><span>'+(picking?'끝 날짜를 선택':'시작 날짜를 선택')+'</span><span><button data-clr="1">지우기</button> <button data-ok="1">닫기</button></span></div>';pop.innerHTML=h};
+  inp.onclick=()=>{pop.classList.toggle('on');render()};
+  pop.onclick=e=>{const b=e.target.closest('button');if(b){if(b.dataset.n){view.setMonth(view.getMonth()+ +b.dataset.n);render()}else if(b.dataset.clr){start=end=null;picking=false;show();render();onChange&&onChange()}else if(b.dataset.ok)pop.classList.remove('on');return}
+    const c=e.target.closest('.d');if(!c)return;const dt=new Date(c.dataset.d+'T00:00:00');
+    if(!picking){start=dt;end=null;picking=true}else{end=dt;if(end<start){const t=start;start=end;end=t}picking=false}
+    show();render();if(!picking){pop.classList.remove('on');onChange&&onChange()}};
+  document.addEventListener('click',e=>{if(!pop.contains(e.target)&&e.target!==inp)pop.classList.remove('on')});
+  return {clear(){start=end=null;picking=false;show()}};
+}
 /* ===== 입력칸 초기화 버튼 (모든 textarea) ===== */
-function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.title='이 입력칸 비우기';b.onclick=()=>{ta.value='';ta.focus()};ta.parentNode.insertBefore(b,ta)})}
+function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.title='이 입력칸 비우기';b.onclick=()=>{ta.value='';ta.dispatchEvent(new Event('cleared'));ta.focus()};ta.parentNode.insertBefore(b,ta)})}
 /* ===== 탭 전환 ===== */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.tab))});
 
@@ -267,7 +299,7 @@ function listPane(id,title,hint){
   el.innerHTML=`<div class="grid"><div class="card"><h2>1. ${title} 데이터 붙여넣기</h2>
   <textarea id="${id}-src" placeholder="${hint}"></textarea>
   <div class="row" style="margin-top:8px">
-    <label>기간 필터 <span class="range"><input type="date" id="${id}-from"> ~ <input type="date" id="${id}-to"></span></label>
+    <label>기간 필터 <span class="rp-wrap"><input type="text" class="rp" id="${id}-range" readonly placeholder="클릭해서 기간 선택"><input type="hidden" id="${id}-from"><input type="hidden" id="${id}-to"><div class="rp-pop" id="${id}-pop"></div></span></label>
     <button id="${id}-run">자동 작성</button></div>
   <div class="hint">기간을 비우면 붙여넣은 행 전체를 대상으로 합니다.</div>
   <div class="hint" id="${id}-detect" style="display:none"></div>
@@ -281,6 +313,8 @@ function listPane(id,title,hint){
   <div id="${id}-preview" data-pid="${id}-preview"></div></div>`;
   const L=LISTS[id]={id,rows:[],hdr:[],map:{},hash:'',out:null};
   const $=k=>document.getElementById(id+'-'+k);
+  L.rp=rangePicker(id,()=>{if(L.out)listCompute(id)});
+  $('src').addEventListener('cleared',()=>{L.rp.clear();L.out=null;L.hash='';$('preview').innerHTML='';$('stat').textContent=''});
   $('run').onclick=()=>listRun(id);
   const cg=()=>{const G=listGrid(id,true);const E=EDITS[id+'-preview']||{};const E2={};Object.keys(E).forEach(k=>{const [ri,c]=k.split(',').map(Number);if(ri>=2)E2[(ri-2)+','+c]=E[k]});G.pid=id+'-preview_d';EDITS[id+'-preview_d']=E2;return G};
   $('copyHtml').onclick=async()=>{if(!L.out){alert('먼저 자동 작성을 실행하세요');return}const G=cg();const ok=await copy(fullHtml(G),gridToTsv(G));$('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀 첫 데이터 행의 부서 셀에 붙여넣기':'복사 실패'};
@@ -305,6 +339,10 @@ function listDetect(id){
   const kind=colMatch(v=>/^\d\d-/.test(String(v||'').trim())); // 코드구분(01-일반) 바로 뒤가 코드
   if(kind>=0){map.code=kind+1;map.name=[kind+2,kind+3,kind+4].find(i=>L.data.filter(r=>(r[i]||'').trim()&&!isCode(r[i])).length>=L.data.length*0.5)??map.name}
   else{const c=colMatch(isCode);if(c>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code]))))map.code=c}
+  const isDate=v=>/^(\d{8}|\d{4}[-./]\d{2}[-./]\d{2})/.test(String(v||'').trim());
+  if(map.date<0||!L.data.some(r=>isDate(r[map.date]))){const d=colMatch(isDate);if(d>=0)map.date=d}
+  if(map.stage<0||!L.data.some(r=>stage(r[map.stage]))){const st=colMatch(v=>!!stage(v)&&String(v).trim().length<=4);if(st>=0)map.stage=st}
+  if(map.stage>=0&&(map.amt<0||!L.data.some(r=>num(r[map.amt])>0))){const a=[map.stage+1,map.stage-1].find(i=>i>=0&&L.data.filter(r=>/^[\s\d,.\-]+$/.test(r[i]||'')&&num(r[i])>0).length>=L.data.length*0.5);if(a!=null)map.amt=a}
   const br=colMatch(v=>/지점$/.test(String(v||'').trim()));if(br>=0&&(map.branch<0||!L.data.some(r=>/지점$/.test((r[map.branch]||'').trim()))))map.branch=br;
   const rg=colMatch(v=>/권역$/.test(String(v||'').trim()));if(rg>=0&&(map.region<0||!L.data.some(r=>/권역$/.test((r[map.region]||'').trim()))))map.region=rg;
   if(map.branch>=0&&(map.person<0||!L.data.some(r=>isName(r[map.person])))){const cand=[map.branch+1,map.branch+2,map.branch+3].find(i=>L.data.filter(r=>isName(r[i])).length>=L.data.length*0.5);if(cand!=null)map.person=cand}
