@@ -196,8 +196,8 @@ function cleanVisitText(t){return String(t||'')
   .replace(/(방문목적|방문내역|경쟁사현황|영업현황|향후계획|비고|계약특이사항|신규계약|재계약)\s*:?\s*(?=\S)/g,' | ').replace(/\b0?\d{2,3}[- ]?\d{3,4}[- ]?\d{4}\b/g,'').replace(/\(\s*\)/g,'').replace(/\s{2,}/g,' | ').replace(/\s*\|\s*/g,' | ').trim()}
 function planFrom(t){const m=t.match(/향후계획\s*:?\s*([^|]+)/);if(m)return m[1].replace(/\s+/g,' ').trim().replace(/[.,\-\s]+$/,'');
   const seg=t.split(/[,.|]|\s-\s/).map(x=>x.trim()).filter(x=>/(예정|재방문|협의 예정|추진 예정|제안 예정)/.test(x)&&x.length<=40);return seg.length?seg[seg.length-1].replace(/^[\-\s]+/,''):''}
-const splitTok=t=>String(t||'').split(/\s*\|\s*|\s*,\s*(?!\d{3}(?!\d))|\s-\s|(?<=\S)-\s(?=[가-힣])/).map(x=>x.replace(/^[\-\s.]+|[\-\s.]+$/g,'').trim()).filter(Boolean);
-const DROP_RE=/물동량|매\/년|매\/월|예상매출|예상수익|억\/년|천원\/년|^(타겟업체|경쟁사현황|경쟁사계약처|기타|실재고없음|신규계약|재계약협의|경쟁사전환|방문목적|방문내역|영업현황|비고)$|^(향후계획|계약특이사항)/;
+const splitTok=t=>String(t||'').split(/\s*\|\s*|\s*,\s*(?!\d{3}(?!\d))|\s-\s|(?<=\S)-\s(?=[가-힣])|(?<=[가-힣)])\.\s+(?=[가-힣A-Z])/).map(x=>x.replace(/^[\-\s.]+|[\-\s.]+$/g,'').trim()).filter(Boolean);
+const DROP_RE=/물동량|매\/년|매\/월|예상매출|예상수익|억\/년|천원\/년|^(타겟업체|경쟁사현황|경쟁사현황\s*파악|경쟁사계약처|기타|실재고없음|신규계약|재계약협의|경쟁사전환|방문목적|방문내역|영업현황|비고|정보조사|파악|현황파악)$|^(향후계획|계약특이사항)/;
 const NAME_RE=/^[가-힣]{2,4}(대표|이사|과장|실장|센터장|기사|팀장|부장|사장|소장|대리|주임)(\s*면담)?$/;
 const COMP_RE=/^(AJ|NPC|KCP|N사|AJ&NPC|아주)$/i;
 function extractParts(d,all,special){
@@ -213,12 +213,12 @@ function extractParts(d,all,special){
   const isPI=x=>x===P.place||x===P.item||PLACE_RE.test(x)&&x===placeFromAddr(d.addr);
   let segs;
   if(special)segs=specTok.slice(2);
-  else segs=splitTok(cleanVisitText(d.dtl.map(x=>x.text).join(' | ')));
+  else segs=splitTok(cleanVisitText(d.dtl.map(x=>{let t=x.text;const m=t.match(/비고\s*:\s*([\s\S]*)$/);if(m)t=m[1];else{const m2=t.match(/방문내역\s*:?\s*([\s\S]*)$/);if(m2)t=m2[1]}return t}).join(' | ')));
   segs=segs.filter(x=>x.length>=2&&!DROP_RE.test(x)&&!NAME_RE.test(x)&&!isPI(x)&&!/^[\d.,%]+$/.test(x)&&!/(예정)$/.test(x))
     .filter(x=>{if(COMP_RE.test(x)){if(!comp)comp=x.toUpperCase();return false}return true});
   segs=segs.filter((x,i)=>segs.indexOf(x)===i);
-  P.body=segs.slice(0,special?4:3).map(x=>x.length>40?x.slice(0,40):x).join(', ');
-  if(comp&&!/경쟁사/.test(P.body))P.body=('경쟁사('+comp+') 사용'+(P.body?', '+P.body:''));
+  P.body=segs.slice(0,special?4:4).map(x=>x.length>90?x.slice(0,90):x).join(', ');
+  if(comp&&!/경쟁사|아주|AJ|NPC|KCP/i.test(P.body))P.body=('경쟁사('+comp+') 사용'+(P.body?', '+P.body:''));
   if(spec&&!P.body.replace(/\s/g,'').includes(spec.replace(/\s/g,'')))P.body=(P.body?P.body+' ':'')+'('+spec.replace(/\s/g,'')+')';
   P.plan=planFrom(all);
   return P;
@@ -227,14 +227,17 @@ function composeMemo(infos,oldMemo,amt,stage){
   const oldTok=splitTok(oldMemo);
   const best=k=>{const i=infos.find(x=>x.parts[k]);return i?i.parts[k]:''};
   let place=oldTok[0]&&PLACE_RE.test(oldTok[0])?oldTok[0]:best('place');
-  let item=oldTok[1]&&!/\d/.test(oldTok[1])&&oldTok[1].length<=14?oldTok[1]:best('item');
+  const isContent=x=>/\d|견적|경쟁사|전환|방문|제안|계약|사용|물동량|예상매출|협의|확인|진행/.test(x)||x.length>14;
+  let item='';{const it=[];for(let i=1;i<oldTok.length&&it.length<3;i++){if(isContent(oldTok[i]))break;it.push(oldTok[i])}item=it.join(',')}
+  if(!item)item=best('item');
   if(!item)item='농산물';
   const sp=infos.find(x=>x.special);let body=sp?sp.parts.body:best('body');
   if(stage==='계약완료'&&!/계약/.test(body))body=(body?body+', ':'')+'경쟁사전환 계약완료';
-  else if(stage==='견적'&&!/견적|제안/.test(body))body=(body?body+', ':'')+'경쟁사전환견적';
+  else if(stage==='견적'&&!/견적|제안/.test(body)){if(/경쟁사\s*전환/.test(body))body=body.replace(/경쟁사\s*전환/,'경쟁사전환견적');else body=(body?body+', ':'')+'경쟁사전환견적'}
   const vol=best('vol');
   let sales=amtToEok(amt);if(!sales){const o=oldTok.find(x=>/예상매출/.test(x));if(o)sales=o}
   const plan=best('plan');
+  if(plan&&body){body=splitTok(body).filter(x=>x!==plan&&!plan.includes(x)).join(', ')}
   const out=[place,item,body,vol,sales,plan].filter(Boolean);
   // 중복 제거
   return out.filter((x,i)=>out.indexOf(x)===i).join(', ');
@@ -262,7 +265,7 @@ function run(){
       const infos=sorted.map(d=>diaryInfo(d));
       infos.forEach(i=>{if(ORDER[i.stage]>(ORDER[stage]||0))stage=i.stage;if(amt==null&&i.amt!=null&&i.amt>0)amt=i.amt});
       const finalStage=(smode==='new'?stage:((ORDER[stage]||0)>(ORDER[stageOf(cells[c.stage])]||0)?stage:stageOf(cells[c.stage])))||stage;
-      if($('memomode').value==='std')memo=composeMemo(infos,cells[c.memo],amt,finalStage);
+      if($('memomode').value==='std')memo=composeMemo(infos,cells[c.memo],amt,stage);
       else{const pri=[/계약특이사항/,/방문내역/,/비고\s*:/];for(const re of pri){const i=infos.find(x=>re.test(x.raw)&&x.memo);if(i){memo=i.memo;break}}if(!memo)memo=(infos.find(x=>x.memo)||{}).memo||''}
       {const v=wk.label;if(cells[c.visit]!==v){cells[c.visit]=v;chg[c.visit]=1}}
       const old=stageOf(cells[c.stage]);
