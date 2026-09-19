@@ -82,6 +82,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
     <label>표시 <select id="view"><option value="upd">업데이트된 행만</option><option value="all">전체 행</option></select></label>
     <label>진행단계 <select id="stagemode"><option value="max">기존보다 높을 때만 변경 (방문&lt;견적&lt;계약완료)</option><option value="new">업무일지 기준으로 항상 변경</option></select></label>
     <label>예상매출 <select id="amtmode"><option value="new">업무일지 값이 있으면 변경</option><option value="keep">기존 값 유지</option></select></label>
+    <label>세부내용 <select id="memomode"><option value="std">표준 형식 (소재지, 품목, 내용, 물동량, 예상매출)</option><option value="raw">업무일지 원문</option></select></label>
     <span id="stat" class="ok"></span>
   </div>
   <h2>3. 결과 (참조시트 형식 그대로, 업무일지에 있는 코드만 갱신)</h2>
@@ -160,7 +161,7 @@ function parseDiary(raw){
     if(f[1]==='DIARY_NUM'&&f[2]==='DTL_TYP')continue;
     if(mainH&&f[0]&&f[0]!=='PRG_GUBUN'&&/^\d{6,}$/.test(String(f[1]||'').trim())&&f[0].trim()!==''){
       const g=k=>{const i=mainH.indexOf(k);return i>=0?String(f[i]||'').trim():''};
-      cur={num:g('DIARY_NUM'),date:parseDate(g('VISIT_DAT')),emp:g('VISIT_EMP_NAM'),code:g('CST_COD'),name:g('CST_NAM'),group:g('TF_GROUP'),dtl:[]};out.push(cur);continue}
+      cur={num:g('DIARY_NUM'),date:parseDate(g('VISIT_DAT')),emp:g('VISIT_EMP_NAM'),code:g('CST_COD'),name:g('CST_NAM'),group:g('TF_GROUP'),addr:g('ZIP_ADDR'),dtl:[]};out.push(cur);continue}
     if(f[0].trim()===''&&/^\d{6,}$/.test(String(f[1]||'').trim())){const num_=f[1].trim();let tgt=out.find(x=>x.num===num_)||cur;if(tgt)tgt.dtl.push({typ:String(f[3]||'').trim(),text:f.slice(4).join(' ').trim()})}
   }
   return out.filter(x=>x.code);
@@ -174,11 +175,69 @@ function diaryInfo(d){
   let amt=null;const m1=all.match(/예상매출액\s*:\s*([\d,]+)\s*\(원\)/);
   if(m1)amt=Math.round(num(m1[1])/1000);
   else{const m2=all.match(/예상매출\s*([\d.,]+)\s*(억|천원|만원)/);if(m2){const v=num(m2[1]);amt=m2[2]==='억'?Math.round(v*100000):m2[2]==='만원'?Math.round(v*10):Math.round(v)}}
-  let memo='';
   const pick=(re)=>{for(const x of d.dtl){const m=x.text.match(re);if(m&&m[1].trim())return m[1].trim()}return ''};
-  memo=pick(/계약특이사항\s*:\s*(.+)$/)||pick(/방문내역\s*:?\s*(.+)$/)||pick(/비고\s*:\s*(.+)$/)||(d.dtl[0]?d.dtl[0].text:'');
-  memo=memo.replace(/\s+/g,' ').trim();
-  return {stage,amt,memo};
+  const rawMemo=(pick(/계약특이사항\s*:\s*(.+)$/)||pick(/방문내역\s*:?\s*(.+)$/)||pick(/비고\s*:\s*(.+)$/)||(d.dtl[0]?d.dtl[0].text:'')).replace(/\s+/g,' ').trim();
+  const special=pick(/계약특이사항\s*:\s*(.+)$/);
+  return {stage,amt,memo:rawMemo,parts:extractParts(d,all,special),raw:all,special:!!special};
+}
+/* ===== 세부내용 표준화: 소재지, 품목, 내용, 물동량, 예상매출[, 계획] ===== */
+const PLACE_RE=/^[가-힣]{2,4}$/;
+const ITEM_WORDS=['농산물저장 및 유통','농산물유통','농산물 유통','농산유통','농산물저장','농산물','농산','감귤','월동무','버섯','채소','과일','한과','식품','유통','농협','APC센터','산지유통센터','농업회사법인'];
+function placeFromAddr(a){a=String(a||'').trim();if(!a)return '';const t=a.split(/\s+/);let x=t[1]||t[0]||'';if(/^(제주)/.test(t[0])&&/^제주/.test(x))return '제주';
+  x=x.replace(/(특별자치시|특별자치도|광역시|특별시|시|군|구)$/,'');return PLACE_RE.test(x)?x:''}
+function volumeFrom(t){let m=t.match(/(?:예상)?물동량\s*([\d.,]+)\s*(만|천)?\s*매\s*\/?\s*(년|월)?/);if(!m)m=t.match(/([\d.,]+)\s*(만|천)?\s*매\s*\/\s*(년|월)/);
+  if(m){let v=num(m[1]);if(m[2]==='만')v*=10000;else if(m[2]==='천')v*=1000;if(m[3]==='월')v*=12;return v>0?'물동량 '+Math.round(v).toLocaleString('en-US')+'매/년':''}
+  const m3=t.match(/예상물동량\s*\(매\/월\)\s*:\s*([\d,]+)/);if(m3){const v=num(m3[1])*12;return v>0?'물동량 '+v.toLocaleString('en-US')+'매/년':''}return ''}
+function amtToEok(amt){if(!amt)return '';let e=amt/100000;let s=e.toFixed(2).replace(/\.?0+$/,'');if(s==='0')s=e.toFixed(3).replace(/\.?0+$/,'');return '예상매출 '+s+'억/년'}
+function cleanVisitText(t){return String(t||'')
+  .replace(/(일자|업체코드|업체명|제목|계약형태|매출액구분|연간예상매출액|예상수익율|경쟁사 구분|방문업체 현황구분|경쟁사 예상물동량[^:]*|경쟁사 예상매출액[^:]*|사용단가[^:]*|PPS|산업자재\(판매\)|SCM|지게차|건설장비|OA)\s*:\s*[^:|]*?(?=(?:\s*\/?\s*[가-힣A-Za-z ()\/]{2,20}\s*:)|\s*\||$)/g,' | ')
+  .replace(/\d\s*\.\s*(?=[가-힣])/g,' | ')
+  .replace(/(면담자|담당자)\s*:?\s*[^|,]{1,12}/g,' | ')
+  .replace(/(방문목적|방문내역|경쟁사현황|영업현황|향후계획|비고|계약특이사항|신규계약|재계약)\s*:?\s*(?=\S)/g,' | ').replace(/\b0?\d{2,3}[- ]?\d{3,4}[- ]?\d{4}\b/g,'').replace(/\(\s*\)/g,'').replace(/\s{2,}/g,' | ').replace(/\s*\|\s*/g,' | ').trim()}
+function planFrom(t){const m=t.match(/향후계획\s*:?\s*([^|]+)/);if(m)return m[1].replace(/\s+/g,' ').trim().replace(/[.,\-\s]+$/,'');
+  const seg=t.split(/[,.|]|\s-\s/).map(x=>x.trim()).filter(x=>/(예정|재방문|협의 예정|추진 예정|제안 예정)/.test(x)&&x.length<=40);return seg.length?seg[seg.length-1].replace(/^[\-\s]+/,''):''}
+const splitTok=t=>String(t||'').split(/\s*\|\s*|\s*,\s*(?!\d{3}(?!\d))|\s-\s|(?<=\S)-\s(?=[가-힣])/).map(x=>x.replace(/^[\-\s.]+|[\-\s.]+$/g,'').trim()).filter(Boolean);
+const DROP_RE=/물동량|매\/년|매\/월|예상매출|예상수익|억\/년|천원\/년|^(타겟업체|경쟁사현황|경쟁사계약처|기타|실재고없음|신규계약|재계약협의|경쟁사전환|방문목적|방문내역|영업현황|비고)$|^(향후계획|계약특이사항)/;
+const NAME_RE=/^[가-힣]{2,4}(대표|이사|과장|실장|센터장|기사|팀장|부장|사장|소장|대리|주임)(\s*면담)?$/;
+const COMP_RE=/^(AJ|NPC|KCP|N사|AJ&NPC|아주)$/i;
+function extractParts(d,all,special){
+  const P={place:'',item:'',body:'',vol:'',plan:''};
+  const specTok=special?splitTok(special):[];
+  if(specTok[0]&&PLACE_RE.test(specTok[0]))P.place=specTok[0];
+  if(!P.place)P.place=placeFromAddr(d.addr);
+  if(specTok[1]&&!/\d/.test(specTok[1])&&specTok[1].length<=14)P.item=specTok[1];
+  if(!P.item){const w=ITEM_WORDS.find(k=>all.includes(k));if(w)P.item=w}
+  P.vol=volumeFrom(all);
+  let comp=(all.match(/경쟁사 구분\s*:\s*([A-Za-z&]+)/)||[])[1]||'';
+  const spec=(all.match(/(\d{2,3}\s*\/\s*\d{3,5}\s*\/\s*\d{3,4})/)||[])[1];
+  const isPI=x=>x===P.place||x===P.item||PLACE_RE.test(x)&&x===placeFromAddr(d.addr);
+  let segs;
+  if(special)segs=specTok.slice(2);
+  else segs=splitTok(cleanVisitText(d.dtl.map(x=>x.text).join(' | ')));
+  segs=segs.filter(x=>x.length>=2&&!DROP_RE.test(x)&&!NAME_RE.test(x)&&!isPI(x)&&!/^[\d.,%]+$/.test(x)&&!/(예정)$/.test(x))
+    .filter(x=>{if(COMP_RE.test(x)){if(!comp)comp=x.toUpperCase();return false}return true});
+  segs=segs.filter((x,i)=>segs.indexOf(x)===i);
+  P.body=segs.slice(0,special?4:3).map(x=>x.length>40?x.slice(0,40):x).join(', ');
+  if(comp&&!/경쟁사/.test(P.body))P.body=('경쟁사('+comp+') 사용'+(P.body?', '+P.body:''));
+  if(spec&&!P.body.replace(/\s/g,'').includes(spec.replace(/\s/g,'')))P.body=(P.body?P.body+' ':'')+'('+spec.replace(/\s/g,'')+')';
+  P.plan=planFrom(all);
+  return P;
+}
+function composeMemo(infos,oldMemo,amt,stage){
+  const oldTok=splitTok(oldMemo);
+  const best=k=>{const i=infos.find(x=>x.parts[k]);return i?i.parts[k]:''};
+  let place=oldTok[0]&&PLACE_RE.test(oldTok[0])?oldTok[0]:best('place');
+  let item=oldTok[1]&&!/\d/.test(oldTok[1])&&oldTok[1].length<=14?oldTok[1]:best('item');
+  if(!item)item='농산물';
+  const sp=infos.find(x=>x.special);let body=sp?sp.parts.body:best('body');
+  if(stage==='계약완료'&&!/계약/.test(body))body=(body?body+', ':'')+'경쟁사전환 계약완료';
+  else if(stage==='견적'&&!/견적|제안/.test(body))body=(body?body+', ':'')+'경쟁사전환견적';
+  const vol=best('vol');
+  let sales=amtToEok(amt);if(!sales){const o=oldTok.find(x=>/예상매출/.test(x));if(o)sales=o}
+  const plan=best('plan');
+  const out=[place,item,body,vol,sales,plan].filter(Boolean);
+  // 중복 제거
+  return out.filter((x,i)=>out.indexOf(x)===i).join(', ');
 }
 
 /* ===== 실행 ===== */
@@ -200,11 +259,11 @@ function run(){
       const latest=sorted[0];
       // 단계: 모든 일지 중 최고 단계, 매출/세부내용: 우선순위(견적서 계약특이사항 > 방문내역 > 비고)로 최신순
       let stage='',amt=null,memo='';
-      const infos=sorted.map(d=>Object.assign(diaryInfo(d),{raw:d.dtl.map(x=>x.text).join(' ')}));
+      const infos=sorted.map(d=>diaryInfo(d));
       infos.forEach(i=>{if(ORDER[i.stage]>(ORDER[stage]||0))stage=i.stage;if(amt==null&&i.amt!=null&&i.amt>0)amt=i.amt});
-      const pri=[/계약특이사항/,/방문내역/,/비고\s*:/];
-      for(const re of pri){const i=infos.find(x=>re.test(x.raw)&&x.memo);if(i){memo=i.memo;break}}
-      if(!memo)memo=(infos.find(x=>x.memo)||{}).memo||'';
+      const finalStage=(smode==='new'?stage:((ORDER[stage]||0)>(ORDER[stageOf(cells[c.stage])]||0)?stage:stageOf(cells[c.stage])))||stage;
+      if($('memomode').value==='std')memo=composeMemo(infos,cells[c.memo],amt,finalStage);
+      else{const pri=[/계약특이사항/,/방문내역/,/비고\s*:/];for(const re of pri){const i=infos.find(x=>re.test(x.raw)&&x.memo);if(i){memo=i.memo;break}}if(!memo)memo=(infos.find(x=>x.memo)||{}).memo||''}
       {const v=wk.label;if(cells[c.visit]!==v){cells[c.visit]=v;chg[c.visit]=1}}
       const old=stageOf(cells[c.stage]);
       if(smode==='new'?stage!==old:(ORDER[stage]||0)>(ORDER[old]||0)){cells[c.stage]=stage;chg[c.stage]=1}
@@ -235,7 +294,7 @@ $('run').onclick=run;
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
 ['view'].forEach(k=>$(k).onchange=render);
-['stagemode','amtmode'].forEach(k=>$(k).onchange=()=>{if(OUT)run()});
+['stagemode','amtmode','memomode'].forEach(k=>$(k).onchange=()=>{if(OUT)run()});
 $('copyUpd').onclick=async()=>{if(!OUT)return;const rows=OUT.rows.filter(r=>r.upd);const ok=await copyText(tsv(rows));$('stat').textContent=ok?'업데이트 행 '+rows.length+'행 값 복사됨':'복사 실패'};
 $('copyAll').onclick=async()=>{if(!OUT)return;const ok=await copyText(tsv(OUT.rows));$('stat').textContent=ok?'전체 '+OUT.rows.length+'행 값 복사됨 → 첫 데이터 행의 (실적)팀/권역 셀에 붙여넣기':'복사 실패'};
 $('copyCols').onclick=async()=>{if(!OUT)return;const c=REF.c;const ok=await copyText(tsv(OUT.rows,c.visit,c.memo+1));$('stat').textContent=ok?'전체 '+OUT.rows.length+'행의 최종방문일~세부내용 값 복사됨 → 첫 데이터 행의 최종방문일 셀에 붙여넣기':'복사 실패'};
