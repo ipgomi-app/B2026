@@ -358,7 +358,7 @@ function listPane(id,title,hint){
   <div class="hint">진행단계 순서 계약 → 견적 → 방문, 각 단계 안에서는 효과금액 상위순.</div></div></div>
   <div class="card"><h2>3. 결과 <span id="${id}-stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">값 복사 (내용만)</button>
-  <span class="hint">복사는 내용(데이터 행)만 됩니다. B 부서 · C 팀/지점 · D 담당자 · E 코드 · F~G 업체명 · H 진행단계 · I 효과금액 · J~R 영업진행사항. 첫 데이터 행의 A열(또는 B열) 셀을 선택하고 붙여넣기.</span></div>
+  <span class="hint">복사는 내용(데이터 행)만 됩니다. B 부서 · C 팀/지점 · D 담당자 · E 코드 · F~G 업체명 · H 진행단계 · I 효과금액 · J~R 영업진행사항. 첫 데이터 행의 부서 셀을 선택하고 붙여넣기(선택한 셀부터 붙음).</span></div>
   <div id="${id}-preview" data-pid="${id}-preview"></div></div>`;
   const L=LISTS[id]={id,rows:[],hdr:[],map:{},hash:'',out:null};
   const $=k=>document.getElementById(id+'-'+k);
@@ -366,7 +366,7 @@ function listPane(id,title,hint){
   $('src').addEventListener('cleared',()=>{L.rp.clear();L.out=null;L.hash='';$('preview').innerHTML='';$('stat').textContent=''});
   $('run').onclick=()=>listRun(id);
   const cg=()=>{const G=listGrid(id,true);const E=EDITS[id+'-preview']||{};const E2={};Object.keys(E).forEach(k=>{const [ri,c]=k.split(',').map(Number);if(ri>=2)E2[(ri-2)+','+c]=E[k]});G.pid=id+'-preview_d';EDITS[id+'-preview_d']=E2;return G};
-  $('copyHtml').onclick=async()=>{if(!L.out){alert('먼저 자동 작성을 실행하세요');return}const G=cg();const ok=await copy(fullHtml(G),gridToTsv(G));$('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀 첫 데이터 행의 부서 셀에 붙여넣기':'복사 실패'};
+  $('copyHtml').onclick=async()=>{if(!L.out){alert('먼저 자동 작성을 실행하세요');return}const G=cg();const t=gridToTsv(G).split('\r\n').map(l=>l.split('\t').slice(1).join('\t')).join('\r\n');const ok=await copy('',t);$('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀 첫 데이터 행의 부서 셀을 선택하고 붙여넣기(선택한 셀부터 붙음)':'복사 실패'};
   ['capC','capQ','capV','minAmt'].forEach(k=>$(k).onchange=()=>{if(L.out)listCompute(id)});
 }
 listPane('target','타겟업체','타겟업체 시트에서 행을 복사해 붙여넣기 (기본NO, 사업구분, 팀/권역, 팀/지점, 담당프로, 코드, 업체명, 예상매출, 신규/점유율확대, 주간적용여부, 시행일, 진행단계, 효과금액, 25년 영업진행사항). 헤더 포함 권장.');
