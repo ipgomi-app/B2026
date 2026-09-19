@@ -577,7 +577,18 @@ const SUM={data:{},out:null};
   <table class="cfg" id="sum-cum"><tr><th>구분</th><th>건수</th><th>매출액(천원)</th></tr>
   ${[['pps신규','PPS 신규'],['pps재전환','PPS 재전환/점유율확대'],['pps단가인상','PPS 단가인상'],['scm','SCM'],['ind','산업자재유통'],['glb','글로벌비즈']].map(([k,l])=>`<tr><td>${l}</td><td><input type="number" data-k="${k}" data-i="0" value="${SUMCUM_DEF[k][0]}"></td><td><input type="number" data-k="${k}" data-i="1" value="${SUMCUM_DEF[k][1]}"></td></tr>`).join('')}
   <tr><td>MHE (업체 / 대수 / 매출)</td><td><input type="number" data-k="mhe" data-i="0" value="${SUMCUM_DEF.mhe[0]}" style="width:45px"> 업체 <input type="number" data-k="mhe" data-i="1" value="${SUMCUM_DEF.mhe[1]}" style="width:45px"> 대</td><td><input type="number" data-k="mhe" data-i="2" value="${SUMCUM_DEF.mhe[2]}"></td></tr></table>
-  <div class="hint">초기값은 첫 번째 사진의 누계에서 금주분을 뺀 값입니다. 매주 갱신하세요 (브라우저에 저장).</div></div>
+  <div class="hint">아래에 지난주 표의 "26년 누계" 부분(건수/대수·매출액 2열, 헤더 포함 가능)을 붙여넣고 적용하면 위 칸에 자동 입력됩니다. 값은 직접 수정할 수 있고 브라우저에 저장됩니다.</div>
+  <textarea id="sum-cumsrc" style="min-height:90px;margin-top:6px" placeholder="26년 누계	
+계약	
+건수/대수	매출액
+ 379 	 1,268,942 
+ 91 	 879,790 
+ 370 	 406,404 
+ 840 	 2,555,136 
+ 57 	 4,143,180 
+ ...
+ 69업체 94대 	 484,371 "></textarea>
+  <div class="row" style="margin-top:6px"><button class="sec" id="sum-cumapply">전주 누계 붙여넣기 적용</button><span class="hint" id="sum-cuminfo"></span></div></div>
   <div class="card"><h2>3. 글로벌비즈 수기 입력 (금주)</h2>
   <div class="row"><label>견적 건수 <input type="number" id="sum-glbQn" value="0"></label><label>견적 매출(천원) <input type="number" id="sum-glbQa" value="0"></label><label>계약 건수 <input type="number" id="sum-glbCn" value="0"></label><label>계약 매출(천원) <input type="number" id="sum-glbCa" value="0"></label></div>
   <div class="hint">금액 단위: 각 입력칸의 "금액 단위"가 자동이면 값이 모두 1,000 배수이고 10만 이상일 때 원→천원으로 나눕니다. MHE는 월 임대료(원)×12÷1000.</div></div></div>
@@ -590,6 +601,16 @@ const SUM={data:{},out:null};
   const $=k=>document.getElementById('sum-'+k);
   try{const sv=JSON.parse(localStorage.getItem('sum_cfg_v1')||'{}');document.querySelectorAll('#sum-cum input').forEach(i=>{const v=sv[i.dataset.k+i.dataset.i];if(v!=null)i.value=v});['week','range'].forEach(k=>{if(sv[k])$(k).value=sv[k]})}catch(e){}
   $('run').onclick=sumRun;
+  $('cumapply').onclick=()=>{const raw=$('cumsrc').value;if(!raw.trim()){alert('전주 누계를 붙여넣으세요');return}
+    const lines=raw.replace(/\r/g,'').split('\n');const pairs=[];let mhe=null;
+    lines.forEach(l=>{const cells=l.split('\t').map(c=>c.trim());if(/업체/.test(l)){const a=l.match(/(\d+)\s*업체/),b=l.match(/(\d+)\s*대/);const amtCell=cells.find(c=>!/업체/.test(c)&&/\d/.test(c));mhe={n:a?+a[1]:0,u:b?+b[1]:0,amt:amtCell?num(amtCell):0};return}
+      const nums=cells.filter(c=>/^[\d,.\-]+$/.test(c)&&/\d/.test(c)).map(num);if(nums.length>=2)pairs.push(nums.slice(0,2))});
+    let sel;if(pairs.length>=9)sel=[0,1,2,4,5,6].map(i=>pairs[i]);else if(pairs.length===6)sel=pairs;else{alert('숫자 행이 '+pairs.length+'개입니다. 신규·재전환·단가인상·PPS계·SCM·산업자재·글로벌비즈·SCM계·합계 9행(또는 소계 제외 6행)을 붙여넣으세요');return}
+    const keys=['pps신규','pps재전환','pps단가인상','scm','ind','glb'];keys.forEach((k,i)=>{document.querySelector('#sum-cum input[data-k="'+k+'"][data-i="0"]').value=sel[i][0];document.querySelector('#sum-cum input[data-k="'+k+'"][data-i="1"]').value=sel[i][1]});
+    if(mhe){document.querySelector('#sum-cum input[data-k="mhe"][data-i="0"]').value=mhe.n;document.querySelector('#sum-cum input[data-k="mhe"][data-i="1"]').value=mhe.u;document.querySelector('#sum-cum input[data-k="mhe"][data-i="2"]').value=mhe.amt}
+    const sv=JSON.parse(localStorage.getItem('sum_cfg_v1')||'{}');document.querySelectorAll('#sum-cum input').forEach(i=>sv[i.dataset.k+i.dataset.i]=i.value);localStorage.setItem('sum_cfg_v1',JSON.stringify(sv));
+    $('cuminfo').textContent='적용됨: '+keys.map((k,i)=>k+' '+sel[i][0]+'/'+sel[i][1].toLocaleString()).join(', ')+(mhe?', MHE '+mhe.n+'업체 '+mhe.u+'대/'+mhe.amt.toLocaleString():'');
+    if(SUM.out)sumRun();};
   $('copy1').onclick=async()=>{if(!SUM.out)return;const G=sumGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
   $('tsv1').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid1()));$('stat1').textContent='TSV 복사됨'};
   $('val1').onclick=async()=>{if(!SUM.out)return;const lines=gridToTsv(sumGrid1()).split('\r\n');const off=cfg.colA==='0'?2:3;const t=lines.slice(4).map(l=>l.split('\t').slice(off,off+6).join('\t')).join('\r\n');await navigator.clipboard.writeText(t);$('stat1').textContent='값만 복사됨 (D5에 붙여넣기)'};
