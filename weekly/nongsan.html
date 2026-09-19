@@ -22,6 +22,7 @@ button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8p
 button.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
 button:hover{filter:brightness(1.08)}
 .hint{font-size:12px;color:var(--mut);margin-top:6px}
+button.xs{padding:2px 8px;font-size:11px;float:right;margin-bottom:4px}
 .ok{color:#137333;font-size:12px}
 .bad{color:#b00020;font-size:12px}
 details summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:14px}
@@ -159,7 +160,7 @@ function buildCfgTables(){
   ['capC','capQ','capV','minAmt','merge','colA','range'].forEach(k=>document.getElementById(k).value=cfg[k]);
 }
 function readCfg(){
-  document.querySelectorAll('table.cfg input').forEach(i=>{cfg[i.dataset.t][i.dataset.r][+i.dataset.i]=+i.value||0});
+  document.querySelectorAll('table.cfg input[data-t]').forEach(i=>{cfg[i.dataset.t][i.dataset.r][+i.dataset.i]=+i.value||0});
   ['capC','capQ','capV','minAmt'].forEach(k=>cfg[k]=+document.getElementById(k).value||0);
   ['merge','colA','range'].forEach(k=>cfg[k]=document.getElementById(k).value);
   localStorage.setItem(LS,JSON.stringify(cfg));
@@ -320,6 +321,8 @@ document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자
 document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid()));document.getElementById('stat').textContent='TSV 복사됨'};
 document.getElementById('dl').onclick=()=>{if(!out)return;const b=new Blob([fullHtml()],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='농산업종_주간회의_'+(out.week||'')+'.html';a.click()};
 
+/* ===== 입력칸 초기화 버튼 (모든 textarea) ===== */
+function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.title='이 입력칸 비우기';b.onclick=()=>{ta.value='';ta.focus()};ta.parentNode.insertBefore(b,ta)})}
 /* ===== 탭 전환 ===== */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.tab))});
 
@@ -534,6 +537,7 @@ function prGrid2(dataOnly){
   return G;
 }
 ['merge'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{if(PR.out)prRender()}));
+addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
 const BR2REG={구미:'경북권역',대구:'경북권역',영천:'경북권역',안동:'경북권역',김해:'경남권역',창원:'경남권역',진주:'경남권역',제주:'경남권역',부산:'부산권역',양산:'부산권역',울산:'부산권역',포항:'부산권역'};
@@ -573,7 +577,7 @@ const SUM={data:{},out:null};
   <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="sum-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv1">TSV 복사</button><button class="sec" id="sum-val1">값만 복사 (D5부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
   <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">A열 빈칸 포함, B 구분·C 계약/견적·D 건수/금액·E~N 내용. A1에 붙여넣기.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">건수/금액(D)과 내용(E~N)만 복사됩니다. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
   document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="auto"${SUMSPEC[k].unit==='auto'?' selected':''}>자동</option><option value="k">천원</option><option value="w">원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option></select></label>
     <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
   const $=k=>document.getElementById('sum-'+k);
@@ -582,8 +586,9 @@ const SUM={data:{},out:null};
   $('copy1').onclick=async()=>{if(!SUM.out)return;const G=sumGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
   $('tsv1').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid1()));$('stat1').textContent='TSV 복사됨'};
   $('val1').onclick=async()=>{if(!SUM.out)return;const lines=gridToTsv(sumGrid1()).split('\r\n');const off=cfg.colA==='0'?2:3;const t=lines.slice(4).map(l=>l.split('\t').slice(off,off+6).join('\t')).join('\r\n');await navigator.clipboard.writeText(t);$('stat1').textContent='값만 복사됨 (D5에 붙여넣기)'};
-  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=sumGrid2();$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
-  $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid2()));$('stat2').textContent='TSV 복사됨'};
+  const g2=()=>{const G=sumGrid2(true);G.pid='sum-prev2';return G};
+  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2();$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (건수/금액·내용만, D열에 붙여넣기)':'복사 실패'};
+  $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(g2()));$('stat2').textContent='TSV 복사됨'};
 })();
 const norm=v=>String(v||'').replace(/\s+/g,'');
 const weekOf=v=>{v=String(v||'');const w=v.match(/(\d+)\s*주/),m=v.match(/(\d+)\s*월/);return w?{w:+w[1],m:m?+m[1]:null}:null};
@@ -677,22 +682,28 @@ function sumGrid1(){
   R();blank();add('MHE','h',M?2:1);if(!M)add('','h');add(m.q.n+' 업체 '+m.q.units+' 대','b c');N(m.q.amt);add(m.c.n+' 업체 '+m.c.units+' 대','b c');N(m.c.amt);add((m.cum[0]+m.c.n)+'업체 '+(m.cum[1]+m.c.units)+'대','b c');N(m.cum[2]+m.c.amt);
   return G;
 }
-function sumGrid2(){
-  const o=SUM.out;const M=cfg.merge==='1';const top=o.top;const {G,R,add,blank,fill}=newGrid(14,[20,90,60,110,90,90,90,90,90,90,90,90,90,90]);G.pid='sum-prev2';
+function sumGrid2(dataOnly){
+  const o=SUM.out;const M=cfg.merge==='1';const top=o.top;
+  const {G,R,add:add0,blank:blank0,fill}=newGrid(dataOnly?11:14,dataOnly?[110,90,90,90,90,90,90,90,90,90,90]:[20,90,60,110,90,90,90,90,90,90,90,90,90,90]);G.pid=dataOnly?'sum-prev2d':'sum-prev2';
+  // 내용만 모드: A~C(빈칸·구분·계약/견적) 열과 제목 행을 생략 → D열(건수/금액)부터
+  let skip=0;const add=(v,cls,cs,rs)=>{if(skip>0){skip--;return}add0(v,cls,cs,rs)};const blank=n=>{for(let i=0;i<(n||1);i++)add('','')};
+  const startRow=()=>{skip=dataOnly?2:0};
   const secs=[['PPS',o.f.ppsC,o.f.ppsQ,false],['SCM',o.f.scmC,o.f.scmQ,false],['MHE',o.f.mheC,o.f.mheQ,true],['산업자재유통',o.f.indC,o.f.indQ,false]];
   const cnt=(rs,isM)=>{if(!rs.length)return '금주없음';const a=rs.reduce((s,x)=>s+x.amt,0);const n=isM?rs.reduce((s,x)=>s+x.units,0)+' 대':rs.length+' 건';return n+' / '+(a/100000).toFixed(1)+' 억'};
-  R();blank();add('[금주 상세내역]','st');fill();
+  if(!dataOnly){R();blank();add('[금주 상세내역]','st');fill();}
   secs.forEach(([name,C,Q,isM])=>{
     [['계약',C,'▶'],['견적',Q,'▷']].forEach(([lab,rs,mk],si)=>{
       const list=[...rs].sort((a,b)=>b.amt-a.amt).slice(0,top);
-      for(let i=0;i<top;i++){R();blank();
-        if(si===0&&i===0)add(name,'b c',1,M?top*2:1);else if(!M)add('','b');
-        if(i===0){add(lab,'b c',1,M?top:1);add(cnt(rs,isM),'b c',1,M?top:1)}else if(!M){add('','b');add('','b')}
+      for(let i=0;i<top;i++){R();startRow();if(!dataOnly)blank();
+        if(dataOnly){skip=0;if(i===0)add(cnt(rs,isM),'b c',1,M?top:1);else if(!M)add('','b')}
+        else{if(si===0&&i===0)add(name,'b c',1,M?top*2:1);else if(!M)add('','b');
+        if(i===0){add(lab,'b c',1,M?top:1);add(cnt(rs,isM),'b c',1,M?top:1)}else if(!M){add('','b');add('','b')}}
         const x=list[i];add(x?mk+' '+x.name+' : '+x.memo:mk,'b txt',M?10:1);if(!M)for(let j=0;j<9;j++)add('','b');fill()}
     })});
   return G;
 }
 document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){document.getElementById('sum-prev1').innerHTML=gridToHtml(sumGrid1(),true);document.getElementById('sum-prev2').innerHTML=gridToHtml(sumGrid2(),true)}});
+addClearButtons();
 </script>
 </body>
 </html>
