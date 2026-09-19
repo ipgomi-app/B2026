@@ -111,8 +111,8 @@ async function copyText(t){try{await navigator.clipboard.writeText(t);return tru
   try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}}
 const ORDER={'방문':1,'견적':2,'계약완료':3};
 const stageOf=v=>{v=String(v||'');if(v.includes('계약완료')||v.includes('계약전환완료')||v.includes('계약체결'))return '계약완료';if(v.includes('견적'))return '견적';if(v.includes('방문'))return '방문';return ''};
-/* 날짜 → "M월N주" (월요일 시작 주. 9/1(화)~9/6 = 9월1주, 9/14~9/20 = 9월3주) */
-function weekLabel(y,m,d){const first=new Date(y,m-1,1);const off=(first.getDay()+6)%7;const w=Math.floor((d-1+off)/7)+1;return m+'월'+w+'주'}
+/* 날짜 → "M월N주" (주 = 금요일~목요일. 9/11(금)~9/17(목)=9월3주, 9/18~9/24=9월4주, 9/25~10/1=10월1주: 주가 끝나는 목요일이 속한 달과 그 날짜로 계산) */
+function weekLabel(y,m,d){const dt=new Date(y,m-1,d);const thu=new Date(dt);thu.setDate(dt.getDate()+((4-dt.getDay()+7)%7));return (thu.getMonth()+1)+'월'+Math.ceil(thu.getDate()/7)+'주'}
 function parseDate(s){const m=String(s||'').match(/(\d{4})[\/\-.]?(\d{1,2})[\/\-.]?(\d{1,2})/);return m?{y:+m[1],m:+m[2],d:+m[3],key:m[1]+String(m[2]).padStart(2,'0')+String(m[3]).padStart(2,'0')}:null}
 
 /* ===== 참조시트 ===== */
