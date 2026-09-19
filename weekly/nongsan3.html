@@ -205,8 +205,8 @@ const SHEETS={
     hint:'PPS/파렛트 일지이면서 렌탈료·성수기·센터이용료·재입고개선·단가인상 문구가 있는 업무일지만 반영(산업자재유통·SCM·지게차 등 단가인상은 제외) · 단가인상구분은 렌탈료/성수기단가/센터이용료/재입고개선 중 자동 인식, 셀에서 선택 변경 가능 · 갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 물동량, 효과금액)'},
   target:{name:'타겟업체',H:{code:['코드'],biz:['사업구분'],date:['시행일'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},info:['biz'],dateFmt:'ymd',
     hint:'행의 사업구분(PPS/물류기기·지게차·SCM·산업자재유통)에 맞는 업무일지만 사용, 견적서가 있으면 견적서 내용 우선 · 갱신: 시행일(최근 방문일 YYYYMMDD) · 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출)'},
-  comp:{name:'경쟁사',H:{code:['코드'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},dateFmt:'',
-    hint:'갱신: 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출). 금주 주요업체 양식 그대로 출력'},
+  comp:{name:'경쟁사',H:{code:['코드'],region:['권역','부서'],branch:['지점','팀/지점'],person:['담당자','담당'],name:['업체명','거래처명','계약처명'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},info:['region','branch','person','name'],layout:'major',dateFmt:'',
+    hint:'경쟁사 리스트(코드·업체명)에서 업무일지 코드가 일치하는 업체만 금주 주요업체 양식(부서, 팀/지점, 담당자, 코드, 업체명, 진행단계, 효과금액, 26년 영업진행사항)으로 출력. 리스트에 권역·지점·담당자 열이 없으면 담당자는 업무일지에서 채움'},
   constr:{name:'건설현장',H:{code:['코드'],date:['방문일'],memo:['내용']},dateFmt:'md',append:true,
     hint:'갱신: 기존 행 아래에 방문일(MM/DD) + 내용 줄을 추가 (시트 양식과 동일). 내용은 업무일지 원문을 정리해서 넣음'}
 };
@@ -264,14 +264,18 @@ function parseRef(raw,sh){
   const htxt=Array.from({length:W},(_,i)=>hdr.map(r=>String(r[i]||'').replace(/\s/g,'')).join(' '));
   const find=(keys,last)=>{for(const k of keys){const hits=[];for(let i=0;i<W;i++)if(htxt[i].includes(k.replace(/\s/g,'')))hits.push(i);if(hits.length)return last?hits[hits.length-1]:hits[0]}return -1};
   const c={};for(const k in sh.H)c[k]=find(sh.H[k],(sh.last||[]).includes(k));
-  if(c.code<0){const cnt={};rows.slice(firstData).forEach(r=>{const i=codeCol(r);if(i>=0)cnt[i]=(cnt[i]||0)+1});c.code=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]}
+  {const cnt={};rows.slice(firstData).forEach(r=>r.forEach((x,i)=>{if(CODE_RE.test(String(x).trim()))cnt[i]=(cnt[i]||0)+1}));const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];if(best!=null&&(c.code<0||(cnt[c.code]||0)<cnt[best]/2))c.code=+best}
   if(c.memo<0)c.memo=W-1;
   // 블록: 코드가 있는 행 + 이어지는 코드 없는 행
   const blocks=[];let cur=null;
   rows.slice(firstData).forEach(r=>{const cells=r.slice();while(cells.length<W)cells.push('');const cs=cells.map(x=>String(x).trim());
     const code=CODE_RE.test(cs[c.code])?cs[c.code]:'';
     if(code){cur={code,rows:[cs]};blocks.push(cur)}else if(cur)cur.rows.push(cs)});
-  const hit=Object.keys(sh.H).filter(k=>c[k]>=0);
+  let hit=Object.keys(sh.H).filter(k=>c[k]>=0);
+  if(sh.layout==='major'){const g=(r,k)=>c[k]>=0?String(r[c[k]]||'').trim():'';
+    const nb=blocks.map(b=>{const r=b.rows[0];return {code:b.code,rows:[[g(r,'region'),g(r,'branch'),g(r,'person'),b.code,g(r,'name'),g(r,'stage'),g(r,'amt'),g(r,'memo')]]}});
+    const nc={code:3,region:0,branch:1,person:2,name:4,stage:5,amt:6,memo:7};hit=Object.keys(nc);
+    return {c:nc,W:8,hdr:[['부서','팀/지점','담당자','코드','업체명','진행단계','효과금액(年)','26년 영업진행사항']],blocks:nb,hit,major:true}}
   return {c,W,hdr,blocks,hit};
 }
 
@@ -297,6 +301,7 @@ function runSheet(k){
       let stage='',amt=null;infos.forEach(i=>{if(ORDER[i.stage]>(ORDER[stage]||0))stage=i.stage;if(amt==null&&i.amt!=null&&i.amt>0)amt=i.amt});
       const all=sorted.map(d=>d.dtl.map(x=>x.text).join(' ')+' '+d.group).join(' ');
       const set=(col,v)=>{if(col>=0&&v!=null&&v!==''&&main[col]!==v){main[col]=v;chg[col]=1}};
+      if(ref.major&&c.person>=0&&!main[c.person]&&latest.emp)set(c.person,latest.emp);
       if(sh.append){
         const dt=latest.date;const md=String(dt.m).padStart(2,'0')+'/'+String(dt.d).padStart(2,'0');
         const text=sorted.map(d=>splitTok(cleanVisitText(d.dtl.map(x=>x.text).join(' | '))).filter(x=>x.length>=2&&!DROP_RE.test(x)).join(', ')).filter(Boolean).join(' / ');
