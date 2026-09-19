@@ -108,8 +108,7 @@ table.xl td.dtl{padding-left:6px}
 <div class="card">
   <h2>3. 결과 <span id="stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:6px;align-items:center">
-    <button id="copyHtml">금주 주요업체 값 복사 (7열, 빈칸 없음)</button>
-    <button class="sec" id="copyTsv">텍스트(TSV) 복사 (열 위치 그대로)</button>
+    <button id="copyTsv">텍스트(TSV) 복사 (열 위치 그대로)</button>
     <span style="display:inline-flex;gap:8px;align-items:center;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 10px;background:#f7f9fc"><b style="color:var(--navy)">주요업체 선정 기준</b>
       <label>계약 최대 <input type="number" id="capC" value="3" style="width:46px"></label>
       <label>견적 최대 <input type="number" id="capQ" value="4" style="width:46px"></label>
@@ -118,7 +117,7 @@ table.xl td.dtl{padding-left:6px}
       <span class="hint" style="margin:0">계약 → 견적 → 방문 순, 효과금액 상위순 · 바꾸면 바로 반영</span></span>
   </div>
   <div class="row" style="margin-bottom:10px">
-    <span class="hint">"값 복사"는 팀/지점, 담당자, 코드, 업체명, 진행단계, 효과금액, 영업 진행사항 7개 값만 빈칸 없이 복사합니다(병합 없는 표에 붙이기). "텍스트(TSV) 복사"는 예전 방식으로 B~Q 열 위치 그대로(업체명 2칸, 진행사항 9칸) 복사합니다. 둘 다 서식 없이 값만 들어가며 첫 행의 "팀/지점" 셀을 선택하고 Ctrl+V. 셀은 클릭해서 수정할 수 있습니다.</span>
+    <span class="hint">주요업체 데이터 행만 B~Q 열 위치 그대로(업체명 2칸, 진행사항 9칸) 값으로 복사합니다. 회의자료 주요업체 표 첫 행의 "팀/지점" 셀을 선택하고 Ctrl+V. 셀은 클릭해서 수정할 수 있습니다.</span>
   </div>
   <div id="preview" data-pid="preview"></div>
 </div>
@@ -306,9 +305,6 @@ async function copy(html,text){
 }
 async function farmCopy(which){if(!out){alert('먼저 자동 작성을 실행하세요');return}const F=buildGrid();const G=which==='sum'?subGrid(F,F.sumStart,F.sumStart+REG.length,4,8):subGrid(F,F.majStart,F.majEnd);
   const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?(which==='sum'?'주간 실적(방문~예상매출, 권역 3행)':'주요업체')+' 복사됨 ('+G.length+'행) → 엑셀에서 선택한 셀에 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'}
-document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const F=buildGrid();applyEdits(F);
-  const lines=F.slice(F.majStart,F.majEnd).map(r=>{const m={};r.cells.forEach(c=>m[c.col]=cellVal(c,false));return [1,2,3,4,6,7,8].map(i=>m[i]||'').join('\t')});
-  const ok=await copy('',lines.join('\r\n'));document.getElementById('stat').textContent=ok?'주요업체 값 복사됨 ('+lines.length+'행, 7열) → 첫 행의 팀/지점 셀에 붙여넣기':'복사 실패'};
 document.getElementById('copyTsv').onclick=()=>farmCopy('maj');
 
 
