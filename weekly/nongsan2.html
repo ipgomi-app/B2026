@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영남본부 자료 자동화 2</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1c2430;--mut:#66707d;--line:#d9dee5;--navy:#1f3a93;--accent:#2b6cb0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;font-size:14px}
+header{background:#111;color:#fff;padding:14px 20px;font-size:20px;font-weight:700}
+header small{font-weight:400;color:#bbb;margin-left:10px;font-size:13px}
+main{padding:16px 20px 60px;max-width:1800px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--navy)}
+textarea{width:100%;min-height:120px;font:12px/1.4 Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre;overflow:auto}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.row label{display:flex;align-items:center;font-size:12px;color:var(--mut);gap:4px}
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px}
+input[type=number]{width:60px;text-align:right}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer}
+button.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+button:hover{filter:brightness(1.08)}
+button.xs{padding:2px 8px;font-size:11px;float:right;margin-bottom:4px}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+.ok{color:#137333;font-size:12px}
+.bad{color:#b00020;font-size:12px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;align-items:center}
+.tabs button{background:#fff;color:var(--navy);border:1px solid var(--line);border-bottom:3px solid transparent;border-radius:6px 6px 0 0;font-weight:700}
+.tabs button.on{border-bottom-color:var(--navy);background:#e8edf8}
+.tabpane{display:none}.tabpane.on{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.prev{overflow:auto;border:1px solid var(--line);border-radius:6px;padding:10px;background:#fff}
+table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
+table.xl td{border:.5pt solid #000;padding:1px 4px;height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center}
+table.xl td.hg{background:#d9d9d9;font-weight:700;text-align:center}
+table.xl td.c{text-align:center}
+table.xl td.n{text-align:right}
+table.xl td.txt{text-align:left}
+table.xl td.upd{background:#fff2cc}
+table.xl td.new{background:#e2f0d9}
+table.xl td[contenteditable]:focus{outline:2px solid #2b6cb0;background:#eef4ff}
+table.xl td.bad{background:#fde2e2!important;color:#b00020}
+.legend{font-size:12px;color:var(--mut);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
+</style>
+</head>
+<body>
+<header>영남본부 자료 자동화 2 <small>영남영업본부 · 참조시트 + 업무일지 → 자동 업데이트</small></header>
+<main>
+<div class="tabs"><button class="on" data-tab="farm">농산업종</button></div>
+
+<div class="tabpane on" id="pane-farm">
+<div class="grid">
+<div class="card">
+  <h2>1. 참조시트 붙여넣기 <span class="tag">기존 내용</span></h2>
+  <textarea id="ref" placeholder="농산업종 2차 타겟 시트에서 헤더 포함 전체(또는 필요한 행)를 복사해서 붙여넣으세요. (실적)팀/권역 열부터 세부내용 열까지."></textarea>
+  <div id="refstat" class="hint"></div>
+</div>
+<div class="card">
+  <h2>2. 업무일지 붙여넣기 <span class="tag">금주 활동</span></h2>
+  <textarea id="diary" placeholder="업무일지 조회 결과(PRG_GUBUN ... 행과 DIARY_NUM/DTL_TYP/HEAD_DTL 상세 행)를 그대로 복사해서 붙여넣으세요."></textarea>
+  <div id="diarystat" class="hint"></div>
+</div>
+</div>
+
+<div class="card">
+  <div class="row" style="margin-bottom:8px">
+    <button id="run">자동 업데이트</button>
+    <label>표시 <select id="view"><option value="upd">업데이트된 행만</option><option value="all">전체 행</option></select></label>
+    <label>진행단계 <select id="stagemode"><option value="max">기존보다 높을 때만 변경 (방문&lt;견적&lt;계약완료)</option><option value="new">업무일지 기준으로 항상 변경</option></select></label>
+    <label>예상매출 <select id="amtmode"><option value="new">업무일지 값이 있으면 변경</option><option value="keep">기존 값 유지</option></select></label>
+    <span id="stat" class="ok"></span>
+  </div>
+  <h2>3. 결과 (참조시트 형식 그대로, 업무일지에 있는 코드만 갱신)</h2>
+  <div class="row" style="margin-bottom:8px">
+    <button id="copyUpd">업데이트 행 값 복사</button>
+    <button id="copyAll">전체 행 값 복사 (참조시트 순서)</button>
+    <button class="sec" id="copyCols">최종방문일~세부내용 4열만 복사 (전체 행)</button>
+    <span class="hint" style="margin:0">값만 복사되어 엑셀에서 선택한 셀부터 붙습니다. "전체 행"은 참조시트 첫 데이터 행의 (실적)팀/권역 셀을 선택하고 붙여넣기. "4열만"은 첫 데이터 행의 최종방문일 셀을 선택하고 붙여넣기(다른 열은 건드리지 않음). 셀은 클릭해서 수정할 수 있습니다.</span>
+  </div>
+  <div id="preview" class="prev"></div>
+  <div class="legend"><i style="background:#fff2cc"></i>업무일지로 갱신된 셀 <i style="background:#e2f0d9"></i>업무일지에 있으나 참조시트에 없는 코드(아래 목록, 복사 대상 아님)</div>
+  <div id="unmatched" class="hint"></div>
+</div>
+</div>
+</main>
+
+<script>
+/* ===== 공통 ===== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n};
+function parseTSV(s){
+  const rows=[];let row=[],cell='',q=false;s=s.replace(/\r\n?/g,'\n').replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g,' ').replace(/[\u200C-\u200F\u2028\u2029\u00AD]/g,'');
+  for(let i=0;i<s.length;i++){const ch=s[i];
+    if(q){ if(ch=='"'){ if(s[i+1]=='"'){cell+='"';i++}else q=false } else cell+=ch }
+    else{ if(ch=='"'&&cell===''){q=true}
+      else if(ch=='\t'){row.push(cell);cell=''}
+      else if(ch=='\n'){row.push(cell);rows.push(row);row=[];cell=''}
+      else cell+=ch }
+  }
+  row.push(cell);rows.push(row);
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.onclick=()=>{ta.value='';ta.dispatchEvent(new Event('cleared'));ta.focus()};ta.parentNode.insertBefore(b,ta)})}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}}
+const ORDER={'방문':1,'견적':2,'계약완료':3};
+const stageOf=v=>{v=String(v||'');if(v.includes('계약완료')||v.includes('계약전환완료')||v.includes('계약체결'))return '계약완료';if(v.includes('견적'))return '견적';if(v.includes('방문'))return '방문';return ''};
+/* 날짜 → "M월N주" (월요일 시작 주. 9/1(화)~9/6 = 9월1주, 9/14~9/20 = 9월3주) */
+function weekLabel(y,m,d){const first=new Date(y,m-1,1);const off=(first.getDay()+6)%7;const w=Math.floor((d-1+off)/7)+1;return m+'월'+w+'주'}
+function parseDate(s){const m=String(s||'').match(/(\d{4})[\/\-.]?(\d{1,2})[\/\-.]?(\d{1,2})/);return m?{y:+m[1],m:+m[2],d:+m[3],key:m[1]+String(m[2]).padStart(2,'0')+String(m[3]).padStart(2,'0')}:null}
+
+/* ===== 참조시트 ===== */
+let REF=null;
+function parseRef(raw){
+  const rows=parseTSV(raw);if(!rows.length)return null;
+  const isData=r=>r.some(c=>/^[가-힣]{2,3}권역$/.test(String(c).trim()));
+  const hdr=rows.filter(r=>!isData(r)).slice(0,4);const data=rows.filter(isData);
+  const W=Math.max(...rows.map(r=>r.length));
+  const htxt=Array.from({length:W},(_,i)=>hdr.map(r=>String(r[i]||'').replace(/\s/g,'')).join(' '));
+  const find=(...keys)=>{for(const k of keys)for(let i=0;i<W;i++)if(htxt[i].includes(k))return i;return -1};
+  const c={region:find('권역'),branch:find('지점'),person:find('담당자'),code:find('코드'),name:find('거래처명','업체명'),visit:find('최종방문'),stage:find('진행단계'),amt:find('예상매출'),memo:find('세부내용','영업진행사항(A)','진행사항')};
+  const first=data[0]||[];
+  if(c.region<0)c.region=first.findIndex(x=>/권역$/.test(String(x).trim()));
+  if(c.code<0)c.code=first.findIndex(x=>/^\d{5,7}$/.test(String(x).trim()));
+  if(c.visit<0||c.stage<0||c.amt<0){const si=first.findIndex(x=>['방문','견적','계약완료'].includes(String(x).trim()));if(si>0){c.visit=si-1;c.stage=si;c.amt=si+1}}
+  if(c.memo<0)c.memo=(c.amt>=0?c.amt+1:W-1);
+  if(c.branch<0)c.branch=c.region+1;if(c.person<0)c.person=c.region+2;if(c.name<0)c.name=c.code+1;
+  const recs=data.map(r=>{const cells=r.slice();while(cells.length<W)cells.push('');return {cells:cells.map(x=>String(x).trim()),code:String(r[c.code]||'').trim()}});
+  return {c,W,hdr,recs,hdrHit:['visit','stage','amt','memo','code'].every(k=>c[k]>=0)};
+}
+
+/* ===== 업무일지 ===== */
+function parseDiary(raw){
+  const lines=raw.replace(/\r/g,'').split('\n');const out=[];let mainH=null,cur=null;
+  for(const line of lines){if(!line.trim())continue;const f=line.split('\t');
+    if(f[0]==='PRG_GUBUN'){mainH=f;continue}
+    if(f[1]==='DIARY_NUM'&&f[2]==='DTL_TYP')continue;
+    if(mainH&&f[0]&&f[0]!=='PRG_GUBUN'&&/^\d{6,}$/.test(String(f[1]||'').trim())&&f[0].trim()!==''){
+      const g=k=>{const i=mainH.indexOf(k);return i>=0?String(f[i]||'').trim():''};
+      cur={num:g('DIARY_NUM'),date:parseDate(g('VISIT_DAT')),emp:g('VISIT_EMP_NAM'),code:g('CST_COD'),name:g('CST_NAM'),group:g('TF_GROUP'),dtl:[]};out.push(cur);continue}
+    if(f[0].trim()===''&&/^\d{6,}$/.test(String(f[1]||'').trim())){const num_=f[1].trim();let tgt=out.find(x=>x.num===num_)||cur;if(tgt)tgt.dtl.push({typ:String(f[3]||'').trim(),text:f.slice(4).join(' ').trim()})}
+  }
+  return out.filter(x=>x.code);
+}
+/* 일지 한 건 → 갱신 정보 */
+function diaryInfo(d){
+  const all=d.dtl.map(x=>x.typ+' '+x.text).join(' ')+' '+d.group;
+  let stage='방문';
+  if(/계약완료|계약전환완료|계약체결|계약서\s*체결/.test(all))stage='계약완료';
+  else if(/견적서|견적\s*(진행|제출|발송|전달|완료|재진행)|견적중/.test(all))stage='견적';
+  let amt=null;const m1=all.match(/예상매출액\s*:\s*([\d,]+)\s*\(원\)/);
+  if(m1)amt=Math.round(num(m1[1])/1000);
+  else{const m2=all.match(/예상매출\s*([\d.,]+)\s*(억|천원|만원)/);if(m2){const v=num(m2[1]);amt=m2[2]==='억'?Math.round(v*100000):m2[2]==='만원'?Math.round(v*10):Math.round(v)}}
+  let memo='';
+  const pick=(re)=>{for(const x of d.dtl){const m=x.text.match(re);if(m&&m[1].trim())return m[1].trim()}return ''};
+  memo=pick(/계약특이사항\s*:\s*(.+)$/)||pick(/방문내역\s*:?\s*(.+)$/)||pick(/비고\s*:\s*(.+)$/)||(d.dtl[0]?d.dtl[0].text:'');
+  memo=memo.replace(/\s+/g,' ').trim();
+  return {stage,amt,memo};
+}
+
+/* ===== 실행 ===== */
+let OUT=null;const EDITS={};
+function run(){
+  const ref=parseRef($('ref').value);if(!ref){alert('참조시트를 먼저 붙여넣으세요');return}
+  REF=ref;$('refstat').textContent='참조시트 인식: 데이터 '+ref.recs.length+'행, 열 '+ref.W+'개'+(ref.hdrHit?' (헤더 감지됨)':' (헤더 없음: 열 위치 추정)')+' · 코드 열 '+(ref.c.code+1)+', 최종방문일 '+(ref.c.visit+1)+', 진행단계 '+(ref.c.stage+1)+', 예상매출 '+(ref.c.amt+1)+', 세부내용 '+(ref.c.memo+1);
+  const diary=parseDiary($('diary').value);
+  const byCode={};diary.forEach(d=>{(byCode[d.code]=byCode[d.code]||[]).push(d)});
+  const codes=new Set(ref.recs.map(r=>r.code));
+  const unmatched=Object.keys(byCode).filter(k=>!codes.has(k));
+  $('diarystat').textContent='업무일지 인식: '+diary.length+'건, 업체 '+Object.keys(byCode).length+'개 · 참조시트 일치 '+(Object.keys(byCode).length-unmatched.length)+'개, 불일치 '+unmatched.length+'개';
+  const smode=$('stagemode').value,amode=$('amtmode').value;const c=ref.c;
+  let updCount=0;Object.keys(EDITS).forEach(k=>delete EDITS[k]);
+  const rows=ref.recs.map(r=>{const ds=byCode[r.code];const cells=r.cells.slice();const chg={};
+    if(ds&&ds.length){
+      const sorted=ds.slice().sort((a,b)=>(b.date?b.date.key:'').localeCompare(a.date?a.date.key:''));
+      const latest=sorted[0];
+      // 단계: 모든 일지 중 최고 단계, 매출/세부내용: 우선순위(견적서 계약특이사항 > 방문내역 > 비고)로 최신순
+      let stage='',amt=null,memo='';
+      const infos=sorted.map(d=>Object.assign(diaryInfo(d),{raw:d.dtl.map(x=>x.text).join(' ')}));
+      infos.forEach(i=>{if(ORDER[i.stage]>(ORDER[stage]||0))stage=i.stage;if(amt==null&&i.amt!=null&&i.amt>0)amt=i.amt});
+      const pri=[/계약특이사항/,/방문내역/,/비고\s*:/];
+      for(const re of pri){const i=infos.find(x=>re.test(x.raw)&&x.memo);if(i){memo=i.memo;break}}
+      if(!memo)memo=(infos.find(x=>x.memo)||{}).memo||'';
+      if(latest.date){const v=weekLabel(latest.date.y,latest.date.m,latest.date.d);if(cells[c.visit]!==v){cells[c.visit]=v;chg[c.visit]=1}}
+      const old=stageOf(cells[c.stage]);
+      if(smode==='new'?stage!==old:(ORDER[stage]||0)>(ORDER[old]||0)){cells[c.stage]=stage;chg[c.stage]=1}
+      if(amode==='new'&&amt!=null&&amt>0&&num(cells[c.amt])!==amt){cells[c.amt]=amt.toLocaleString('en-US');chg[c.amt]=1}
+      if(memo&&cells[c.memo]!==memo){cells[c.memo]=memo;chg[c.memo]=1}
+      if(Object.keys(chg).length)updCount++;
+    }
+    return {cells,chg,upd:!!(ds&&ds.length),code:r.code}});
+  OUT={rows,unmatched:unmatched.map(k=>{const d=byCode[k][0];const i=diaryInfo(d);return {code:k,name:d.name,emp:d.emp,date:d.date?weekLabel(d.date.y,d.date.m,d.date.d):'',stage:i.stage,amt:i.amt,memo:i.memo}})};
+  render();
+  $('stat').textContent='완료: 업무일지 업체 '+(Object.keys(byCode).length-unmatched.length)+'개 일치, '+updCount+'행 갱신';
+}
+function visibleRows(){return $('view').value==='all'?OUT.rows:OUT.rows.filter(r=>r.upd)}
+function cellCls(ci){const c=REF.c;if(ci===c.amt)return 'n';if(ci===c.memo||ci===c.name)return 'txt';return 'c'}
+function render(){if(!OUT)return;const c=REF.c;const W=REF.W;
+  const widths=Array.from({length:W},(_,i)=>i===c.memo?520:i===c.name?200:i===c.code?70:80);
+  let h='<table class="xl" style="width:'+widths.reduce((a,b)=>a+b,0)+'px"><colgroup>'+widths.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup>';
+  const hdrRow=REF.hdr.length?REF.hdr[REF.hdr.length-1].map((x,i)=>String(REF.hdr[0][i]||'').replace(/\s+/g,' ').trim()+(REF.hdr.length>1&&x?' '+String(x).replace(/\s+/g,' ').trim():'')):Array.from({length:W},(_,i)=>String.fromCharCode(65+i));
+  h+='<tr>'+Array.from({length:W},(_,i)=>'<td class="hg" title="'+esc(hdrRow[i]||'')+'">'+esc((hdrRow[i]||'').slice(0,12))+'</td>').join('')+'</tr>';
+  visibleRows().forEach(r=>{const ri=OUT.rows.indexOf(r);h+='<tr>'+r.cells.map((v,ci)=>{const e=EDITS[ri+','+ci];const val=e!=null?e:v;return '<td class="'+cellCls(ci)+(r.chg[ci]?' upd':'')+'" contenteditable="true" data-rc="'+ri+','+ci+'" title="'+esc(val)+'">'+esc(val)+'</td>'}).join('')+'</tr>'});
+  h+='</table>';$('preview').innerHTML=h;
+  const u=OUT.unmatched;$('unmatched').innerHTML=u.length?'<b>참조시트에 없는 업무일지 업체 ('+u.length+'개, 복사 대상 아님):</b> '+u.map(x=>esc(x.code+' '+x.name+' ('+x.emp+', '+x.date+', '+x.stage+(x.amt?', '+x.amt.toLocaleString('en-US'):'')+')')).join(' · '):'';
+}
+document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;EDITS[td.dataset.rc]=td.textContent});
+function rowVals(r){const ri=OUT.rows.indexOf(r);return r.cells.map((v,ci)=>{const e=EDITS[ri+','+ci];const val=e!=null?e:v;return String(val).replace(/\t/g,' ').replace(/\r?\n/g,' ')})}
+function tsv(rows,c0=0,c1=null){return rows.map(r=>{const v=rowVals(r);return v.slice(c0,c1==null?v.length:c1).join('\t')}).join('\r\n')}
+$('run').onclick=run;
+['view'].forEach(k=>$(k).onchange=render);
+['stagemode','amtmode'].forEach(k=>$(k).onchange=()=>{if(OUT)run()});
+$('copyUpd').onclick=async()=>{if(!OUT)return;const rows=OUT.rows.filter(r=>r.upd);const ok=await copyText(tsv(rows));$('stat').textContent=ok?'업데이트 행 '+rows.length+'행 값 복사됨':'복사 실패'};
+$('copyAll').onclick=async()=>{if(!OUT)return;const ok=await copyText(tsv(OUT.rows));$('stat').textContent=ok?'전체 '+OUT.rows.length+'행 값 복사됨 → 첫 데이터 행의 (실적)팀/권역 셀에 붙여넣기':'복사 실패'};
+$('copyCols').onclick=async()=>{if(!OUT)return;const c=REF.c;const ok=await copyText(tsv(OUT.rows,c.visit,c.memo+1));$('stat').textContent=ok?'전체 '+OUT.rows.length+'행의 최종방문일~세부내용 값 복사됨 → 첫 데이터 행의 최종방문일 셀에 붙여넣기':'복사 실패'};
+$('ref').addEventListener('cleared',()=>{REF=null;OUT=null;$('preview').innerHTML='';$('refstat').textContent='';$('stat').textContent='';$('unmatched').innerHTML=''});
+$('diary').addEventListener('cleared',()=>{OUT=null;$('preview').innerHTML='';$('diarystat').textContent='';$('stat').textContent='';$('unmatched').innerHTML=''});
+addClearButtons();
+</script>
+</body>
+</html>
