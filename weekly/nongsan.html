@@ -42,7 +42,8 @@ table.cfg input[type=text]{width:80px}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 /* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
 table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
-table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;overflow:visible;vertical-align:middle;mso-number-format:"\@"}
+table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;overflow:visible;vertical-align:middle}
+table.xl td[contenteditable]:focus{outline:2px solid #2b6cb0;background:#eef4ff}
 table.xl td.b{border:.5pt solid #000}
 table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center;border:.5pt solid #000}
 table.xl td.h2{background:#dce6f1;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
@@ -50,8 +51,8 @@ table.xl td.hy{background:#fff2cc;color:#000;font-weight:700;text-align:center;b
 table.xl td.t{background:#000;color:#fff;font-weight:700;font-size:13pt;text-align:left}
 table.xl td.st{font-weight:700;text-align:left}
 table.xl td.c{text-align:center}
-table.xl td.n{text-align:right;mso-number-format:"\#\,\#\#0\;\-\#\,\#\#0\;\\-"}
-table.xl td.p{text-align:right;mso-number-format:"0\.0%"}
+table.xl td.n{text-align:right}
+table.xl td.p{text-align:right}
 table.xl td.sum{background:#e7e6e6;font-weight:700}
 table.xl td.y{background:#fff2cc}
 table.xl td.g{background:#ededed}
@@ -116,9 +117,9 @@ table.xl td.txt{text-align:left}
     <button id="copyHtml">엑셀용 복사 (서식 포함)</button>
     <button class="sec" id="copyTsv">텍스트(TSV) 복사</button>
     <button class="sec" id="dl">HTML 파일 저장</button>
-    <span class="hint">복사 후 엑셀에서 시트의 A1(또는 A열 미포함 시 B열 시작 셀)을 선택하고 Ctrl+V. 열 위치가 원본과 동일(B~Q)해서 밀림이 없습니다.</span>
+    <span class="hint">복사 후 엑셀에서 시트의 A1(또는 A열 미포함 시 B열 시작 셀)을 선택하고 Ctrl+V. 열 위치가 원본과 동일(B~Q)해서 밀림이 없습니다. 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span>
   </div>
-  <div id="preview"></div>
+  <div id="preview" data-pid="preview"></div>
   <div class="hint" style="margin-top:8px">금주 인식 행 (권역 | 지점 | 담당자 | 코드 | 업체명 | 단계 | 예상매출 | 진행사항)</div><pre id="log"></pre>
 </div>
 </div>
@@ -201,7 +202,7 @@ function detectCols(rows){
 /* ===== 계산 ===== */
 let out=null;
 function run(){
-  readCfg();
+  readCfg();EDITS.preview={};
   const raw=document.getElementById('src').value;
   if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
   const {c,rows,hdrHit}=detectCols(parseTSV(raw));
@@ -235,7 +236,7 @@ document.getElementById('week').onchange=()=>{if(document.getElementById('src').
 /* ===== 표 생성 (17열 A~Q 고정, 병합 위치까지 계산) ===== */
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 function buildGrid(){
-  const W=17;const G=[];G.W=W;const occ={}; // occ[col]=rowspan으로 점유된 마지막 행 index
+  const W=17;const G=[];G.W=W;G.pid='preview';const occ={}; // occ[col]=rowspan으로 점유된 마지막 행 index
   let r;
   const R=()=>{r={cells:[],pos:0,idx:G.length};G.push(r);return r};
   const next=()=>{while(occ[r.pos]>=r.idx)r.pos++;return r.pos};
@@ -271,23 +272,30 @@ function buildGrid(){
   out.major.forEach(x=>{R();blank();add(x.branch,'b c');add(x.person,'b c');add(x.code,'b c');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.stage,'b c');add(x.amt,'b n');add(x.memo,'b txt',M?9:1);if(!M)for(let i=0;i<8;i++)add('','b');fill()});
   return G;
 }
+const EDITS={};
+function applyEdits(G){const e=G.pid&&EDITS[G.pid];if(!e)return;G.forEach((r,ri)=>r.cells.forEach(c=>{const k=ri+','+c.col;if(!(k in e))return;const t=e[k];
+  if(/\bn\b/.test(c.cls))c.v=(t.trim()==='-'||t.trim()==='')?0:num(t);else if(/\bp\b/.test(c.cls))c.v=num(t)/100;else c.v=t}))}
 const cellVal=(c,html)=>{const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls);
-  if(isNum)return (c.v===0||c.v==null||c.v==='')?'-':(html?Number(c.v).toLocaleString('en-US'):String(Number(c.v)));
+  if(isNum){const v=Number(c.v)||0;return html?(v===0?'-':v.toLocaleString('en-US')):String(v)}
   if(isP)return (Number(c.v)*100).toFixed(1)+'%';
   return html?esc(c.v):String(c.v??'').replace(/\t/g,' ').replace(/\r?\n/g,' ')};
-function gridToHtml(G){
-  const skipA=cfg.colA==='0';
+const NF={n:'mso-number-format:&quot;\\#\\,\\#\\#0\\;\\-\\#\\,\\#\\#0\\;\\-&quot;',p:'mso-number-format:&quot;0\\.0%&quot;',t:'mso-number-format:&quot;General&quot;'};
+document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const box=td.closest('[data-pid]');if(!box)return;(EDITS[box.dataset.pid]=EDITS[box.dataset.pid]||{})[td.dataset.rc]=td.textContent});
+function gridToHtml(G,edit){
+  applyEdits(G);const skipA=cfg.colA==='0';
   const widths=G.widths||[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
   const ws=widths.slice(skipA?1:0);let h='<table class="xl" border="0" cellspacing="0" cellpadding="0" style="width:'+ws.reduce((a,b)=>a+b,0)+'px"><colgroup>'+ws.map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
-  G.forEach(r=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
-    h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(c.cls?' class="'+c.cls+'"':'')+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
+  G.forEach((r,ri)=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
+    const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls);const nf=isNum?NF.n:isP?NF.p:NF.t;
+    const ed=edit&&!/\bh\b|\bh2\b|\bhy\b/.test(c.cls)?' contenteditable="true" data-rc="'+ri+','+c.col+'"':'';
+    h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(c.cls?' class="'+c.cls+'"':'')+' style="'+nf+'"'+ed+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
   return h+'</table>';
 }
 function gridToTsv(G){
-  const skipA=cfg.colA==='0';
+  applyEdits(G);const skipA=cfg.colA==='0';
   return G.map(r=>{const cells=new Array(G.W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
 }
-function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid())}
+function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid(),true)}
 ['merge','colA','range'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out){out.range=cfg.range;render()}});
 
 /* ===== 복사 ===== */
@@ -335,7 +343,7 @@ function listPane(id,title,hint){
   <div class="card"><h2>3. 결과 <span id="${id}-stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">엑셀용 복사 (서식 포함)</button><button class="sec" id="${id}-copyTsv">텍스트(TSV) 복사</button><button class="sec" id="${id}-dl">HTML 파일 저장</button>
   <span class="hint">B열 "부서"부터 시작, 영업진행사항은 J~R 병합. A1(또는 B열 셀)에 붙여넣기.</span></div>
-  <div id="${id}-preview"></div></div>`;
+  <div id="${id}-preview" data-pid="${id}-preview"></div></div>`;
   const L=LISTS[id]={id,rows:[],hdr:[],map:{},hash:'',out:null};
   const $=k=>document.getElementById(id+'-'+k);
   $('run').onclick=()=>listRun(id);
@@ -380,7 +388,7 @@ function listMapUI(id){
 function listRun(id){
   const L=LISTS[id];const $=k=>document.getElementById(id+'-'+k);
   const raw=$('src').value;if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
-  L.rows=parseTSV(raw);
+  L.rows=parseTSV(raw);EDITS[id+'-preview']={};
   if(raw!==L.hash){listDetect(id);listMapUI(id);L.hash=raw}
   listCompute(id);
 }
@@ -401,7 +409,7 @@ function listCompute(id){
   L.out={major,dept:$('dept').value};
   $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
   $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
-  $('preview').innerHTML=gridToHtml(listGrid(id,$('scope').value==='data'));
+  $('preview').innerHTML=gridToHtml(listGrid(id,$('scope').value==='data'),true);
 }
 function listGrid(id,dataOnly){
   const L=LISTS[id];const W=LISTW;const G=[];G.W=W;G.widths=[20,60,85,70,75,85,85,80,90,90,90,90,90,90,90,90,90,90];
@@ -447,10 +455,10 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   <div class="hint">비고(내용) = 재고차이사유 및 계약내용 + 계약특이사항 (같은 내용이면 한 번만). 주요업체는 효과금액 상위순.</div></div></div>
   <div class="card"><h2>3-1. 단가인상 관리시트 행 <span id="pr-stat1" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="pr-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="pr-tsv1">TSV 복사</button>
-  <span class="hint">기본: 코드, 계약처명, 진행여부, 적용월, 단가인상구분, 년예상효과, 비고 7열(데이터 행만). 전체 32열 배치로 바꾸면 관리시트의 팀/권역 셀에 바로 붙여넣기.</span></div><div id="pr-prev1"></div></div>
+  <span class="hint">기본: 코드, 계약처명, 진행여부, 적용월, 단가인상구분, 년예상효과, 비고 7열(데이터 행만). 전체 32열 배치로 바꾸면 관리시트의 팀/권역 셀에 바로 붙여넣기.</span></div><div id="pr-prev1" data-pid="pr-prev1"></div></div>
   <div class="card"><h2>3-2. 금주 주요업체 <span id="pr-stat2" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="pr-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="pr-tsv2">TSV 복사</button>
-  <span class="hint">N 구분, O 코드, V 업체명, X 효과금액, AC~AH 세부내용. 제목 셀(N열)을 선택하고 붙여넣기.</span></div><div id="pr-prev2"></div></div>`;
+  <span class="hint">N 구분, O 코드, V 업체명, X 효과금액, AC~AH 세부내용. 제목 셀(N열)을 선택하고 붙여넣기.</span></div><div id="pr-prev2" data-pid="pr-prev2"></div></div>`;
   const $=k=>document.getElementById('pr-'+k);
   $('run').onclick=prRun;
   ['status','gubun','fillRP','hdr','max','start','scope','layout'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
@@ -461,7 +469,7 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
 })();
 function prRun(){
   const $=k=>document.getElementById('pr-'+k);const raw=$('src').value;if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
-  PR.rows=parseTSV(raw);
+  PR.rows=parseTSV(raw);EDITS['pr-prev1']={};EDITS['pr-prev2']={};
   if(raw!==PR.hash){PR.hash=raw;
     let first=PR.rows.findIndex(r=>r.some(isCode)&&r.some(c=>/권역$/.test((c||'').trim())));if(first<0)first=0;
     PR.hdr=PR.rows.slice(0,first);PR.data=PR.rows.slice(first);const width=Math.max(...PR.rows.map(r=>r.length));PR.width=width;
@@ -484,19 +492,19 @@ function prCompute(){
 }
 function prRender(){
   const $=k=>document.getElementById('pr-'+k);
-  $('prev1').innerHTML=gridToHtml(prGrid1());$('stat1').textContent='('+PR.out.length+'행)';
-  $('prev2').innerHTML=gridToHtml(prGrid2($('scope').value==='data'));$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
+  $('prev1').innerHTML=gridToHtml(prGrid1(),true);$('stat1').textContent='('+PR.out.length+'행)';
+  $('prev2').innerHTML=gridToHtml(prGrid2($('scope').value==='data'),true);$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
 }
 function prGrid1(){
   const $=k=>document.getElementById('pr-'+k);const M=cfg.merge==='1';
   if($('layout').value==='short'){
-    const {G,R,add,fill}=newGrid(7,[65,160,60,60,110,80,420]);
+    const {G,R,add,fill}=newGrid(7,[65,160,60,60,110,80,420]);G.pid='pr-prev1';
     if($('hdr').value==='1'){R();add('코드','h');add('계약처명','h');['진행여부','적용월','단가인상구분(LPS품의)','년예상효과(천원)','비고(내용)'].forEach(h=>add(h,'hy'))}
     const st=$('status').value;
     PR.out.forEach(x=>{R();add(x.code,'b c');add(x.name,'b txt');add(st,'b c');add(x.week,'b c');add(x.kind,'b c');add(x.amt,'b n');add(x.memo,'b txt');fill()});
     return G;
   }
-  const {G,R,add,blank,fill}=newGrid(32,[70,70,60,60,65,140,70,60,60,50,55,60,70,55,60,70,70,75,75,70,75,55,60,70,70,75,75,60,60,110,80,320]);
+  const {G,R,add,blank,fill}=newGrid(32,[70,70,60,60,65,140,70,60,60,50,55,60,70,55,60,70,70,75,75,70,75,55,60,70,70,75,75,60,60,110,80,320]);G.pid='pr-prev1';
   if($('hdr').value==='1'){
     R();['팀/권역','팀/지점','담당자','패드구분','코드','계약처명','연매출(25년)','손익(25년)','수익율(25년)','매출등급','수익율등급','KPP단독/병행','25년 단가인상 진행여부'].forEach(h=>add(h,'h',1,M?2:1));
     add('상반기 단가인상 계획및 실적','h',M?8:1);if(!M)for(let i=0;i<7;i++)add('','h');add('하반기 단가인상 계획','h',M?6:1);if(!M)for(let i=0;i<5;i++)add('','h');add('26년 단가인상 실적','hy',M?5:1);if(!M)for(let i=0;i<4;i++)add('','hy');
@@ -512,7 +520,7 @@ function prGrid1(){
 function prGrid2(dataOnly){
   const $=k=>document.getElementById('pr-'+k);const M=cfg.merge==='1';const lead=$('start').value==='A'?13:0;
   const widths=[...Array(lead).fill(20),60,70,50,50,50,50,50,50,130,30,70,50,50,50,50,90,90,90,90,90,90];
-  const {G,R,add,blank,fill}=newGrid(lead+21,widths);
+  const {G,R,add,blank,fill}=newGrid(lead+21,widths);G.pid='pr-prev2';
   const max=+$('max').value||PR.out.length;const rows=[...PR.out].sort((a,b)=>b.amt-a.amt).slice(0,max);
   if(!dataOnly){R();blank(lead);add('※ 금주 주요업체','st');fill();
   R();blank(lead);add('구분','h2');add('코드','h2');for(let i=0;i<6;i++)add('','h2');add('업체명','h2 txt',M?2:1);if(!M)add('','h2');add('효과금액','h2');for(let i=0;i<4;i++)add('','h2');add('세부내용','h2 txt',M?6:1);if(!M)for(let i=0;i<5;i++)add('','h2');fill();}
@@ -557,9 +565,9 @@ const SUM={data:{},out:null};
   <div class="row"><label>견적 건수 <input type="number" id="sum-glbQn" value="0"></label><label>견적 매출(천원) <input type="number" id="sum-glbQa" value="0"></label><label>계약 건수 <input type="number" id="sum-glbCn" value="0"></label><label>계약 매출(천원) <input type="number" id="sum-glbCa" value="0"></label></div>
   <div class="hint">금액 단위: 각 입력칸의 "금액 단위"가 자동이면 값이 모두 1,000 배수이고 10만 이상일 때 원→천원으로 나눕니다. MHE는 월 임대료(원)×12÷1000.</div></div></div>
   <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv1">TSV 복사</button><span class="hint">A열 빈칸 포함, B~I열. A1에 붙여넣기.</span></div><div id="sum-prev1"></div></div>
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv1">TSV 복사</button><button class="sec" id="sum-val1">값만 복사 (D5부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
   <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">A열 빈칸 포함, B 구분·C 계약/견적·D 건수/금액·E~N 내용. A1에 붙여넣기.</span></div><div id="sum-prev2"></div></div>`;
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">A열 빈칸 포함, B 구분·C 계약/견적·D 건수/금액·E~N 내용. A1에 붙여넣기.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
   document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="auto"${SUMSPEC[k].unit==='auto'?' selected':''}>자동</option><option value="k">천원</option><option value="w">원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option></select></label>
     <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
   const $=k=>document.getElementById('sum-'+k);
@@ -567,6 +575,7 @@ const SUM={data:{},out:null};
   $('run').onclick=sumRun;
   $('copy1').onclick=async()=>{if(!SUM.out)return;const G=sumGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
   $('tsv1').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid1()));$('stat1').textContent='TSV 복사됨'};
+  $('val1').onclick=async()=>{if(!SUM.out)return;const lines=gridToTsv(sumGrid1()).split('\r\n');const off=cfg.colA==='0'?2:3;const t=lines.slice(4).map(l=>l.split('\t').slice(off,off+6).join('\t')).join('\r\n');await navigator.clipboard.writeText(t);$('stat1').textContent='값만 복사됨 (D5에 붙여넣기)'};
   $('copy2').onclick=async()=>{if(!SUM.out)return;const G=sumGrid2();$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
   $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid2()));$('stat2').textContent='TSV 복사됨'};
 })();
@@ -604,7 +613,7 @@ function sumParse(k){
 function sumRun(){
   const $=k=>document.getElementById('sum-'+k);
   const sv={};document.querySelectorAll('#sum-cum input').forEach(i=>sv[i.dataset.k+i.dataset.i]=i.value);sv.week=$('week').value;sv.range=$('range').value;localStorage.setItem('sum_cfg_v1',JSON.stringify(sv));
-  const only=$('only').value==='1';
+  EDITS['sum-prev1']={};EDITS['sum-prev2']={};const only=$('only').value==='1';
   const all={};SUMIN.forEach(([k])=>{const p=sumParse(k);all[k]=p.recs;$('info-'+k).textContent=p.info});
   // 주차: 입력 없으면 PPS 견적 최빈값
   let wk=weekOf($('week').value);
@@ -628,12 +637,16 @@ function sumRun(){
   rows.forEach(r=>{r.cumN=r.cum[0]+r.c.n;r.cumA=r.cum[1]+r.c.amt});
   const mhe={q:agg(f.mheQ),c:agg(f.mheC),cum:cum.mhe};
   SUM.out={rows,mhe,f,range:$('range').value,top:+$('top').value||3,wk};
-  $('prev1').innerHTML=gridToHtml(sumGrid1());$('prev2').innerHTML=gridToHtml(sumGrid2());
+  $('prev1').innerHTML=gridToHtml(sumGrid1(),true);$('prev2').innerHTML=gridToHtml(sumGrid2(),true);
   $('detect').textContent='주차 '+(wk?(wk.m?wk.m+'월':'')+wk.w+'주':'전체')+' · 필터 후 건수: '+SUMIN.map(([k,l])=>l+' '+f[k].length).join(', ')+' · 단가인상 '+price.n+'건'+(PR.out?'':' (단가인상 탭 데이터 없음)');
   $('stat1').textContent='작성 완료';$('stat2').textContent='작성 완료';
 }
 function sumGrid1(){
-  const o=SUM.out;const M=cfg.merge==='1';const {G,R,add,blank,fill}=newGrid(9,[20,70,120,90,90,90,90,90,100]);
+  const o0=SUM.out;const M=cfg.merge==='1';const {G,R,add,blank,fill}=newGrid(9,[20,70,120,90,90,90,90,90,100]);G.pid='sum-prev1';
+  // 화면에서 수정한 값을 행 데이터에 반영 → 소계/합계 재계산
+  const o=Object.assign({},o0,{rows:o0.rows.map(r=>({...r,q:{...r.q},c:{...r.c}}))});const E=EDITS['sum-prev1']||{};
+  const rowIdx=[4,5,6,8,9,10];rowIdx.forEach((ri,i)=>{const r=o.rows[i];const set=(col,f)=>{const k=ri+','+col;if(k in E){const t=E[k].trim();f((t===''||t==='-')?0:num(t))}};
+    set(3,v=>r.q.n=v);set(4,v=>r.q.amt=v);set(5,v=>r.c.n=v);set(6,v=>r.c.amt=v);set(7,v=>r.cumN=v);set(8,v=>r.cumA=v)});
   const H=(v,cs=1,rs=1)=>add(v,'h',cs,rs);
   R();blank();add('[금주 진행사항]['+o.range+']','st');blank(6);add('단위: 천원','c');
   R();blank();H('구분',M?2:1,M?3:1);if(!M)H('');H('금주',M?4:1);if(!M)for(let i=0;i<3;i++)H('');H('26년 누계',M?2:1);if(!M)H('');
@@ -654,7 +667,7 @@ function sumGrid1(){
   return G;
 }
 function sumGrid2(){
-  const o=SUM.out;const M=cfg.merge==='1';const top=o.top;const {G,R,add,blank,fill}=newGrid(14,[20,90,60,110,90,90,90,90,90,90,90,90,90,90]);
+  const o=SUM.out;const M=cfg.merge==='1';const top=o.top;const {G,R,add,blank,fill}=newGrid(14,[20,90,60,110,90,90,90,90,90,90,90,90,90,90]);G.pid='sum-prev2';
   const secs=[['PPS',o.f.ppsC,o.f.ppsQ,false],['SCM',o.f.scmC,o.f.scmQ,false],['MHE',o.f.mheC,o.f.mheQ,true],['산업자재유통',o.f.indC,o.f.indQ,false]];
   const cnt=(rs,isM)=>{if(!rs.length)return '금주없음';const a=rs.reduce((s,x)=>s+x.amt,0);const n=isM?rs.reduce((s,x)=>s+x.units,0)+' 대':rs.length+' 건';return n+' / '+(a/100000).toFixed(1)+' 억'};
   R();blank();add('[금주 상세내역]','st');fill();
@@ -668,7 +681,7 @@ function sumGrid2(){
     })});
   return G;
 }
-document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){document.getElementById('sum-prev1').innerHTML=gridToHtml(sumGrid1());document.getElementById('sum-prev2').innerHTML=gridToHtml(sumGrid2())}});
+document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){document.getElementById('sum-prev1').innerHTML=gridToHtml(sumGrid1(),true);document.getElementById('sum-prev2').innerHTML=gridToHtml(sumGrid2(),true)}});
 </script>
 </body>
 </html>
