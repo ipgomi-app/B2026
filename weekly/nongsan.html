@@ -61,7 +61,7 @@ table.xl td.txt{text-align:left}
 <body>
 <header>농산업종 주간회의 자동작성 <small>영남영업본부 · 26년 농산업종 영업</small></header>
 <main>
-<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button></div>
+<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button></div>
 
 <div class="tabpane on" id="pane-farm">
 <div class="grid">
@@ -127,6 +127,7 @@ table.xl td.txt{text-align:left}
 <div class="tabpane" id="pane-target"></div>
 <div class="tabpane" id="pane-comp"></div>
 <div class="tabpane" id="pane-price"></div>
+<div class="tabpane" id="pane-sum"></div>
 </main>
 
 <script>
@@ -519,6 +520,155 @@ function prGrid2(dataOnly){
   return G;
 }
 ['merge'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{if(PR.out)prRender()}));
+
+/* ===== 금주요약 탭 ===== */
+const BR2REG={구미:'경북권역',대구:'경북권역',영천:'경북권역',안동:'경북권역',김해:'경남권역',창원:'경남권역',진주:'경남권역',제주:'경남권역',부산:'부산권역',양산:'부산권역',울산:'부산권역',포항:'부산권역'};
+const SUMIN=[['ppsQ','PPS 견적'],['ppsC','PPS 계약'],['scmQ','SCM 견적'],['scmC','SCM 계약'],['indQ','산업자재유통 견적'],['indC','산업자재유통 계약'],['mheQ','MHE 견적'],['mheC','MHE 계약']];
+const SUMSPEC={
+  ppsQ:{amt:['효과금액'],week:['주차'],name:['업체명'],unit:'auto'},
+  ppsC:{amt:['효과금액(년)','효과금액'],week:['주차'],name:['계약처명','업체명'],unit:'auto'},
+  scmQ:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
+  scmC:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
+  indQ:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
+  indC:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
+  mheQ:{amt:['견적금액'],week:['견적주차','주차'],name:['계약업체','업체명'],units:['견적대수'],memo:['비고'],unit:'m12'},
+  mheC:{amt:['확정금액','계약금액'],week:['계약주차','주차'],name:['계약업체','업체명'],units:['계약대수'],memo:['비고'],unit:'m12'}
+};
+const SUMCUM_DEF={pps신규:[379,1268942],pps재전환:[91,879790],pps단가인상:[370,406404],scm:[57,4143180],ind:[284,4546970],glb:[30,1394540],mhe:[72,97,484371]};
+const SUM={data:{},out:null};
+(function(){
+  const el=document.getElementById('pane-sum');
+  el.innerHTML=`<div class="card"><h2>1. 금주 데이터 붙여넣기 (헤더 포함, 각 칸 따로)</h2>
+  <div class="grid" id="sum-inputs"></div>
+  <div class="row" style="margin-top:10px">
+    <label>주차 <input type="text" id="sum-week" placeholder="9월3주" style="min-width:90px"></label>
+    <label>기간 문구 <input type="text" id="sum-range" placeholder="9월 11일~ 9월 17일까지" style="min-width:180px"></label>
+    <label>영남 지점만 <select id="sum-only"><option value="1">예 (경북·경남·부산 권역/지점)</option><option value="0">아니오 (전체)</option></select></label>
+    <label>상세 업체 수 <input type="number" id="sum-top" value="3"></label>
+    <button id="sum-run">금주요약 작성</button></div>
+  <div class="hint">단가인상 행은 "단가인상" 탭에 붙여넣은 데이터에서 자동 집계됩니다. 글로벌비즈는 아래에 수기 입력.</div>
+  <div class="hint" id="sum-detect"></div></div>
+  <div class="grid"><div class="card"><h2>2. 전주 누계 (26년 누계 = 전주 누계 + 금주 계약)</h2>
+  <table class="cfg" id="sum-cum"><tr><th>구분</th><th>건수</th><th>매출액(천원)</th></tr>
+  ${[['pps신규','PPS 신규'],['pps재전환','PPS 재전환/점유율확대'],['pps단가인상','PPS 단가인상'],['scm','SCM'],['ind','산업자재유통'],['glb','글로벌비즈']].map(([k,l])=>`<tr><td>${l}</td><td><input type="number" data-k="${k}" data-i="0" value="${SUMCUM_DEF[k][0]}"></td><td><input type="number" data-k="${k}" data-i="1" value="${SUMCUM_DEF[k][1]}"></td></tr>`).join('')}
+  <tr><td>MHE (업체 / 대수 / 매출)</td><td><input type="number" data-k="mhe" data-i="0" value="${SUMCUM_DEF.mhe[0]}" style="width:45px"> 업체 <input type="number" data-k="mhe" data-i="1" value="${SUMCUM_DEF.mhe[1]}" style="width:45px"> 대</td><td><input type="number" data-k="mhe" data-i="2" value="${SUMCUM_DEF.mhe[2]}"></td></tr></table>
+  <div class="hint">초기값은 첫 번째 사진의 누계에서 금주분을 뺀 값입니다. 매주 갱신하세요 (브라우저에 저장).</div></div>
+  <div class="card"><h2>3. 글로벌비즈 수기 입력 (금주)</h2>
+  <div class="row"><label>견적 건수 <input type="number" id="sum-glbQn" value="0"></label><label>견적 매출(천원) <input type="number" id="sum-glbQa" value="0"></label><label>계약 건수 <input type="number" id="sum-glbCn" value="0"></label><label>계약 매출(천원) <input type="number" id="sum-glbCa" value="0"></label></div>
+  <div class="hint">금액 단위: 각 입력칸의 "금액 단위"가 자동이면 값이 모두 1,000 배수이고 10만 이상일 때 원→천원으로 나눕니다. MHE는 월 임대료(원)×12÷1000.</div></div></div>
+  <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv1">TSV 복사</button><span class="hint">A열 빈칸 포함, B~I열. A1에 붙여넣기.</span></div><div id="sum-prev1"></div></div>
+  <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">A열 빈칸 포함, B 구분·C 계약/견적·D 건수/금액·E~N 내용. A1에 붙여넣기.</span></div><div id="sum-prev2"></div></div>`;
+  document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="auto"${SUMSPEC[k].unit==='auto'?' selected':''}>자동</option><option value="k">천원</option><option value="w">원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option></select></label>
+    <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
+  const $=k=>document.getElementById('sum-'+k);
+  try{const sv=JSON.parse(localStorage.getItem('sum_cfg_v1')||'{}');document.querySelectorAll('#sum-cum input').forEach(i=>{const v=sv[i.dataset.k+i.dataset.i];if(v!=null)i.value=v});['week','range'].forEach(k=>{if(sv[k])$(k).value=sv[k]})}catch(e){}
+  $('run').onclick=sumRun;
+  $('copy1').onclick=async()=>{if(!SUM.out)return;const G=sumGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
+  $('tsv1').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid1()));$('stat1').textContent='TSV 복사됨'};
+  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=sumGrid2();$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
+  $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid2()));$('stat2').textContent='TSV 복사됨'};
+})();
+const norm=v=>String(v||'').replace(/\s+/g,'');
+const weekOf=v=>{v=String(v||'');const w=v.match(/(\d+)\s*주/),m=v.match(/(\d+)\s*월/);return w?{w:+w[1],m:m?+m[1]:null}:null};
+function sumParse(k){
+  const raw=document.getElementById('sum-src-'+k).value;if(!raw.trim())return {recs:[],info:'없음'};
+  const rows=parseTSV(raw);const spec=SUMSPEC[k];
+  const isDataRow=r=>r.some(isCode)||r.some(c=>/^[가-힣]{2,3}(권역|지점)$/.test(String(c||'').trim()));
+  let first=rows.findIndex(isDataRow);if(first<0)first=0;
+  const hdr=rows.slice(0,first),data=rows.slice(first);const width=Math.max(...rows.map(r=>r.length));
+  const htxt=Array.from({length:width},(_,i)=>norm(hdr.map(r=>r[i]||'').join('')));
+  const find=keys=>{for(const key of keys){const kk=norm(key);let i=htxt.findIndex(t=>t===kk);if(i<0)i=htxt.findIndex(t=>t.includes(kk));if(i>=0)return i}return -1};
+  const colMatch=f=>{let best=-1,bs=0;for(let i=0;i<width;i++){const n=data.filter(r=>f(r[i])).length;if(n>bs){bs=n;best=i}}return bs>=Math.max(1,data.length*0.5)?best:-1};
+  const m={};
+  m.amt=find(spec.amt);m.week=find(spec.week);m.name=find(spec.name);m.units=spec.units?find(spec.units):-1;
+  m.region=colMatch(v=>/권역$/.test(String(v||'').trim()));if(m.region<0)m.region=find(['팀/권역','권역']);
+  m.branch=colMatch(v=>/(지점|팀|파트)$/.test(String(v||'').trim()));
+  m.kind=colMatch(v=>/^\d\d-(재전환|점유율확대|해당없음)/.test(String(v||'').trim()));if(m.kind<0)m.kind=find(['점유율확대','경쟁사구분']);
+  m.code=find(['코드']);if(m.code<0||!data.some(r=>isCode(r[m.code])))m.code=colMatch(isCode);
+  if(m.name<0&&m.code>=0)m.name=m.code+1;
+  m.form=find(['계약형태']);
+  // 내용: 한글 텍스트 평균 길이가 가장 긴 열 (업체명·제목 제외)
+  m.memo=spec.memo?find(spec.memo):-1;
+  if(m.memo<0){let best=-1,bl=0;for(let i=0;i<width;i++){if(i===m.name)continue;const l=data.reduce((a,r)=>a+((r[i]||'').match(/[가-힣]/g)||[]).length,0);if(l>bl&&data.some(r=>(r[i]||'').length>15)){bl=l;best=i}}m.memo=best}
+  const g=(r,i)=>(i>=0?(r[i]||''):'').trim();
+  let recs=data.map(r=>{const br=g(r,m.branch);let region=reg(g(r,m.region));if(!region&&br){const key=Object.keys(BR2REG).find(b=>br.startsWith(b));region=key?BR2REG[key]:(m.branch>=0?'기타':null)}
+    const kindv=g(r,m.kind);return {region,branch:br,code:g(r,m.code),name:g(r,m.name),amtRaw:num(g(r,m.amt)),units:num(g(r,m.units)),memo:g(r,m.memo),week:weekOf(g(r,m.week)),kind:/재전환|점유율확대/.test(kindv)?'재전환':'신규',glb:r.some(c=>/글로벌비즈/.test(c||''))}}).filter(x=>x.name||x.code);
+  // 금액 단위
+  let unit=document.getElementById('sum-unit-'+k).value;
+  if(unit==='auto'){const vals=recs.map(x=>x.amtRaw).filter(v=>v>0);const won=vals.length&&vals.every(v=>v%1000===0)&&vals.slice().sort((a,b)=>a-b)[Math.floor(vals.length/2)]>=100000;unit=won?'w':'k'}
+  recs.forEach(x=>{x.amt=unit==='k'?x.amtRaw:unit==='w'?x.amtRaw/1000:x.amtRaw*12/1000});
+  return {recs,info:'헤더 '+hdr.length+'줄, '+data.length+'행, 단위 '+({k:'천원',w:'원',m12:'월×12'}[unit])+' · 열: 금액 '+m.amt+', 업체명 '+m.name+', 내용 '+m.memo+', 주차 '+m.week+', 권역 '+m.region+', 지점 '+m.branch+(spec.units?', 대수 '+m.units:'')+(k.startsWith('pps')?', 구분 '+m.kind:'')};
+}
+function sumRun(){
+  const $=k=>document.getElementById('sum-'+k);
+  const sv={};document.querySelectorAll('#sum-cum input').forEach(i=>sv[i.dataset.k+i.dataset.i]=i.value);sv.week=$('week').value;sv.range=$('range').value;localStorage.setItem('sum_cfg_v1',JSON.stringify(sv));
+  const only=$('only').value==='1';
+  const all={};SUMIN.forEach(([k])=>{const p=sumParse(k);all[k]=p.recs;$('info-'+k).textContent=p.info});
+  // 주차: 입력 없으면 PPS 견적 최빈값
+  let wk=weekOf($('week').value);
+  if(!wk){const cnt={};Object.values(all).flat().forEach(x=>{if(x.week){const key=(x.week.m||'')+'월'+x.week.w+'주';cnt[key]=(cnt[key]||0)+1}});const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];if(best){wk=weekOf(best);$('week').value=best.replace(/^월/,'')}}
+  const keep=x=>(!only||!x.region||x.region!=='기타')&&(!wk||!x.week||(x.week.w===wk.w&&(!wk.m||!x.week.m||x.week.m===wk.m)));
+  const f={};SUMIN.forEach(([k])=>{f[k]=all[k].filter(keep).filter(x=>!(k.startsWith('scm')&&x.glb))});
+  const agg=rs=>({n:rs.length,amt:rs.reduce((a,x)=>a+x.amt,0),units:rs.reduce((a,x)=>a+x.units,0)});
+  const ppsQn=f.ppsQ.filter(x=>x.kind==='신규'),ppsQr=f.ppsQ.filter(x=>x.kind==='재전환'),ppsCn=f.ppsC.filter(x=>x.kind==='신규'),ppsCr=f.ppsC.filter(x=>x.kind==='재전환');
+  // 단가인상: 단가인상 탭
+  const pr=(PR.out||[]).filter(x=>{const w=weekOf(x.week);return !wk||!w||w.w===wk.w});
+  const price={n:pr.length,amt:pr.reduce((a,x)=>a+x.amt,0)};
+  const cum={};document.querySelectorAll('#sum-cum input').forEach(i=>{(cum[i.dataset.k]=cum[i.dataset.k]||[])[+i.dataset.i]=+i.value||0});
+  const glb={Qn:+$('glbQn').value||0,Qa:+$('glbQa').value||0,Cn:+$('glbCn').value||0,Ca:+$('glbCa').value||0};
+  const rows=[
+    {g:'PPS',l:'신규',q:agg(ppsQn),c:agg(ppsCn),cum:cum['pps신규']},
+    {g:'PPS',l:'재전환/점유율확대',q:agg(ppsQr),c:agg(ppsCr),cum:cum['pps재전환']},
+    {g:'PPS',l:'단가인상',q:{n:0,amt:0},c:price,cum:cum['pps단가인상']},
+    {l:'SCM',q:agg(f.scmQ),c:agg(f.scmC),cum:cum.scm},
+    {l:'산업자재유통',q:agg(f.indQ),c:agg(f.indC),cum:cum.ind},
+    {l:'글로벌비즈',q:{n:glb.Qn,amt:glb.Qa},c:{n:glb.Cn,amt:glb.Ca},cum:cum.glb}];
+  rows.forEach(r=>{r.cumN=r.cum[0]+r.c.n;r.cumA=r.cum[1]+r.c.amt});
+  const mhe={q:agg(f.mheQ),c:agg(f.mheC),cum:cum.mhe};
+  SUM.out={rows,mhe,f,range:$('range').value,top:+$('top').value||3,wk};
+  $('prev1').innerHTML=gridToHtml(sumGrid1());$('prev2').innerHTML=gridToHtml(sumGrid2());
+  $('detect').textContent='주차 '+(wk?(wk.m?wk.m+'월':'')+wk.w+'주':'전체')+' · 필터 후 건수: '+SUMIN.map(([k,l])=>l+' '+f[k].length).join(', ')+' · 단가인상 '+price.n+'건'+(PR.out?'':' (단가인상 탭 데이터 없음)');
+  $('stat1').textContent='작성 완료';$('stat2').textContent='작성 완료';
+}
+function sumGrid1(){
+  const o=SUM.out;const M=cfg.merge==='1';const {G,R,add,blank,fill}=newGrid(9,[20,70,120,90,90,90,90,90,100]);
+  const H=(v,cs=1,rs=1)=>add(v,'h',cs,rs);
+  R();blank();add('[금주 진행사항]['+o.range+']','st');blank(6);add('단위: 천원','c');
+  R();blank();H('구분',M?2:1,M?3:1);if(!M)H('');H('금주',M?4:1);if(!M)for(let i=0;i<3;i++)H('');H('26년 누계',M?2:1);if(!M)H('');
+  R();blank();if(!M){H('');H('')}H('견적',M?2:1);if(!M)H('');H('계약',M?2:1);if(!M)H('');H('계약',M?2:1);if(!M)H('');
+  R();blank();if(!M){H('');H('')}['건수/대수','매출액','건수/대수','매출액','건수/대수','매출액'].forEach(h=>add(h,'h2'));
+  const N=(v,cls='b n')=>add(v,cls);
+  const tot={qn:0,qa:0,cn:0,ca:0,kn:0,ka:0},pps={qn:0,qa:0,cn:0,ca:0,kn:0,ka:0},scm={qn:0,qa:0,cn:0,ca:0,kn:0,ka:0};
+  const acc=(t,r)=>{t.qn+=r.q.n;t.qa+=r.q.amt;t.cn+=r.c.n;t.ca+=r.c.amt;t.kn+=r.cumN;t.ka+=r.cumA};
+  const line=(r,cls)=>{N(r.q.n,cls);N(r.q.amt,cls);N(r.c.n,cls);N(r.c.amt,cls);N(r.cumN,cls);N(r.cumA,cls)};
+  o.rows.slice(0,3).forEach((r,i)=>{R();blank();if(i===0)add('PPS','b c',1,M?3:1);else if(!M)add('','b');add(r.l,'b c');line(r,'b n');acc(pps,r);acc(tot,r)});
+  R();blank();add('PPS계','b c sum',M?2:1);if(!M)add('','b sum');line({q:{n:pps.qn,amt:pps.qa},c:{n:pps.cn,amt:pps.ca},cumN:pps.kn,cumA:pps.ka},'b n sum');
+  o.rows.slice(3).forEach(r=>{R();blank();add(r.l,'b c',M?2:1);if(!M)add('','b');line(r,'b n');acc(scm,r);acc(tot,r)});
+  R();blank();add('SCM계','b c sum',M?2:1);if(!M)add('','b sum');line({q:{n:scm.qn,amt:scm.qa},c:{n:scm.cn,amt:scm.ca},cumN:scm.kn,cumA:scm.ka},'b n sum');
+  R();blank();add('합계','b c sum',M?2:1);if(!M)add('','b sum');line({q:{n:tot.qn,amt:tot.qa},c:{n:tot.cn,amt:tot.ca},cumN:tot.kn,cumA:tot.ka},'b n sum');
+  R();fill();
+  const m=o.mhe;
+  R();blank();add('MHE','h',M?2:1);if(!M)add('','h');add(m.q.n+' 업체 '+m.q.units+' 대','b c');N(m.q.amt);add(m.c.n+' 업체 '+m.c.units+' 대','b c');N(m.c.amt);add((m.cum[0]+m.c.n)+'업체 '+(m.cum[1]+m.c.units)+'대','b c');N(m.cum[2]+m.c.amt);
+  return G;
+}
+function sumGrid2(){
+  const o=SUM.out;const M=cfg.merge==='1';const top=o.top;const {G,R,add,blank,fill}=newGrid(14,[20,90,60,110,90,90,90,90,90,90,90,90,90,90]);
+  const secs=[['PPS',o.f.ppsC,o.f.ppsQ,false],['SCM',o.f.scmC,o.f.scmQ,false],['MHE',o.f.mheC,o.f.mheQ,true],['산업자재유통',o.f.indC,o.f.indQ,false]];
+  const cnt=(rs,isM)=>{if(!rs.length)return '금주없음';const a=rs.reduce((s,x)=>s+x.amt,0);const n=isM?rs.reduce((s,x)=>s+x.units,0)+' 대':rs.length+' 건';return n+' / '+(a/100000).toFixed(1)+' 억'};
+  R();blank();add('[금주 상세내역]','st');fill();
+  secs.forEach(([name,C,Q,isM])=>{
+    [['계약',C,'▶'],['견적',Q,'▷']].forEach(([lab,rs,mk],si)=>{
+      const list=[...rs].sort((a,b)=>b.amt-a.amt).slice(0,top);
+      for(let i=0;i<top;i++){R();blank();
+        if(si===0&&i===0)add(name,'b c',1,M?top*2:1);else if(!M)add('','b');
+        if(i===0){add(lab,'b c',1,M?top:1);add(cnt(rs,isM),'b c',1,M?top:1)}else if(!M){add('','b');add('','b')}
+        const x=list[i];add(x?mk+' '+x.name+' : '+x.memo:mk,'b txt',M?10:1);if(!M)for(let j=0;j<9;j++)add('','b');fill()}
+    })});
+  return G;
+}
+document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){document.getElementById('sum-prev1').innerHTML=gridToHtml(sumGrid1());document.getElementById('sum-prev2').innerHTML=gridToHtml(sumGrid2())}});
 </script>
 </body>
 </html>
