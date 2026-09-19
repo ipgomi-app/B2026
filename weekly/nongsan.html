@@ -63,6 +63,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 table.xl td.b{border:.5pt solid #000}
 table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center;border:.5pt solid #000}
 table.xl td.h2{background:#dce6f1;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
+table.xl td.hg{background:#d9d9d9;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
 table.xl td.hy{background:#fff2cc;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
 table.xl td.t{background:#000;color:#fff;font-weight:700;font-size:13pt;text-align:left}
 table.xl td.st{font-weight:700;text-align:left}
@@ -84,37 +85,43 @@ table.xl td.dtl{padding-left:6px}
 <body>
 <header>영남본부 자료 자동화 <small>영남영업본부 · 주간회의 자료</small></header>
 <main>
-<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select> A열 포함 <select id="colA"><option value="1">포함 (A열 셀에 붙여넣기)</option><option value="0">미포함 (B열 셀에 붙여넣기)</option></select></span></div>
+<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
 
 <div class="tabpane on" id="pane-farm">
-<div class="grid">
 <div class="card">
   <h2>1. 금주 데이터 붙여넣기 (엑셀에서 필터된 행 복사 → 붙여넣기)</h2>
   <textarea id="src" placeholder="엑셀에서 금주(예: 9월2주) 행을 그대로 복사해서 여기에 붙여넣으세요. 헤더 포함/미포함 모두 가능. (실적)팀/권역 열부터 영업진행사항(A) 열까지."></textarea>
   <div class="row" style="margin-top:8px">
     <label>주차 <select id="week"></select></label>
+    <label>주간 실적 기간 <input type="text" id="range" placeholder="9/11~9/17" style="width:90px"></label>
     <button id="run">자동 작성</button>
   </div>
   <div id="detect" class="hint"></div>
 </div>
-<div class="card">
-  <h2>2. 금주 주요업체 선정 기준</h2>
-  <div class="row">
-    <label>계약 최대 건수 <input type="number" id="capC" value="3"></label>
-    <label>견적 최대 건수 <input type="number" id="capQ" value="4"></label>
-    <label>방문 최대 건수 <input type="number" id="capV" value="2"></label>
-    <label>최소 효과금액 <input type="number" id="minAmt" value="0"></label>
+<div class="card" style="padding:8px 16px">
+  <div class="row" style="align-items:center;font-size:12px">
+    <b style="color:var(--navy)">2. 주요업체 선정 기준</b>
+    <label>계약 최대 <input type="number" id="capC" value="3" style="width:50px"></label>
+    <label>견적 최대 <input type="number" id="capQ" value="4" style="width:50px"></label>
+    <label>방문 최대 <input type="number" id="capV" value="2" style="width:50px"></label>
+    <label>최소 효과금액 <input type="number" id="minAmt" value="0" style="width:70px"></label>
+    <span class="hint" style="margin:0">계약 → 견적 → 방문 순, 단계 안에서는 효과금액 상위순</span>
   </div>
-  <div class="hint">진행단계 순서 계약 → 견적 → 방문, 각 단계 안에서는 효과금액(예상매출) 상위순.</div>
 </div>
+<div class="card">
+  <h2>3. 전주 누계 (지난주 회의자료의 "2차 타겟 현황" 표를 복사해서 붙여넣기 → 적용, 또는 아래 표에 직접 입력)</h2>
+  <textarea id="cumsrc" style="min-height:70px" placeholder="지난주 자료의 경북권역~영남영업본부 행(부서 열부터 방문진행률까지)을 복사해서 붙여넣으세요. 누계실적 4칸이 전주 누계로 들어갑니다."></textarea>
+  <div class="row" style="margin-top:6px"><button class="sec" id="cumapply">전주 누계 적용</button><span id="cumstat" class="hint"></span></div>
+  <table class="cfg" id="cum"><tr><th>권역</th><th>대상 업체수</th><th>경쟁사 매출</th><th>누계 방문</th><th>누계 견적</th><th>누계 계약완료</th><th>누계 예상매출</th></tr></table>
+  <div class="hint">이번주 누계 = 전주 누계 + 금주 실적. 방문진행률 = (누계 방문+견적+계약완료) ÷ 대상 업체수. 값은 브라우저에 저장됩니다.</div>
 </div>
 
 <div class="card">
-  <h2>3. 금주 주요업체 <span id="stat" class="ok"></span></h2>
+  <h2>4. 결과 <span id="stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px">
-    <button id="copyHtml">엑셀용 복사 (서식 포함)</button>
-    <button class="sec" id="copyTsv">텍스트(TSV) 복사</button>
-    <span class="hint">복사는 내용(데이터 행)만 됩니다. B 팀/지점 · C 담당자 · D 코드 · E~F 업체명 · G 진행단계 · H 효과금액 · I~Q 영업 진행사항. 첫 데이터 행의 A열(또는 B열) 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
+    <button id="copySum">2차 타겟 현황 복사 (내용만)</button>
+    <button id="copyHtml">금주 주요업체 복사 (내용만)</button>
+    <span class="hint">제목·헤더 없이 값 행만 복사되고, 엑셀에서 선택한 셀부터 붙습니다. 현황 표는 경북권역 행의 "부서" 셀을, 주요업체는 첫 행의 "팀/지점" 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
   </div>
   <div id="preview" data-pid="preview"></div>
 </div>
@@ -131,11 +138,20 @@ table.xl td.dtl{padding-left:6px}
 /* ===== 기준값 (링크 시트 2026-09 값) ===== */
 const REG=['경북권역','부산권역','경남권역'];
 const LS='nongsan_weekly_cfg_v2';
-const DEF={capC:3,capQ:4,capV:2,minAmt:0,merge:'1',colA:'1'};
-function loadCfg(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(LS)||'{}'))}catch(e){return Object.assign({},DEF)}}
+const DEF={capC:3,capQ:4,capV:2,minAmt:0,merge:'1',colA:'1',range:'',cum:{'경북권역':[153,1982145,22,66,5,30000],'부산권역':[12,339559,3,5,1,25000],'경남권역':[72,1184485,15,26,3,43240]}};
+function loadCfg(){try{const c=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS)||'{}'));c.cum=Object.assign({},DEF.cum,c.cum||{});REG.forEach(r=>{if(!Array.isArray(c.cum[r])||c.cum[r].length!==6)c.cum[r]=DEF.cum[r].slice()});return c}catch(e){return JSON.parse(JSON.stringify(DEF))}}
 let cfg=loadCfg();
-function readCfg(){['capC','capQ','capV','minAmt'].forEach(k=>cfg[k]=+document.getElementById(k).value||0);['merge','colA'].forEach(k=>cfg[k]=document.getElementById(k).value);localStorage.setItem(LS,JSON.stringify(cfg))}
-Object.keys(DEF).forEach(k=>{const el=document.getElementById(k);if(el)el.value=cfg[k]});
+function readCfg(){['capC','capQ','capV','minAmt'].forEach(k=>cfg[k]=+document.getElementById(k).value||0);['merge','range'].forEach(k=>cfg[k]=document.getElementById(k).value);cfg.colA='1';
+  document.querySelectorAll('#cum input[data-t=cum]').forEach(i=>{cfg.cum[i.dataset.r][+i.dataset.i]=num(i.value)});localStorage.setItem(LS,JSON.stringify(cfg))}
+['capC','capQ','capV','minAmt','merge','range'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=cfg[k]});
+function renderCum(){const t=document.getElementById('cum');t.querySelectorAll('tr:not(:first-child)').forEach(r=>r.remove());
+  REG.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+r+'</td>'+cfg.cum[r].map((v,i)=>'<td><input type="number" data-t="cum" data-r="'+r+'" data-i="'+i+'" value="'+v+'"></td>').join('');t.appendChild(tr)});
+  t.querySelectorAll('input').forEach(i=>i.onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()})}
+document.getElementById('cumapply').onclick=()=>{const rows=parseTSV(document.getElementById('cumsrc').value);let hit=0;
+  rows.forEach(r=>{const k=reg(r[0]);if(!k||!/권역$/.test(String(r[0]).trim()))return;const v=r.slice(1).map(x=>String(x).trim()).filter(x=>x!=='').map(num);
+    if(v.length>=11){cfg.cum[k]=[v[0],v[1],v[6],v[7],v[8],v[9]];hit++}else if(v.length>=6){cfg.cum[k]=v.slice(0,6);hit++}});
+  const st=document.getElementById('cumstat');if(hit){localStorage.setItem(LS,JSON.stringify(cfg));renderCum();st.textContent='전주 누계 적용됨 ('+hit+'개 권역)';st.className='ok';if(out&&document.getElementById('src').value.trim())run()}else{st.textContent='권역 행을 찾지 못했습니다 (경북권역/부산권역/경남권역 행이 필요)';st.className='bad'}};
+document.getElementById('cumsrc').addEventListener('cleared',()=>{document.getElementById('cumstat').textContent=''});
 
 /* ===== TSV 파싱 (엑셀 복사본: 따옴표 안 줄바꿈 처리) ===== */
 function parseTSV(s){
@@ -153,6 +169,7 @@ function parseTSV(s){
 const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n};
 const reg=v=>{v=String(v||'').trim();for(const r of REG)if(v.startsWith(r.slice(0,2)))return r;return null};
 const stage=v=>{v=String(v||'');if(v.includes('계약'))return '계약';if(v.includes('견적'))return '견적';if(v.includes('방문'))return '방문';return ''};
+renderCum();
 
 /* ===== 열 위치 판별 ===== */
 function detectCols(rows){
@@ -186,18 +203,22 @@ function run(){
   const week=wsel.value||'';
   document.getElementById('detect').innerHTML='인식: 데이터 '+recs.length+'행, 헤더 '+(hdrHit>=3?'감지됨':'없음(기본 열 위치 적용)')+' · 열 위치(0부터): 권역 '+c.region+', 지점 '+c.branch+', 담당자 '+c.person+', 코드 '+c.code+', 업체명 '+c.name+', 최종방문 '+c.visit+', 진행단계 '+c.stage+', 예상매출 '+c.amt+', 진행사항 '+c.memo;
   const cur=recs.filter(x=>x.visit===week);
+  const wk={},cm={};REG.forEach(r=>{wk[r]={방문:0,견적:0,계약:0,amt:0}});
+  cur.forEach(x=>{if(!x.stage)return;wk[x.region][x.stage]++;if(x.stage=='계약')wk[x.region].amt+=x.amt});
+  REG.forEach(r=>{const p=cfg.cum[r];cm[r]={방문:p[2]+wk[r].방문,견적:p[3]+wk[r].견적,계약:p[4]+wk[r].계약,amt:p[5]+wk[r].amt}});
   const cap={계약:cfg.capC,견적:cfg.capQ,방문:cfg.capV};const major=[];
   ['계약','견적','방문'].forEach(s=>{major.push(...cur.filter(x=>x.stage===s&&x.amt>=cfg.minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s]))});
-  out={week,major,cur};
+  out={week,major,cur,wk,cm,range:cfg.range};
   render();
   document.getElementById('stat').textContent='작성 완료 ('+week+', 금주 '+cur.length+'건, 주요업체 '+major.length+'건)';
 }
 document.getElementById('run').onclick=run;
 document.getElementById('week').onchange=()=>{if(document.getElementById('src').value.trim())run()};
+document.getElementById('range').onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()};
 
 /* ===== 표 생성 (17열 A~Q 고정, 병합 위치까지 계산) ===== */
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-function buildGrid(dataOnly){
+function buildGrid(){
   const W=17;const G=[];G.W=W;G.pid='preview';const occ={};
   let r;
   const R=()=>{r={cells:[],pos:0,idx:G.length};G.push(r);return r};
@@ -205,13 +226,34 @@ function buildGrid(dataOnly){
   const add=(v,cls,cs=1,rs=1)=>{const col=next();r.cells.push({v,cls,cs,rs,col});if(rs>1)for(let i=0;i<cs;i++)occ[col+i]=r.idx+rs-1;r.pos=col+cs};
   const blank=(n=1)=>{for(let i=0;i<n;i++)add('','')};
   const fill=()=>{while(next()<W)add('','')};
-  const M=cfg.merge==='1';
-  if(dataOnly){const E=EDITS.preview||{};const E2={};Object.keys(E).forEach(k=>{const [ri,c]=k.split(',').map(Number);if(ri>=2)E2[(ri-2)+','+c]=E[k]});G.pid='preview_d';EDITS.preview_d=E2}
-  if(!dataOnly){R();blank();add('※ 금주 주요업체','st');fill();
-  R();blank();add('팀/지점','h');add('담당자','h');add('코드','h');add('업체명','h',M?2:1);if(!M)add('','h');add('진행단계','h');add('효과금액(年)','h');add('영업 진행사항','h',M?9:1);if(!M)for(let i=0;i<8;i++)add('','h');fill();}
+  const M=cfg.merge==='1',wk=out.wk,cm=out.cm;
+  R();blank();add('▶ 농산업종 2차 타겟 현황','st');blank(2);add(out.week,'c');fill();
+  R();blank();add('부서','h',1,M?2:1);add('2차 타겟업체','h',M?2:1);if(!M)add('','h');
+    add('주간 실적['+(out.range||'')+']','h2',M?4:1);if(!M)for(let i=0;i<3;i++)add('','h2');
+    add('2차 타겟 누계실적','hy',M?4:1);if(!M)for(let i=0;i<3;i++)add('','hy');
+    add('방문진행률','h',1,M?2:1);fill();
+  R();blank();if(!M)add('부서','h');add('대상 업체수','h');add('경쟁사 매출','h');['방문','견적','계약완료','예상매출'].forEach(h=>add(h,'h2'));['방문','견적','계약완료','예상매출'].forEach(h=>add(h,'hy'));if(!M)add('방문진행률','h');fill();
+  G.sumStart=G.length;
+  const T={n:0,s:0,v:0,q:0,c:0,am:0,cv:0,cq:0,cc:0,cam:0};
+  REG.forEach(k=>{const p=cfg.cum[k],w=wk[k],c=cm[k];const rate=p[0]?(c.방문+c.견적+c.계약)/p[0]:0;
+    T.n+=p[0];T.s+=p[1];T.v+=w.방문;T.q+=w.견적;T.c+=w.계약;T.am+=w.amt;T.cv+=c.방문;T.cq+=c.견적;T.cc+=c.계약;T.cam+=c.amt;
+    R();blank();add(k,'b c');add(p[0],'b n y');add(p[1],'b n y');add(w.방문,'b n');add(w.견적,'b n');add(w.계약,'b n');add(w.amt,'b n');
+    add(c.방문,'b n');add(c.견적,'b n');add(c.계약,'b n');add(c.amt,'b n');add(rate,'b p bd');fill()});
+  R();blank();add('영남영업본부','b c sum');[T.n,T.s,T.v,T.q,T.c,T.am,T.cv,T.cq,T.cc,T.cam].forEach(x=>add(x,'b n sum'));add(T.n?(T.cv+T.cq+T.cc)/T.n:0,'b p sum');fill();
+  G.sumEnd=G.length;
+  R();blank();add('※ 2차 타겟업체 : 영남본부 676업체 파렛트 사용확인 결과 KPP 계약 사용중인 업체와 계약불가(종료, 미사용 등) 업체를 제외한 추가 영업 가능업체를 2차 타겟으로 설정.','txt');fill();
+  R();fill();
+  R();blank();add('※ 금주 주요업체','st');fill();
+  R();blank();add('팀/지점','hg');add('담당자','hg');add('코드','hg');add('업체명','hg',M?2:1);if(!M)add('','hg');add('진행단계','hg');add('효과금액(年)','hg');add('영업 진행사항','hg',M?9:1);if(!M)for(let i=0;i<8;i++)add('','hg');fill();
+  G.majStart=G.length;
   out.major.forEach(x=>{R();blank();add(x.branch,'b c');add(x.person,'b c');add(x.code,'b c');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.stage,'b c');add(x.amt,'b n');add(x.memo,'b txt',M?9:1);if(!M)for(let i=0;i<8;i++)add('','b');fill()});
+  G.majEnd=G.length;
   return G;
 }
+/* 행 범위 잘라내기: 수정값 반영 후 A열 제거 → 선택한 셀부터 붙는 내용만 그리드 */
+function subGrid(G,r0,r1){applyEdits(G);const S=[];S.W=G.W-1;S.noSkip=true;S.widths=(G.widths||FW).slice(1);
+  G.slice(r0,r1).forEach((r,i)=>{S.push({cells:r.cells.filter(c=>c.col>0).map(c=>Object.assign({},c,{col:c.col-1})),pos:0,idx:i})});return S}
+const FW=[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
 const EDITS={};
 function applyEdits(G){const e=G.pid&&EDITS[G.pid];if(!e)return;G.forEach((r,ri)=>r.cells.forEach(c=>{const k=ri+','+c.col;if(!(k in e))return;const t=e[k];
   if(/\bn\b/.test(c.cls))c.v=(t.trim()==='-'||t.trim()==='')?0:num(t);else if(/\bp\b/.test(c.cls))c.v=num(t)/100;else c.v=t}))}
@@ -231,8 +273,8 @@ document.addEventListener('focusin',e=>{const td=e.target.closest&&e.target.clos
 document.addEventListener('focusout',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const box=td.closest('[data-pid]');if(!box)return;
   if(box.dataset.pid==='sum-prev1'&&SUM.out){box.innerHTML=gridToHtml(sumGrid1(),true);const st=document.getElementById('sum-stat1');if(st){st.textContent=td.classList.contains('bad')?'⚠ 숫자가 아닌 입력은 무시했습니다':'수정 반영 (누계·합계 재계산)';st.className=td.classList.contains('bad')?'bad':'ok'}}});
 function gridToHtml(G,edit){
-  applyEdits(G);const skipA=cfg.colA==='0';
-  const widths=G.widths||[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
+  applyEdits(G);const skipA=cfg.colA==='0'&&!G.noSkip;
+  const widths=G.widths||FW;
   const ws=widths.slice(skipA?1:0);let h='<table class="xl" border="0" cellspacing="0" cellpadding="0" style="width:'+ws.reduce((a,b)=>a+b,0)+'px"><colgroup>'+ws.map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
   G.forEach((r,ri)=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
     const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls);const nf=isNum?NF.n:isP?NF.p:NF.t;
@@ -241,11 +283,11 @@ function gridToHtml(G,edit){
   return h+'</table>';
 }
 function gridToTsv(G){
-  applyEdits(G);const skipA=cfg.colA==='0';
+  applyEdits(G);const skipA=cfg.colA==='0'&&!G.noSkip;
   return G.map(r=>{const cells=new Array(G.W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
 }
-function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid(false),true)}
-['merge','colA','capC','capQ','capV','minAmt'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()});
+function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid(),true)}
+['merge','capC','capQ','capV','minAmt'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()});
 
 /* ===== 복사 ===== */
 function fullHtml(G){
@@ -259,8 +301,10 @@ async function copy(html,text){
   try{const d=document.createElement('div');d.contentEditable=true;d.style.position='fixed';d.style.left='-9999px';d.innerHTML=html;document.body.appendChild(d);
     const s=window.getSelection(),rg=document.createRange();rg.selectNodeContents(d);s.removeAllRanges();s.addRange(rg);const ok=document.execCommand('copy');s.removeAllRanges();d.remove();return ok}catch(e){return false}
 }
-document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const G=buildGrid(true);const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀에서 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'};
-document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid(true)));document.getElementById('stat').textContent='TSV 복사됨'};
+async function farmCopy(which){if(!out){alert('먼저 자동 작성을 실행하세요');return}const F=buildGrid();const G=which==='sum'?subGrid(F,F.sumStart,F.sumEnd):subGrid(F,F.majStart,F.majEnd);
+  const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?(which==='sum'?'현황 표':'주요업체')+' 복사됨 ('+G.length+'행) → 엑셀에서 선택한 셀에 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'}
+document.getElementById('copySum').onclick=()=>farmCopy('sum');
+document.getElementById('copyHtml').onclick=()=>farmCopy('maj');
 
 
 /* ===== 기간 선택기 (달력 하나로 시작~끝 선택) ===== */
@@ -396,7 +440,7 @@ function listGrid(id,dataOnly){
   L.out.major.forEach(x=>{R();blank();add(L.out.dept==='region'?x.region:'','b c');add(x.branch,'b c');add(x.person,'b c');add(x.code,'b c');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.stage,'b c');add(x.amt,'b n');add(x.memo,'b txt',M?9:1);if(!M)for(let i=0;i<8;i++)add('','b');fill()});
   return G;
 }
-['merge','colA'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{Object.keys(LISTS).forEach(id=>{if(LISTS[id].out)listCompute(id)})}));
+['merge'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{Object.keys(LISTS).forEach(id=>{if(LISTS[id].out)listCompute(id)})}));
 
 /* ===== 단가인상 탭 ===== */
 function newGrid(W,widths){const G=[];G.W=W;G.widths=widths;const occ={};let r;
