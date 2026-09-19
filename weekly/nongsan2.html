@@ -54,6 +54,15 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 <div class="tabs"><button class="on" data-tab="farm">농산업종</button></div>
 
 <div class="tabpane on" id="pane-farm">
+<div class="card" style="padding:10px 16px">
+  <div class="row">
+    <b style="color:var(--navy)">주차 선택</b>
+    <label>날짜 <input type="date" id="wkdate"></label>
+    <span id="wkrange" class="hint" style="margin:0"></span>
+    <label>주차 표기 <input type="text" id="wklabel" style="width:90px" placeholder="9월3주"></label>
+    <span class="hint" style="margin:0">주는 금요일~목요일입니다. 달력에서 아무 날이나 고르면 그 날이 속한 금~목 주가 선택되고, 그 기간의 업무일지만 반영됩니다. 주차 표기는 자동 계산되며 직접 고칠 수 있습니다(예: 9/25~10/1 → 9월5주).</span>
+  </div>
+</div>
 <div class="grid">
 <div class="card">
   <h2>1. 참조시트 붙여넣기 <span class="tag">기존 내용</span></h2>
@@ -111,8 +120,16 @@ async function copyText(t){try{await navigator.clipboard.writeText(t);return tru
   try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}}
 const ORDER={'방문':1,'견적':2,'계약완료':3};
 const stageOf=v=>{v=String(v||'');if(v.includes('계약완료')||v.includes('계약전환완료')||v.includes('계약체결'))return '계약완료';if(v.includes('견적'))return '견적';if(v.includes('방문'))return '방문';return ''};
-/* 날짜 → "M월N주" (주 = 금요일~목요일. 9/11(금)~9/17(목)=9월3주, 9/18~9/24=9월4주, 9/25~10/1=10월1주: 주가 끝나는 목요일이 속한 달과 그 날짜로 계산) */
-function weekLabel(y,m,d){const dt=new Date(y,m-1,d);const thu=new Date(dt);thu.setDate(dt.getDate()+((4-dt.getDay()+7)%7));return (thu.getMonth()+1)+'월'+Math.ceil(thu.getDate()/7)+'주'}
+/* 주 = 금요일~목요일. 선택한 날짜가 속한 주의 금요일/목요일 */
+function weekOf(dt){const fri=new Date(dt);fri.setDate(dt.getDate()-((dt.getDay()-5+7)%7));const thu=new Date(fri);thu.setDate(fri.getDate()+6);return {fri,thu}}
+/* 주차 표기: 금요일이 속한 달 기준, 그 달의 목요일 개수로 N주 (9/11~9/17=9월3주, 9/25~10/1=9월5주) */
+function weekLabel(y,m,d){const {fri,thu}=weekOf(new Date(y,m-1,d));const M=fri.getMonth();let n=0;
+  for(let x=1;x<=31;x++){const t=new Date(fri.getFullYear(),M,x);if(t.getMonth()!==M)break;if(t.getDay()===4&&t<=thu)n++}
+  if(thu.getMonth()!==M)n++;return (M+1)+'월'+n+'주'}
+const fmtMD=d=>(d.getMonth()+1)+'/'+d.getDate();
+const ymd=d=>d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+function curWeek(){const v=$('wkdate').value;if(!v)return null;const [y,m,d]=v.split('-').map(Number);const w=weekOf(new Date(y,m-1,d));return {from:ymd(w.fri),to:ymd(w.thu),label:$('wklabel').value.trim()||weekLabel(y,m,d),text:fmtMD(w.fri)+'~'+fmtMD(w.thu)}}
+function onWeekChange(auto){const w=curWeek();if(!w){$('wkrange').textContent='';return}$('wkrange').textContent='기간 '+w.text+' (금~목)';if(auto){const v=$('wkdate').value.split('-').map(Number);$('wklabel').value=weekLabel(v[0],v[1],v[2])}if(OUT)run()}
 function parseDate(s){const m=String(s||'').match(/(\d{4})[\/\-.]?(\d{1,2})[\/\-.]?(\d{1,2})/);return m?{y:+m[1],m:+m[2],d:+m[3],key:m[1]+String(m[2]).padStart(2,'0')+String(m[3]).padStart(2,'0')}:null}
 
 /* ===== 참조시트 ===== */
@@ -169,11 +186,12 @@ let OUT=null;const EDITS={};
 function run(){
   const ref=parseRef($('ref').value);if(!ref){alert('참조시트를 먼저 붙여넣으세요');return}
   REF=ref;$('refstat').textContent='참조시트 인식: 데이터 '+ref.recs.length+'행, 열 '+ref.W+'개'+(ref.hdrHit?' (헤더 감지됨)':' (헤더 없음: 열 위치 추정)')+' · 코드 열 '+(ref.c.code+1)+', 최종방문일 '+(ref.c.visit+1)+', 진행단계 '+(ref.c.stage+1)+', 예상매출 '+(ref.c.amt+1)+', 세부내용 '+(ref.c.memo+1);
-  const diary=parseDiary($('diary').value);
+  const wk=curWeek();if(!wk){alert('맨 위에서 주차(날짜)를 먼저 선택하세요');return}
+  const diaryAll=parseDiary($('diary').value);const diary=diaryAll.filter(d=>d.date&&d.date.key>=wk.from&&d.date.key<=wk.to);const skipped=diaryAll.length-diary.length;
   const byCode={};diary.forEach(d=>{(byCode[d.code]=byCode[d.code]||[]).push(d)});
   const codes=new Set(ref.recs.map(r=>r.code));
   const unmatched=Object.keys(byCode).filter(k=>!codes.has(k));
-  $('diarystat').textContent='업무일지 인식: '+diary.length+'건, 업체 '+Object.keys(byCode).length+'개 · 참조시트 일치 '+(Object.keys(byCode).length-unmatched.length)+'개, 불일치 '+unmatched.length+'개';
+  $('diarystat').textContent='업무일지 인식: '+diaryAll.length+'건 중 '+wk.text+' 기간 '+diary.length+'건 (기간 밖 '+skipped+'건 제외), 업체 '+Object.keys(byCode).length+'개 · 참조시트 일치 '+(Object.keys(byCode).length-unmatched.length)+'개, 불일치 '+unmatched.length+'개';
   const smode=$('stagemode').value,amode=$('amtmode').value;const c=ref.c;
   let updCount=0;Object.keys(EDITS).forEach(k=>delete EDITS[k]);
   const rows=ref.recs.map(r=>{const ds=byCode[r.code];const cells=r.cells.slice();const chg={};
@@ -187,7 +205,7 @@ function run(){
       const pri=[/계약특이사항/,/방문내역/,/비고\s*:/];
       for(const re of pri){const i=infos.find(x=>re.test(x.raw)&&x.memo);if(i){memo=i.memo;break}}
       if(!memo)memo=(infos.find(x=>x.memo)||{}).memo||'';
-      if(latest.date){const v=weekLabel(latest.date.y,latest.date.m,latest.date.d);if(cells[c.visit]!==v){cells[c.visit]=v;chg[c.visit]=1}}
+      {const v=wk.label;if(cells[c.visit]!==v){cells[c.visit]=v;chg[c.visit]=1}}
       const old=stageOf(cells[c.stage]);
       if(smode==='new'?stage!==old:(ORDER[stage]||0)>(ORDER[old]||0)){cells[c.stage]=stage;chg[c.stage]=1}
       if(amode==='new'&&amt!=null&&amt>0&&num(cells[c.amt])!==amt){cells[c.amt]=amt.toLocaleString('en-US');chg[c.amt]=1}
@@ -195,7 +213,7 @@ function run(){
       if(Object.keys(chg).length)updCount++;
     }
     return {cells,chg,upd:!!(ds&&ds.length),code:r.code}});
-  OUT={rows,unmatched:unmatched.map(k=>{const d=byCode[k][0];const i=diaryInfo(d);return {code:k,name:d.name,emp:d.emp,date:d.date?weekLabel(d.date.y,d.date.m,d.date.d):'',stage:i.stage,amt:i.amt,memo:i.memo}})};
+  OUT={rows,unmatched:unmatched.map(k=>{const d=byCode[k][0];const i=diaryInfo(d);return {code:k,name:d.name,emp:d.emp,date:d.date?fmtMD(new Date(d.date.y,d.date.m-1,d.date.d)):'',stage:i.stage,amt:i.amt,memo:i.memo}})};
   render();
   $('stat').textContent='완료: 업무일지 업체 '+(Object.keys(byCode).length-unmatched.length)+'개 일치, '+updCount+'행 갱신';
 }
@@ -214,6 +232,8 @@ document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closes
 function rowVals(r){const ri=OUT.rows.indexOf(r);return r.cells.map((v,ci)=>{const e=EDITS[ri+','+ci];const val=e!=null?e:v;return String(val).replace(/\t/g,' ').replace(/\r?\n/g,' ')})}
 function tsv(rows,c0=0,c1=null){return rows.map(r=>{const v=rowVals(r);return v.slice(c0,c1==null?v.length:c1).join('\t')}).join('\r\n')}
 $('run').onclick=run;
+$('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
+(()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
 ['view'].forEach(k=>$(k).onchange=render);
 ['stagemode','amtmode'].forEach(k=>$(k).onchange=()=>{if(OUT)run()});
 $('copyUpd').onclick=async()=>{if(!OUT)return;const rows=OUT.rows.filter(r=>r.upd);const ok=await copyText(tsv(rows));$('stat').textContent=ok?'업데이트 행 '+rows.length+'행 값 복사됨':'복사 실패'};
