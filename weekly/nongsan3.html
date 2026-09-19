@@ -201,7 +201,7 @@ const SHEETS={
   farm:{name:'농산업종',H:{code:['코드'],date:['최종방문'],stage:['진행단계'],amt:['예상매출'],memo:['세부내용','영업진행사항(A)','진행사항']},dateFmt:'week',
     hint:'갱신: 최종방문일(주차) · 진행단계 · 예상매출 · 세부내용(소재지, 품목, 내용, 물동량, 예상매출)'},
   price:{name:'단가인상',H:{code:['코드'],status:['진행여부'],date:['적용월'],kind:['단가인상구분'],amt:['년예상효과','예상효과','효과'],memo:['비고']},last:['status','date','amt'],dateFmt:'week',require:/단가\s*인상|단가\s*조정|(렌탈료|이용료|단가|요금|운송비|청구)[^,|]{0,12}(인상|조정|추가|증액)|센터이용료|추가\s*청구|인상\s*(협의|제안|통보|적용|완료|공문)/,
-    hint:'파렛트/PPS 단가인상 문구가 있는 업무일지만 반영(지게차·산업자재 등 제외) · 단가인상구분은 렌탈료/성수기단가/센터이용료/재입고개선 중 자동 인식, 셀에서 선택 변경 가능 · 갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 물동량, 효과금액)'},
+    hint:'PPS/파렛트 일지이면서 렌탈료·성수기·센터이용료·재입고개선·단가인상 문구가 있는 업무일지만 반영(산업자재유통·SCM·지게차 등 단가인상은 제외) · 단가인상구분은 렌탈료/성수기단가/센터이용료/재입고개선 중 자동 인식, 셀에서 선택 변경 가능 · 갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 물동량, 효과금액)'},
   target:{name:'타겟업체',H:{code:['코드'],date:['시행일'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},dateFmt:'ymd',
     hint:'갱신: 시행일(최근 방문일 YYYYMMDD) · 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출)'},
   comp:{name:'경쟁사',H:{code:['코드'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},dateFmt:'',
@@ -284,7 +284,7 @@ function runSheet(k){
   const c=ref.c;const smode=$(k+'-stagemode')?$(k+'-stagemode').value:'max';const amode=$(k+'-amtmode')?$(k+'-amtmode').value:'new';const mmode=$(k+'-memomode')?$(k+'-memomode').value:'std';
   st.edits={};let updCount=0;const codes=new Set(ref.blocks.map(b=>b.code));
   const rows=[];
-  ref.blocks.forEach(b=>{let ds=byCode[b.code];if(ds&&sh.require)ds=ds.filter(d=>{const t=d.dtl.map(x=>x.text).join(' ')+' '+d.group;return sh.require.test(t)&&(PALLET_RE.test(t)||!OTHER_BIZ_RE.test(t))});const chg={};let upd=false;
+  ref.blocks.forEach(b=>{let ds=byCode[b.code];if(ds&&sh.require)ds=ds.filter(d=>{const t=d.dtl.map(x=>x.text).join(' ')+' '+d.group;return PALLET_RE.test(t)&&detectKind(t)!==''});const chg={};let upd=false;
     const main=b.rows[0].slice();const extra=b.rows.slice(1).map(r=>r.slice());
     if(ds&&ds.length){upd=true;
       const sorted=ds.slice().sort((x,y)=>(y.date?y.date.key:'').localeCompare(x.date?x.date.key:''));
