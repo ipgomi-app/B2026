@@ -44,6 +44,7 @@ table.cfg input[type=text]{width:80px}
 table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
 table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;overflow:visible;vertical-align:middle}
 table.xl td[contenteditable]:focus{outline:2px solid #2b6cb0;background:#eef4ff}
+table.xl td.bad{background:#fde2e2!important;color:#b00020}
 table.xl td.b{border:.5pt solid #000}
 table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center;border:.5pt solid #000}
 table.xl td.h2{background:#dce6f1;color:#000;font-weight:700;text-align:center;border:.5pt solid #000}
@@ -280,7 +281,12 @@ const cellVal=(c,html)=>{const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls)
   if(isP)return (Number(c.v)*100).toFixed(1)+'%';
   return html?esc(c.v):String(c.v??'').replace(/\t/g,' ').replace(/\r?\n/g,' ')};
 const NF={n:'mso-number-format:&quot;\\#\\,\\#\\#0\\;\\-\\#\\,\\#\\#0\\;\\-&quot;',p:'mso-number-format:&quot;0\\.0%&quot;',t:'mso-number-format:&quot;General&quot;'};
-document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const box=td.closest('[data-pid]');if(!box)return;(EDITS[box.dataset.pid]=EDITS[box.dataset.pid]||{})[td.dataset.rc]=td.textContent});
+document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const box=td.closest('[data-pid]');if(!box)return;
+  const pid=box.dataset.pid;const t=td.textContent;const isNum=/\bn\b/.test(td.className);
+  if(isNum&&!/^[\s\d,.\-]*$/.test(t)){td.classList.add('bad');td.title='숫자만 입력할 수 있습니다';const st=document.getElementById(pid.replace('prev','stat').replace('preview','stat'));if(st){st.textContent='⚠ 숫자만 입력할 수 있습니다: "'+t+'"';st.className='bad'}return}
+  td.classList.remove('bad');td.title='';(EDITS[pid]=EDITS[pid]||{})[td.dataset.rc]=t});
+document.addEventListener('focusout',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const box=td.closest('[data-pid]');if(!box)return;
+  if(box.dataset.pid==='sum-prev1'&&SUM.out){box.innerHTML=gridToHtml(sumGrid1(),true);const st=document.getElementById('sum-stat1');if(st){st.textContent=td.classList.contains('bad')?'⚠ 숫자가 아닌 입력은 무시했습니다':'수정 반영 (누계·합계 재계산)';st.className=td.classList.contains('bad')?'bad':'ok'}}});
 function gridToHtml(G,edit){
   applyEdits(G);const skipA=cfg.colA==='0';
   const widths=G.widths||[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
@@ -646,7 +652,12 @@ function sumGrid1(){
   // 화면에서 수정한 값을 행 데이터에 반영 → 소계/합계 재계산
   const o=Object.assign({},o0,{rows:o0.rows.map(r=>({...r,q:{...r.q},c:{...r.c}}))});const E=EDITS['sum-prev1']||{};
   const rowIdx=[4,5,6,8,9,10];rowIdx.forEach((ri,i)=>{const r=o.rows[i];const set=(col,f)=>{const k=ri+','+col;if(k in E){const t=E[k].trim();f((t===''||t==='-')?0:num(t))}};
-    set(3,v=>r.q.n=v);set(4,v=>r.q.amt=v);set(5,v=>r.c.n=v);set(6,v=>r.c.amt=v);set(7,v=>r.cumN=v);set(8,v=>r.cumA=v)});
+    set(3,v=>r.q.n=v);set(4,v=>r.q.amt=v);set(5,v=>r.c.n=v);set(6,v=>r.c.amt=v);
+    r.cumN=r.cum[0]+r.c.n;r.cumA=r.cum[1]+r.c.amt; // 금주 계약 수정 → 누계 자동 재계산
+    set(7,v=>r.cumN=v);set(8,v=>r.cumA=v)});
+  o.mhe={...o0.mhe,q:{...o0.mhe.q},c:{...o0.mhe.c}};{const mr=14;const pu=t=>{const a=t.match(/(\d+)\s*업체/),b=t.match(/(\d+)\s*대/);return {n:a?+a[1]:0,units:b?+b[1]:0}};
+    if((mr+',3') in E)Object.assign(o.mhe.q,pu(E[mr+',3']));if((mr+',4') in E)o.mhe.q.amt=num(E[mr+',4']);
+    if((mr+',5') in E)Object.assign(o.mhe.c,pu(E[mr+',5']));if((mr+',6') in E)o.mhe.c.amt=num(E[mr+',6']);}
   const H=(v,cs=1,rs=1)=>add(v,'h',cs,rs);
   R();blank();add('[금주 진행사항]['+o.range+']','st');blank(6);add('단위: 천원','c');
   R();blank();H('구분',M?2:1,M?3:1);if(!M)H('');H('금주',M?4:1);if(!M)for(let i=0;i<3;i++)H('');H('26년 누계',M?2:1);if(!M)H('');
