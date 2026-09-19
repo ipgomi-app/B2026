@@ -198,11 +198,11 @@ const SHEETS={
   farm:{name:'농산업종',H:{code:['코드'],date:['최종방문'],stage:['진행단계'],amt:['예상매출'],memo:['세부내용','영업진행사항(A)','진행사항']},dateFmt:'week',
     hint:'갱신: 최종방문일(주차) · 진행단계 · 예상매출 · 세부내용(소재지, 품목, 내용, 물동량, 예상매출)'},
   price:{name:'단가인상',H:{code:['코드'],status:['진행여부'],date:['적용월'],kind:['단가인상구분'],amt:['년예상효과','예상효과','효과'],memo:['비고']},last:['status','date','amt'],dateFmt:'week',
-    hint:'갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 효과금액)'},
+    hint:'갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 물동량, 효과금액)'},
   target:{name:'타겟업체',H:{code:['코드'],date:['시행일'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},dateFmt:'ymd',
-    hint:'갱신: 시행일(최근 방문일 YYYYMMDD) · 진행단계 · 효과금액 · 영업진행사항(표준 형식)'},
+    hint:'갱신: 시행일(최근 방문일 YYYYMMDD) · 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출)'},
   comp:{name:'경쟁사',H:{code:['코드'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},dateFmt:'',
-    hint:'갱신: 진행단계 · 효과금액 · 영업진행사항(표준 형식). 금주 주요업체 양식 그대로 출력'},
+    hint:'갱신: 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출). 금주 주요업체 양식 그대로 출력'},
   constr:{name:'건설현장',H:{code:['코드'],date:['방문일'],memo:['내용']},dateFmt:'md',append:true,
     hint:'갱신: 기존 행 아래에 방문일(MM/DD) + 내용 줄을 추가 (시트 양식과 동일). 내용은 업무일지 원문을 정리해서 넣음'}
 };
@@ -226,7 +226,7 @@ const CODE_RE=/^[A-Z]?\d{5,7}$/;
     <label>표시 <select id="${k}-view"><option value="upd">업데이트된 행만</option><option value="all">전체 행</option></select></label>
     ${sh.H.stage?`<label>진행단계 <select id="${k}-stagemode"><option value="max">기존보다 높을 때만 변경</option><option value="new">업무일지 기준으로 항상 변경</option></select></label>`:''}
     ${sh.H.amt?`<label>금액 <select id="${k}-amtmode"><option value="new">업무일지 값이 있으면 변경</option><option value="keep">기존 값 유지</option></select></label>`:''}
-    ${sh.H.memo&&!sh.append?`<label>내용 <select id="${k}-memomode"><option value="std">표준 형식</option><option value="raw">업무일지 원문</option></select></label>`:''}
+    ${sh.H.memo&&!sh.append?`<label>내용 <select id="${k}-memomode"><option value="std">표준 형식 (소재지, 품목, 내용, 물동량, ${k==='price'?'효과금액':'예상매출'})</option><option value="raw">업무일지 원문</option></select></label>`:''}
     <span id="${k}-stat" class="ok"></span>
   </div>
   <h2>3. 결과 (${sh.name} 시트 양식 그대로) <span class="hint" style="font-weight:400">${sh.hint}</span></h2>
