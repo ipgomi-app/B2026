@@ -202,7 +202,7 @@ const SHEETS={
   farm:{name:'농산업종',H:{code:['코드'],date:['최종방문'],stage:['진행단계'],amt:['예상매출'],memo:['세부내용','영업진행사항(A)','진행사항']},dateFmt:'week',
     hint:'갱신: 최종방문일(주차) · 진행단계 · 예상매출 · 세부내용(소재지, 품목, 내용, 물동량, 예상매출)'},
   price:{name:'단가인상',H:{code:['코드'],status:['진행여부'],date:['적용월'],kind:['단가인상구분'],amt:['년예상효과','예상효과','효과'],memo:['비고']},last:['status','date','amt'],dateFmt:'week',require:/단가\s*인상|단가\s*조정|(렌탈료|이용료|단가|요금|운송비|청구)[^,|]{0,12}(인상|조정|추가|증액)|센터이용료|추가\s*청구|인상\s*(협의|제안|통보|적용|완료|공문)/,
-    hint:'PPS/파렛트 일지이면서 렌탈료·성수기·센터이용료·재입고개선·단가인상 문구가 있는 업무일지만 반영(산업자재유통·SCM·지게차 등 단가인상은 제외) · 단가인상구분은 렌탈료/성수기단가/센터이용료/재입고개선 중 자동 인식, 셀에서 선택 변경 가능 · 갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 물동량, 효과금액)'},
+    hint:'업무일지 구분이 단가인상이면 반영. 그 외에는 구분이 미수금·보증·법적대응·회수·재고실사가 아니고, PPS/파렛트 건이며 단가인상·렌탈료 인상·성수기·센터이용료·재입고개선 문구가 있을 때만 반영(산업자재유통·SCM·지게차 제외) · 단가인상구분은 렌탈료/성수기단가/센터이용료/재입고개선 중 자동 인식, 셀에서 선택 변경 가능 · 갱신: 진행여부(진행중, 일지에 완료 문구가 있으면 완료) · 적용월(주차) · 단가인상구분(렌탈료/추가청구 문구 인식) · 년예상효과 · 비고(소재지, 품목, 내용, 물동량, 효과금액)'},
   target:{name:'타겟업체',H:{code:['코드'],biz:['사업구분'],date:['시행일'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},info:['biz'],dateFmt:'ymd',
     hint:'행의 사업구분(PPS/물류기기·지게차·SCM·산업자재유통)에 맞는 업무일지만 사용, 견적서가 있으면 견적서 내용 우선 · 갱신: 시행일(최근 방문일 YYYYMMDD) · 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출)'},
   comp:{name:'경쟁사',H:{code:['코드'],region:['권역','부서'],branch:['지점','팀/지점'],person:['담당자','담당'],name:['업체명','거래처명','계약처명'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},info:['region','branch','person','name'],layout:'major',dateFmt:'',
@@ -211,7 +211,9 @@ const SHEETS={
     hint:'갱신: 기존 행 아래에 방문일(MM/DD) + 내용 줄을 추가 (시트 양식과 동일). 내용은 업무일지 원문을 정리해서 넣음'}
 };
 const PRICE_KINDS=['렌탈료','성수기단가','센터이용료','재입고개선'];
-function detectKind(t){if(/성수기/.test(t))return '성수기단가';if(/센터\s*이용료|이용료/.test(t))return '센터이용료';if(/재입고/.test(t))return '재입고개선';if(/렌탈료|렌탈\s*단가|단가\s*인상|단가\s*조정|인상/.test(t))return '렌탈료';return ''}
+function detectKind(t){if(/성수기/.test(t))return '성수기단가';if(/센터\s*이용료/.test(t))return '센터이용료';if(/재입고\s*개선|재입고/.test(t))return '재입고개선';if(/렌탈료\s*(인상|조정)|단가\s*인상|단가\s*조정|렌탈\s*단가/.test(t))return '렌탈료';return ''}
+function diaryCategory(d){const tags=d.dtl.map(x=>(x.text.match(/제목\s*:\s*\[([^\]]+)\]/)||[])[1]||'').join(' ');return [d.group,...d.dtl.map(x=>x.typ),tags].join(' ')}
+const NONSALES_RE=/미수금|보증|법적\s*대응|법적\s*조치|재고실사|회수|입고미회수|수불|DRS|분실|폐기|반납/;const PRICE_CAT_RE=/단가\s*인상/;
 const PALLET_RE=/PALLET|파렛트|팔레트|PPS|N1\d|매\/년|매\/월|\d{2}\/\d{3,4}\/\d{3}/i;const OTHER_BIZ_RE=/지게차|산업자재|스트레치|롤테이너|건설장비|SCM|박스|필름|테이프|OA/i;
 const BIZ_RE={pps:/PALLET|파렛트|팔레트|PPS|N1\d|P1\d|매\/년|매\/월|\d{2}\/\d{3,4}\/\d{3}/i,fork:/지게차|C\/B|전동|디젤|리치|포크/i,scm:/SCM|윙|운송|라토스|톤\s*차|배송|화물|물류센터|보관/i,ind:/산업자재|스트레치|필름|박스|테이프|포장재|랩핑|아이스팩|스티로폼/i};
 function bizKey(v){v=String(v||'');if(/지게차/.test(v))return 'fork';if(/산업자재/.test(v))return 'ind';if(/SCM/i.test(v))return 'scm';if(/PPS|물류기기|파렛트/i.test(v))return 'pps';return ''}
@@ -293,7 +295,7 @@ function runSheet(k){
   st.edits={};let updCount=0;const codes=new Set(ref.blocks.map(b=>b.code));
   const rows=[];
   ref.blocks.forEach(b=>{let ds=byCode[b.code];if(ds&&c.biz>=0){const bk=bizKey(b.rows[0][c.biz]);ds=ds.filter(d=>bizMatch(bk,d.dtl.map(x=>x.text).join(' ')+' '+d.group))}
-    if(ds&&sh.require)ds=ds.filter(d=>{const t=d.dtl.map(x=>x.text).join(' ')+' '+d.group;return PALLET_RE.test(t)&&detectKind(t)!==''});const chg={};let upd=false;
+    if(ds&&sh.require)ds=ds.filter(d=>{const t=d.dtl.map(x=>x.text).join(' ')+' '+d.group;const cat=diaryCategory(d);if(PRICE_CAT_RE.test(cat))return true;return !NONSALES_RE.test(cat)&&PALLET_RE.test(t)&&detectKind(t)!==''});const chg={};let upd=false;
     const main=b.rows[0].slice();const extra=b.rows.slice(1).map(r=>r.slice());
     if(ds&&ds.length){upd=true;
       const sorted=ds.slice().sort((x,y)=>(y.date?y.date.key:'').localeCompare(x.date?x.date.key:''));
