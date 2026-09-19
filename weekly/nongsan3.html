@@ -207,6 +207,9 @@ const SHEETS={
     hint:'행의 사업구분(PPS/물류기기·지게차·SCM·산업자재유통)에 맞는 업무일지만 사용, 견적서가 있으면 견적서 내용 우선 · 갱신: 시행일(최근 방문일 YYYYMMDD) · 진행단계 · 효과금액 · 영업진행사항(소재지, 품목, 내용, 물동량, 예상매출)'},
   comp:{name:'경쟁사',H:{code:['코드'],region:['권역','부서'],branch:['지점','팀/지점'],person:['담당자','담당'],name:['업체명','거래처명','계약처명'],stage:['진행단계'],amt:['효과금액'],memo:['영업진행사항','진행사항']},info:['region','branch','person','name'],layout:'major',dateFmt:'',
     hint:'경쟁사 리스트(코드·업체명)에서 업무일지 코드가 일치하는 업체만 금주 주요업체 양식(부서, 팀/지점, 담당자, 코드, 업체명, 진행단계, 효과금액, 26년 영업진행사항)으로 출력. 리스트에 권역·지점·담당자 열이 없으면 담당자는 업무일지에서 채움'},
+  eng:{name:'엔지니어링',H:{code:['코드'],person:['담당자'],scope:['추진과제'],stage:['진행단계'],amt:['예상매출'],vplan:['방문계획'],vnew:['방문실적(신규)'],vre:['방문실적(재방문)'],le:['LE동행방문'],revisit:['재방문여부'],accomp:['동행방문여부'],memo:['주요이슈','고객사Needs','Needs'],
+      eq_load:['자동상하차'],eq_stacker:['스태커'],eq_shuttle:['멀티셔틀'],eq_robot:['복합로봇'],eq_agv:['AGV'],eq_agf:['무인지게차'],eq_pal:['파렛타이'],eq_mono:['모노레일'],eq_sorter:['소터'],eq_etc:['기타설비']},info:['person','vplan'],eng:true,dateFmt:'week',
+    hint:'업무일지 중 엔지니어링 건(프로젝트 구분 엔지니어링, 또는 자동창고·자동화·무인지게차·AGV·셔틀·스태커·파렛타이저·소터·WMS 등 키워드)만 반영 · 갱신: 설비 O 표시 · 추진과제(비어 있을 때) · 진행단계(정보조사<니즈확인<방문/협의<견적<계약) · 예상매출(억원) · 방문실적(신규/재방문 주차) · LE동행방문실적(동행 문구) · 재방문여부 · 동행방문여부 · 주요 이슈(업무일지 진행사항, 줄바꿈 유지)'},
   constr:{name:'건설현장',H:{code:['코드'],date:['방문일'],memo:['내용']},dateFmt:'md',append:true,
     hint:'갱신: 기존 행 아래에 방문일(MM/DD) + 내용 줄을 추가 (시트 양식과 동일). 내용은 업무일지 원문을 정리해서 넣음'}
 };
@@ -218,6 +221,14 @@ const PALLET_RE=/PALLET|파렛트|팔레트|PPS|N1\d|매\/년|매\/월|\d{2}\/\d
 const BIZ_RE={pps:/PALLET|파렛트|팔레트|PPS|N1\d|P1\d|매\/년|매\/월|\d{2}\/\d{3,4}\/\d{3}/i,fork:/지게차|C\/B|전동|디젤|리치|포크/i,scm:/SCM|윙|운송|라토스|톤\s*차|배송|화물|물류센터|보관/i,ind:/산업자재|스트레치|필름|박스|테이프|포장재|랩핑|아이스팩|스티로폼/i};
 function bizKey(v){v=String(v||'');if(/지게차/.test(v))return 'fork';if(/산업자재/.test(v))return 'ind';if(/SCM/i.test(v))return 'scm';if(/PPS|물류기기|파렛트/i.test(v))return 'pps';return ''}
 function bizMatch(key,t){if(!key)return true;const others=Object.keys(BIZ_RE).filter(k=>k!==key);if(BIZ_RE[key].test(t))return true;return !others.some(k=>BIZ_RE[k].test(t))}
+const ENG_RE=/엔지니어링|자동\s*창고|자동화|무인\s*지게차|AGF|AGV|AMR|셔틀|스태커|파렛타이[저져]|소터|모노레일|WMS|WCS|TSPG|로지스올|컨베이어|자동\s*상하차/i;
+const ENG_EQ={eq_load:/자동\s*상하차|상하차\s*자동/,eq_stacker:/스태커/,eq_shuttle:/셔틀/,eq_robot:/복합\s*로봇|로봇\s*자동화/,eq_agv:/AGV|AMR/i,eq_agf:/무인\s*지게차|AGF/i,eq_pal:/파렛타이[저져]/,eq_mono:/모노레일/,eq_sorter:/소터/};
+const ENG_STAGE=['정보조사','니즈확인','방문/협의','견적','계약'];
+function engStage(t){const m=t.match(/진행단계\s*:\s*([^\s|]+)/);if(m){const v=m[1];if(/견적/.test(v))return '견적';if(/계약/.test(v))return '계약';if(/니즈/.test(v))return '니즈확인';if(/협의|방문/.test(v))return '방문/협의';if(/정보/.test(v))return '정보조사'}
+  if(/견적서\s*제출|견적\s*완료|견적\s*제안|견적금액/.test(t))return '견적';if(/니즈\s*(확인|有|있)/.test(t))return '니즈확인';if(/협의/.test(t))return '방문/협의';return '정보조사'}
+function engAmt(t){const m=t.match(/예상매출\s*:?\s*([\d.,]+)\s*억/)||t.match(/견적금액\s*:?\s*([\d.,]+)\s*억/)||t.match(/([\d.,]+)\s*억\s*(원)?\s*\/?\s*(건|년)?/);return m?num(m[1]):null}
+function engMemo(d){let t=d.dtl.map(x=>x.text).join('\n');const m=t.match(/진행\s*사항\s*:\s*([\s\S]*)$/);if(m)t=m[1];
+  t=t.replace(/\r/g,'').replace(/\s*(?<![\d.])(?=\d\s*\.\s*[가-힣A-Za-z])/g,'\n').replace(/\s*-\s+/g,'\n- ').replace(/\n{2,}/g,'\n').replace(/^\s*\n/,'').split('\n').map(x=>x.trim()).filter(Boolean).join('\n');return t}
 const S={};Object.keys(SHEETS).forEach(k=>S[k]={ref:null,out:null,edits:{}});
 const CODE_RE=/^[A-Z]?\d{5,7}$/;
 /* ===== UI 생성 ===== */
@@ -295,6 +306,7 @@ function runSheet(k){
   st.edits={};let updCount=0;const codes=new Set(ref.blocks.map(b=>b.code));
   const rows=[];
   ref.blocks.forEach(b=>{let ds=byCode[b.code];if(ds&&c.biz>=0){const bk=bizKey(b.rows[0][c.biz]);ds=ds.filter(d=>bizMatch(bk,d.dtl.map(x=>x.text).join(' ')+' '+d.group))}
+    if(ds&&sh.eng)ds=ds.filter(d=>{const t=d.dtl.map(x=>x.text).join(' ')+' '+diaryCategory(d);return /프로젝트\s*구분\s*:\s*엔지니어링|엔지니어링/.test(t)||ENG_RE.test(t)});
     if(ds&&sh.require)ds=ds.filter(d=>{const t=d.dtl.map(x=>x.text).join(' ')+' '+d.group;const cat=diaryCategory(d);if(PRICE_CAT_RE.test(cat))return true;return !NONSALES_RE.test(cat)&&PALLET_RE.test(t)&&detectKind(t)!==''});const chg={};let upd=false;
     const main=b.rows[0].slice();const extra=b.rows.slice(1).map(r=>r.slice());
     if(ds&&ds.length){upd=true;
@@ -304,7 +316,16 @@ function runSheet(k){
       const all=sorted.map(d=>d.dtl.map(x=>x.text).join(' ')+' '+d.group).join(' ');
       const set=(col,v)=>{if(col>=0&&v!=null&&v!==''&&main[col]!==v){main[col]=v;chg[col]=1}};
       if(ref.major&&c.person>=0&&!main[c.person]&&latest.emp)set(c.person,latest.emp);
-      if(sh.append){
+      if(sh.eng){
+        Object.keys(ENG_EQ).forEach(k2=>{if(c[k2]>=0&&ENG_EQ[k2].test(all)&&!main[c[k2]])set(c[k2],'O')});
+        if(c.scope>=0&&!main[c.scope]){const sc=Object.keys(ENG_EQ).filter(k2=>ENG_EQ[k2].test(all)).map(k2=>({eq_load:'자동상하차',eq_stacker:'스태커크레인',eq_shuttle:'멀티셔틀',eq_robot:'복합로봇',eq_agv:'AGV/AMR',eq_agf:'무인지게차',eq_pal:'로봇파렛타이저',eq_mono:'모노레일',eq_sorter:'자동소터'})[k2]);set(c.scope,sc.length?sc.join('/'):(/자동\s*창고|자동화\s*창고/.test(all)?'자동화창고':'자동화설비'))}
+        if(c.stage>=0){const ns=engStage(all);const os=main[c.stage];const oi=ENG_STAGE.findIndex(x=>os.includes(x.split('/')[0]));const ni=ENG_STAGE.indexOf(ns);if(smode==='new'?ns!==os:ni>oi)set(c.stage,ns)}
+        if(c.amt>=0&&amode==='new'){const a=engAmt(all);if(a!=null&&a>0&&num(main[c.amt])!==a)set(c.amt,String(a))}
+        const isRe=c.vnew>=0&&main[c.vnew]!=='';
+        if(isRe){if(c.vre>=0)set(c.vre,wk.label);if(c.revisit>=0)set(c.revisit,'재방문')}else{if(c.vnew>=0)set(c.vnew,wk.label);if(c.revisit>=0)set(c.revisit,'신규방문')}
+        if(/동행/.test(all)){if(c.le>=0)set(c.le,wk.label);if(c.accomp>=0)set(c.accomp,'동행방문')}else if(c.accomp>=0&&!main[c.accomp])set(c.accomp,'X');
+        if(c.memo>=0){const m=engMemo(latest);if(m)set(c.memo,m)}
+      }else if(sh.append){
         const dt=latest.date;const md=String(dt.m).padStart(2,'0')+'/'+String(dt.d).padStart(2,'0');
         const text=sorted.map(d=>splitTok(cleanVisitText(d.dtl.map(x=>x.text).join(' | '))).filter(x=>x.length>=2&&!DROP_RE.test(x)).join(', ')).filter(Boolean).join(' / ');
         const line=new Array(ref.W).fill('');if(c.date>=0)line[c.date]=md;line[c.memo]=text;
@@ -342,7 +363,7 @@ function renderSheet(k){const st=S[k],ref=st.ref,c=ref.c,W=ref.W;if(!st.out)retu
   visibleRows(k).forEach(r=>{const ri=st.out.rows.indexOf(r);
     const line=(cells,sub,chgMap)=>'<tr>'+cells.map((v,ci)=>{const key=ri+','+sub+','+ci;const e=st.edits[key];const val=e!=null?e:v;const cls=(ci===c.amt?'n':(ci===c.memo?'txt':'c'))+(chgMap&&chgMap[ci]?' upd':'');
       if(k==='price'&&ci===c.kind&&sub===0)return '<td class="'+cls+'"><select data-rc="'+key+'" style="font-size:10pt;border:0;background:transparent;width:100%">'+['',...PRICE_KINDS].map(o=>'<option'+(o===val?' selected':'')+'>'+o+'</option>').join('')+'</select></td>';
-      return '<td class="'+cls+'" contenteditable="true" data-rc="'+key+'" title="'+esc(val)+'">'+esc(val)+'</td>'}).join('')+'</tr>';
+      return '<td class="'+cls+'" contenteditable="true" data-rc="'+key+'" title="'+esc(val)+'"'+(SHEETS[k].eng&&ci===c.memo?' style="white-space:pre-wrap;height:auto"':'')+'>'+esc(val)+'</td>'}).join('')+'</tr>';
     h+=line(r.cells,0,r.chg);
     r.extra.forEach((x,xi)=>{const isNew=r.chg.appendRow===xi+1;h+=line(x,xi+1,isNew?{[c.date]:1,[c.memo]:1}:null)});
   });
@@ -350,7 +371,7 @@ function renderSheet(k){const st=S[k],ref=st.ref,c=ref.c,W=ref.W;if(!st.out)retu
 }
 document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const pane=td.closest('.tabpane');if(!pane)return;const k=pane.id.replace('pane-','');S[k].edits[td.dataset.rc]=td.textContent});
 document.addEventListener('change',e=>{const sel=e.target.closest&&e.target.closest('select[data-rc]');if(!sel)return;const pane=sel.closest('.tabpane');if(!pane)return;const k=pane.id.replace('pane-','');S[k].edits[sel.dataset.rc]=sel.value});
-function rowLines(k,r){const st=S[k];const ri=st.out.rows.indexOf(r);const get=(cells,sub)=>cells.map((v,ci)=>{const e=st.edits[ri+','+sub+','+ci];return String(e!=null?e:v).replace(/\t/g,' ').replace(/\r?\n/g,' ')});
+function rowLines(k,r){const st=S[k];const ri=st.out.rows.indexOf(r);const get=(cells,sub)=>cells.map((v,ci)=>{const e=st.edits[ri+','+sub+','+ci];let x=String(e!=null?e:v).replace(/\t/g,' ').replace(/\r\n?/g,'\n');if(SHEETS[k].eng&&x.includes('\n'))x='"'+x.replace(/"/g,'""')+'"';else x=x.replace(/\n/g,' ');return x});
   return [get(r.cells,0),...r.extra.map((x,i)=>get(x,i+1))]}
 function tsv(k,rows,c0=0,c1=null){const out=[];rows.forEach(r=>rowLines(k,r).forEach(v=>out.push(v.slice(c0,c1==null?v.length:c1).join('\t'))));return out.join('\r\n')}
 Object.keys(SHEETS).forEach(k=>{
