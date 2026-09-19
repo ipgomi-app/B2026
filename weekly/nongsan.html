@@ -348,7 +348,7 @@ function listDetect(id){
   if(map.branch>=0&&(map.person<0||!L.data.some(r=>isName(r[map.person])))){const cand=[map.branch+1,map.branch+2,map.branch+3].find(i=>L.data.filter(r=>isName(r[i])).length>=L.data.length*0.5);if(cand!=null)map.person=cand}
   if(map.code>=0&&(map.name<0||!L.data.some(r=>(r[map.name]||'').trim())))map.name=[map.code+1,map.code+2].find(i=>L.data.filter(r=>(r[i]||'').trim()).length>=L.data.length*0.5)??-1;
   if(map.memo<0||!L.data.some(r=>/[가-힣]{2,}/.test(r[map.memo]||''))){ // 가장 긴 텍스트 열
-    let best=-1,bl=0;for(let i=0;i<width;i++){const l=L.data.reduce((a,r)=>a+(r[i]||'').length,0);if(l>bl&&L.data.some(r=>(r[i]||'').length>20)){bl=l;best=i}}map.memo=best}
+    let best=-1,bl=0;for(let i=0;i<width;i++){const l=L.data.reduce((a,r)=>a+(r[i]||'').length,0);if(l>bl&&L.data.some(r=>(r[i]||'').length>6)){bl=l;best=i}}map.memo=best}
   L.map=map;L.width=width;
 }
 function listMapUI(id){
