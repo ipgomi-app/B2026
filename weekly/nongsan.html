@@ -293,6 +293,9 @@ document.addEventListener('input',e=>{const td=e.target.closest&&e.target.closes
   const pid=box.dataset.pid;const t=td.textContent;const isNum=/\bn\b/.test(td.className);
   if(isNum&&!/^[\s\d,.\-]*$/.test(t)){td.classList.add('bad');td.title='숫자만 입력할 수 있습니다';const st=document.getElementById(pid.replace('prev','stat').replace('preview','stat'));if(st){st.textContent='⚠ 숫자만 입력할 수 있습니다: "'+t+'"';st.className='bad'}return}
   td.classList.remove('bad');td.title='';(EDITS[pid]=EDITS[pid]||{})[td.dataset.rc]=t});
+document.addEventListener('focusin',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;
+  if(/\bn\b/.test(td.className)&&td.textContent.trim()==='-')td.textContent='';
+  try{const r=document.createRange();r.selectNodeContents(td);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r)}catch(x){}});
 document.addEventListener('focusout',e=>{const td=e.target.closest&&e.target.closest('td[data-rc]');if(!td)return;const box=td.closest('[data-pid]');if(!box)return;
   if(box.dataset.pid==='sum-prev1'&&SUM.out){box.innerHTML=gridToHtml(sumGrid1(),true);const st=document.getElementById('sum-stat1');if(st){st.textContent=td.classList.contains('bad')?'⚠ 숫자가 아닌 입력은 무시했습니다':'수정 반영 (누계·합계 재계산)';st.className=td.classList.contains('bad')?'bad':'ok'}}});
 function gridToHtml(G,edit){
@@ -550,12 +553,12 @@ addClearButtons();
 const BR2REG={구미:'경북권역',대구:'경북권역',영천:'경북권역',안동:'경북권역',김해:'경남권역',창원:'경남권역',진주:'경남권역',제주:'경남권역',부산:'부산권역',양산:'부산권역',울산:'부산권역',포항:'부산권역'};
 const SUMIN=[['ppsQ','PPS 견적'],['ppsC','PPS 계약'],['scmQ','SCM 견적'],['scmC','SCM 계약'],['indQ','산업자재유통 견적'],['indC','산업자재유통 계약'],['mheQ','MHE 견적'],['mheC','MHE 계약']];
 const SUMSPEC={
-  ppsQ:{amt:['효과금액'],week:['주차'],name:['업체명'],unit:'auto'},
-  ppsC:{amt:['효과금액(년)','효과금액'],week:['주차'],name:['계약처명','업체명'],unit:'auto'},
-  scmQ:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
-  scmC:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
-  indQ:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
-  indC:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'auto'},
+  ppsQ:{amt:['효과금액'],week:['주차'],name:['업체명'],unit:'k'},
+  ppsC:{amt:['효과금액(년)','효과금액'],week:['주차'],name:['계약처명','업체명'],unit:'w'},
+  scmQ:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'w'},
+  scmC:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'w'},
+  indQ:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'w'},
+  indC:{amt:['예상매출액'],week:['주차'],name:['업체명'],unit:'w'},
   mheQ:{amt:['견적금액'],week:['견적주차','주차'],name:['계약업체','업체명'],units:['견적대수'],memo:['비고'],unit:'m12'},
   mheC:{amt:['확정금액','계약금액'],week:['계약주차','주차'],name:['계약업체','업체명'],units:['계약대수'],memo:['비고'],unit:'m12'}
 };
@@ -591,12 +594,12 @@ const SUM={data:{},out:null};
   <div class="row" style="margin-top:6px"><button class="sec" id="sum-cumapply">전주 누계 붙여넣기 적용</button><span class="hint" id="sum-cuminfo"></span></div></div>
   <div class="card"><h2>3. 글로벌비즈 수기 입력 (금주)</h2>
   <div class="row"><label>견적 건수 <input type="number" id="sum-glbQn" value="0"></label><label>견적 매출(천원) <input type="number" id="sum-glbQa" value="0"></label><label>계약 건수 <input type="number" id="sum-glbCn" value="0"></label><label>계약 매출(천원) <input type="number" id="sum-glbCa" value="0"></label></div>
-  <div class="hint">금액 단위: 각 입력칸의 "금액 단위"가 자동이면 값이 모두 1,000 배수이고 10만 이상일 때 원→천원으로 나눕니다. MHE는 월 임대료(원)×12÷1000.</div></div></div>
+  <div class="hint">금액 단위: PPS 견적은 천원, PPS 계약·SCM·산업자재유통은 원(÷1000), MHE는 월 임대료(원)×12÷1000이 기본입니다. 입력칸 옆에서 바꿀 수 있습니다.</div></div></div>
   <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="sum-copy1">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv1">TSV 복사</button><button class="sec" id="sum-val1">값만 복사 (D5부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
   <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (서식 포함)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">건수/금액(D)과 내용(E~N)만 복사됩니다. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
-  document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="auto"${SUMSPEC[k].unit==='auto'?' selected':''}>자동</option><option value="k">천원</option><option value="w">원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option></select></label>
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">엑셀용 복사 (병합 포함)</button><button id="sum-copy2b">엑셀용 복사 (병합 없음)</button><button class="sec" id="sum-tsv2">TSV 복사</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약부터 산업자재유통 견적까지 24줄이 복사됩니다. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
+  document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="k"${SUMSPEC[k].unit==='k'?' selected':''}>천원</option><option value="w"${SUMSPEC[k].unit==='w'?' selected':''}>원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option><option value="auto">자동</option></select></label>
     <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
   const $=k=>document.getElementById('sum-'+k);
   try{const sv=JSON.parse(localStorage.getItem('sum_cfg_v1')||'{}');document.querySelectorAll('#sum-cum input').forEach(i=>{const v=sv[i.dataset.k+i.dataset.i];if(v!=null)i.value=v});['week','range'].forEach(k=>{if(sv[k])$(k).value=sv[k]})}catch(e){}
@@ -614,9 +617,12 @@ const SUM={data:{},out:null};
   $('copy1').onclick=async()=>{if(!SUM.out)return;const G=sumGrid1();$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨':'복사 실패'};
   $('tsv1').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(sumGrid1()));$('stat1').textContent='TSV 복사됨'};
   $('val1').onclick=async()=>{if(!SUM.out)return;const lines=gridToTsv(sumGrid1()).split('\r\n');const off=cfg.colA==='0'?2:3;const t=lines.slice(4).map(l=>l.split('\t').slice(off,off+6).join('\t')).join('\r\n');await navigator.clipboard.writeText(t);$('stat1').textContent='값만 복사됨 (D5에 붙여넣기)'};
-  const g2=()=>{const G=sumGrid2(true);G.pid='sum-prev2';return G};
-  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2();$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (건수/금액·내용만, D열에 붙여넣기)':'복사 실패'};
-  $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(g2()));$('stat2').textContent='TSV 복사됨'};
+  const g2=(noMerge)=>{const keep=cfg.merge;if(noMerge)cfg.merge='0';const G=sumGrid2(true);cfg.merge=keep;
+    // 미리보기(제목행·A~C열 포함)에서 수정한 값을 내용만 그리드 좌표(행-1, 열-3)로 옮김
+    const E=EDITS['sum-prev2']||{};const E2={};Object.keys(E).forEach(k=>{const [r,c]=k.split(',').map(Number);if(c>=3)E2[(r-1)+','+(c-3)]=E[k]});G.pid='sum-prev2d';EDITS['sum-prev2d']=E2;return G};
+  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (병합 포함, D열에 붙여넣기)':'복사 실패'};
+  $('copy2b').onclick=async()=>{if(!SUM.out)return;const G=g2(true);$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (병합 없음, D열에 붙여넣기)':'복사 실패'};
+  $('tsv2').onclick=async()=>{if(!SUM.out)return;await navigator.clipboard.writeText(gridToTsv(g2(true)));$('stat2').textContent='TSV 복사됨'};
 })();
 const norm=v=>String(v||'').replace(/\s+/g,'');
 const weekOf=v=>{v=String(v||'');const w=v.match(/(\d+)\s*주/),m=v.match(/(\d+)\s*월/);return w?{w:+w[1],m:m?+m[1]:null}:null};
@@ -645,7 +651,7 @@ function sumParse(k){
     const kindv=g(r,m.kind);let memo=g(r,m.memo);if(!spec.memo){let bl=((memo.match(/[가-힣]/g)||[]).length);r.forEach((c,i)=>{if(i===m.name)return;const l=((c||'').match(/[가-힣]/g)||[]).length;if(l>bl){bl=l;memo=(c||'').trim()}})}return {region,branch:br,code:g(r,m.code),name:g(r,m.name),amtRaw:num(g(r,m.amt)),units:num(g(r,m.units)),memo,week:weekOf(g(r,m.week)),kind:/재전환|점유율확대/.test(kindv)?'재전환':'신규',glb:r.some(c=>/글로벌비즈/.test(c||''))}}).filter(x=>x.name||x.code);
   // 금액 단위
   let unit=document.getElementById('sum-unit-'+k).value;
-  if(unit==='auto'){const vals=recs.map(x=>x.amtRaw).filter(v=>v>0);const won=vals.length&&vals.every(v=>v%1000===0)&&vals.slice().sort((a,b)=>a-b)[Math.floor(vals.length/2)]>=100000;unit=won?'w':'k'}
+  if(unit==='auto'){const vals=recs.map(x=>x.amtRaw).filter(v=>v>0);const won=vals.length&&vals.slice().sort((a,b)=>a-b)[Math.floor(vals.length/2)]>=100000;unit=won?'w':'k'}
   recs.forEach(x=>{x.amt=unit==='k'?x.amtRaw:unit==='w'?x.amtRaw/1000:x.amtRaw*12/1000});
   return {recs,info:'헤더 '+hdr.length+'줄, '+data.length+'행, 단위 '+({k:'천원',w:'원',m12:'월×12'}[unit])+' · 열: 금액 '+m.amt+', 업체명 '+m.name+', 내용 '+m.memo+', 주차 '+m.week+', 권역 '+m.region+', 지점 '+m.branch+(spec.units?', 대수 '+m.units:'')+(k.startsWith('pps')?', 구분 '+m.kind:'')};
 }
