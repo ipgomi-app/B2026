@@ -478,6 +478,8 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   const $=k=>document.getElementById('pr-'+k);
   $('run').onclick=prRun;
   ['status','gubun','fillRP','hdr','max','start','scope','layout'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
+  $('prev1').addEventListener('click',async e=>{const b=e.target.closest('button.rowcopy');if(!b||!PR.out)return;const G=prGrid1(true);const lines=gridToTsv(G).split('\r\n');const off=($('hdr').value==='1'&&$('layout').value==='short')?1:0;const line=lines[+b.dataset.i+off];if(line==null)return;
+    const ok=await copy('',line);$('stat1').textContent=ok?(+b.dataset.i+1)+'번째 행 복사됨 (진행여부부터 5열) → 관리시트 해당 업체 행의 진행여부 셀에 붙여넣기':'복사 실패'});
   $('copy1').onclick=async()=>{if(!PR.out)return;const G=prGrid1(true);$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (진행여부부터 5열, 관리시트 진행여부 셀에 붙여넣기)':'복사 실패'};
   $('copy2').onclick=async()=>{if(!PR.out)return;const G=prGrid2($('scope').value==='data');$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 ('+G.length+'행, 제목·헤더 없음)':'복사 실패'};
 })();
@@ -506,7 +508,9 @@ function prCompute(){
 }
 function prRender(){
   const $=k=>document.getElementById('pr-'+k);
-  $('prev1').innerHTML=gridToHtml(prGrid1(),true);$('stat1').textContent='('+PR.out.length+'행)';
+  {const hdr=$('hdr').value==='1'&&$('layout').value==='short';let i=0;let html=gridToHtml(prGrid1(),true).replace(/style="width:(\d+)px"><colgroup>/,(m,w)=>'style="width:'+(+w+56)+'px"><colgroup><col width="56" style="width:56px">');const parts=html.split('</tr>');
+    $('prev1').innerHTML=parts.map((seg,n)=>{if(n===parts.length-1)return seg;const isH=hdr&&n===0;const cell=isH?'<td class="hg">행복사</td>':'<td style="border:0;padding:0 2px;text-align:center"><button class="sec xs rowcopy" data-i="'+(i++)+'" style="float:none;margin:0;padding:1px 7px">복사</button></td>';return seg.replace('<tr>','<tr>'+cell)+'</tr>'}).join('');
+    $('stat1').textContent='('+PR.out.length+'행)'}
   $('prev2').innerHTML=gridToHtml(prGrid2($('scope').value==='data'),true);$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
 }
 function prGrid1(copyOnly){
