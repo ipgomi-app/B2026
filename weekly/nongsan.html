@@ -594,7 +594,7 @@ function sumParse(k){
   if(m.memo<0){let best=-1,bl=0;for(let i=0;i<width;i++){if(i===m.name)continue;const l=data.reduce((a,r)=>a+((r[i]||'').match(/[가-힣]/g)||[]).length,0);if(l>bl&&data.some(r=>(r[i]||'').length>15)){bl=l;best=i}}m.memo=best}
   const g=(r,i)=>(i>=0?(r[i]||''):'').trim();
   let recs=data.map(r=>{const br=g(r,m.branch);let region=reg(g(r,m.region));if(!region&&br){const key=Object.keys(BR2REG).find(b=>br.startsWith(b));region=key?BR2REG[key]:(m.branch>=0?'기타':null)}
-    const kindv=g(r,m.kind);return {region,branch:br,code:g(r,m.code),name:g(r,m.name),amtRaw:num(g(r,m.amt)),units:num(g(r,m.units)),memo:g(r,m.memo),week:weekOf(g(r,m.week)),kind:/재전환|점유율확대/.test(kindv)?'재전환':'신규',glb:r.some(c=>/글로벌비즈/.test(c||''))}}).filter(x=>x.name||x.code);
+    const kindv=g(r,m.kind);let memo=g(r,m.memo);if(!spec.memo){let bl=((memo.match(/[가-힣]/g)||[]).length);r.forEach((c,i)=>{if(i===m.name)return;const l=((c||'').match(/[가-힣]/g)||[]).length;if(l>bl){bl=l;memo=(c||'').trim()}})}return {region,branch:br,code:g(r,m.code),name:g(r,m.name),amtRaw:num(g(r,m.amt)),units:num(g(r,m.units)),memo,week:weekOf(g(r,m.week)),kind:/재전환|점유율확대/.test(kindv)?'재전환':'신규',glb:r.some(c=>/글로벌비즈/.test(c||''))}}).filter(x=>x.name||x.code);
   // 금액 단위
   let unit=document.getElementById('sum-unit-'+k).value;
   if(unit==='auto'){const vals=recs.map(x=>x.amtRaw).filter(v=>v>0);const won=vals.length&&vals.every(v=>v%1000===0)&&vals.slice().sort((a,b)=>a-b)[Math.floor(vals.length/2)]>=100000;unit=won?'w':'k'}
