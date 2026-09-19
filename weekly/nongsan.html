@@ -97,18 +97,8 @@ table.xl td.dtl{padding-left:6px}
   </div>
   <div id="detect" class="hint"></div>
 </div>
-<div class="card" style="padding:8px 16px">
-  <div class="row" style="align-items:center;font-size:12px">
-    <b style="color:var(--navy)">2. 주요업체 선정 기준</b>
-    <label>계약 최대 <input type="number" id="capC" value="3" style="width:50px"></label>
-    <label>견적 최대 <input type="number" id="capQ" value="4" style="width:50px"></label>
-    <label>방문 최대 <input type="number" id="capV" value="2" style="width:50px"></label>
-    <label>최소 효과금액 <input type="number" id="minAmt" value="0" style="width:70px"></label>
-    <span class="hint" style="margin:0">계약 → 견적 → 방문 순, 단계 안에서는 효과금액 상위순</span>
-  </div>
-</div>
 <div class="card">
-  <h2>3. 전주 누계 (지난주 회의자료의 "2차 타겟 현황" 표를 복사해서 붙여넣기 → 적용)</h2>
+  <h2>2. 전주 누계 (지난주 회의자료의 "2차 타겟 현황" 표를 복사해서 붙여넣기 → 적용)</h2>
   <textarea id="cumsrc" style="min-height:70px" placeholder="지난주 자료의 경북권역~영남영업본부 행(부서 열부터 방문진행률까지)을 복사해서 붙여넣으세요. 누계실적 4칸이 전주 누계로 들어갑니다."></textarea>
   <div class="row" style="margin-top:6px"><button class="sec" id="cumapply">전주 누계 적용</button><span id="cumstat" class="hint"></span></div>
   <div id="cum"></div>
@@ -116,10 +106,18 @@ table.xl td.dtl{padding-left:6px}
 </div>
 
 <div class="card">
-  <h2>4. 결과 <span id="stat" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px">
+  <h2>3. 결과 <span id="stat" class="ok"></span></h2>
+  <div class="row" style="margin-bottom:6px;align-items:center">
     <button id="copySum">주간 실적 복사 (숫자만)</button>
     <button id="copyHtml">금주 주요업체 복사 (내용만)</button>
+    <span style="display:inline-flex;gap:8px;align-items:center;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 10px;background:#f7f9fc"><b style="color:var(--navy)">주요업체 선정 기준</b>
+      <label>계약 최대 <input type="number" id="capC" value="3" style="width:46px"></label>
+      <label>견적 최대 <input type="number" id="capQ" value="4" style="width:46px"></label>
+      <label>방문 최대 <input type="number" id="capV" value="2" style="width:46px"></label>
+      <label>최소 효과금액 <input type="number" id="minAmt" value="0" style="width:66px"></label>
+      <span class="hint" style="margin:0">계약 → 견적 → 방문 순, 효과금액 상위순 · 바꾸면 바로 반영</span></span>
+  </div>
+  <div class="row" style="margin-bottom:10px">
     <span class="hint">제목·헤더 없이 값만 복사되고, 엑셀에서 선택한 셀부터 붙습니다. 주간 실적은 경북·부산·경남 3행의 방문~예상매출 4열만(누계·합계는 엑셀 수식 유지), 경북권역 행의 "방문" 셀을 선택하고 붙여넣기. 주요업체는 첫 행의 "팀/지점" 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
   </div>
   <div id="preview" data-pid="preview"></div>
