@@ -456,7 +456,7 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   el.innerHTML=`<div class="grid"><div class="card"><h2>1. 단가인상 결재 리스트 붙여넣기</h2>
   <textarea id="pr-src" placeholder="단가인상 결재 리스트(부서, 담당자, 항목, 코드, 계약처명 … 계약특이사항 …)를 헤더 포함해서 붙여넣기"></textarea>
   <div class="row" style="margin-top:8px"><button id="pr-run">자동 작성</button></div>
-  <div class="hint" id="pr-detect"></div><div class="map" id="pr-map"></div></div>
+  <div class="hint" id="pr-detect"></div><div class="map" id="pr-map" style="display:none"></div></div>
   <div class="card"><h2>2. 옵션</h2>
   <div class="row">
     <label>진행여부(관리시트) <input type="text" id="pr-status" value="완료" style="min-width:80px"></label>
@@ -494,7 +494,7 @@ function prRun(){
     const opts=i=>'<option value="-1">(없음)</option>'+Array.from({length:width},(_,j)=>'<option value="'+j+'"'+(j===i?' selected':'')+'>'+j+': '+((PR.hdr.map(r=>r[j]||'').join(' ').replace(/\s+/g,' ').trim()||sample[j]||'').slice(0,16))+'</option>').join('');
     $('map').innerHTML=PFIELDS.map(([k,label])=>'<label>'+label+'<select data-k="'+k+'">'+opts(map[k])+'</select></label>').join('');
     $('map').querySelectorAll('select').forEach(sel=>sel.onchange=()=>{PR.map[sel.dataset.k]=+sel.value;prCompute()});
-    $('detect').textContent='인식: 헤더 '+PR.hdr.length+'줄, 데이터 '+PR.data.length+'행 · 열 매핑은 아래에서 수정 가능';
+    $('detect').textContent='인식: 헤더 '+PR.hdr.length+'줄, 데이터 '+PR.data.length+'행';
   }
   prCompute();
 }
