@@ -70,7 +70,7 @@ table.xl td.dtl{padding-left:6px}
 <body>
 <header>농산업종 주간회의 자동작성 <small>영남영업본부 · 26년 농산업종 영업</small></header>
 <main>
-<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button></div>
+<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select> A열 포함 <select id="colA"><option value="1">포함 (A열 셀에 붙여넣기)</option><option value="0">미포함 (B열 셀에 붙여넣기)</option></select></span></div>
 
 <div class="tabpane on" id="pane-farm">
 <div class="grid">
@@ -84,20 +84,14 @@ table.xl td.dtl{padding-left:6px}
   <div id="detect" class="hint"></div>
 </div>
 <div class="card">
-  <h2>2. 선정 기준 · 붙여넣기 옵션</h2>
+  <h2>2. 금주 주요업체 선정 기준</h2>
   <div class="row">
-    <label>계약 최대 <input type="number" id="capC" value="3"></label>
-    <label>견적 최대 <input type="number" id="capQ" value="4"></label>
-    <label>방문 최대 <input type="number" id="capV" value="2"></label>
+    <label>계약 최대 건수 <input type="number" id="capC" value="3"></label>
+    <label>견적 최대 건수 <input type="number" id="capQ" value="4"></label>
+    <label>방문 최대 건수 <input type="number" id="capV" value="2"></label>
     <label>최소 효과금액 <input type="number" id="minAmt" value="0"></label>
   </div>
-  <div class="hint">계약 → 견적 → 방문 순, 각 단계 안에서는 효과금액(예상매출) 상위순.</div>
-  <div class="row" style="margin-top:8px">
-    <label>셀 병합 <select id="merge"><option value="1">병합 포함 (원본과 동일)</option><option value="0">병합 없음 (칸만 유지)</option></select></label>
-    <label>A열 포함 <select id="colA"><option value="1">포함 (A열 셀에 붙여넣기)</option><option value="0">미포함 (B열 셀에 붙여넣기)</option></select></label>
-    <label>복사 범위 <select id="scope"><option value="data">내용(데이터 행)만</option><option value="all">제목+헤더 포함</option></select></label>
-  </div>
-  <div class="hint">병합/A열 옵션은 모든 탭에 공통 적용됩니다.</div>
+  <div class="hint">진행단계 순서 계약 → 견적 → 방문, 각 단계 안에서는 효과금액(예상매출) 상위순.</div>
 </div>
 </div>
 
@@ -106,7 +100,7 @@ table.xl td.dtl{padding-left:6px}
   <div class="row" style="margin-bottom:10px">
     <button id="copyHtml">엑셀용 복사 (서식 포함)</button>
     <button class="sec" id="copyTsv">텍스트(TSV) 복사</button>
-    <span class="hint">B 팀/지점 · C 담당자 · D 코드 · E~F 업체명 · G 진행단계 · H 효과금액 · I~Q 영업 진행사항. 첫 데이터 행의 A열(또는 B열) 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
+    <span class="hint">복사는 내용(데이터 행)만 됩니다. B 팀/지점 · C 담당자 · D 코드 · E~F 업체명 · G 진행단계 · H 효과금액 · I~Q 영업 진행사항. 첫 데이터 행의 A열(또는 B열) 셀을 선택하고 붙여넣기. 셀은 클릭해서 수정할 수 있습니다.</span>
   </div>
   <div id="preview" data-pid="preview"></div>
 </div>
@@ -123,10 +117,10 @@ table.xl td.dtl{padding-left:6px}
 /* ===== 기준값 (링크 시트 2026-09 값) ===== */
 const REG=['경북권역','부산권역','경남권역'];
 const LS='nongsan_weekly_cfg_v2';
-const DEF={capC:3,capQ:4,capV:2,minAmt:0,merge:'1',colA:'1',scope:'data'};
+const DEF={capC:3,capQ:4,capV:2,minAmt:0,merge:'1',colA:'1'};
 function loadCfg(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(LS)||'{}'))}catch(e){return Object.assign({},DEF)}}
 let cfg=loadCfg();
-function readCfg(){['capC','capQ','capV','minAmt'].forEach(k=>cfg[k]=+document.getElementById(k).value||0);['merge','colA','scope'].forEach(k=>cfg[k]=document.getElementById(k).value);localStorage.setItem(LS,JSON.stringify(cfg))}
+function readCfg(){['capC','capQ','capV','minAmt'].forEach(k=>cfg[k]=+document.getElementById(k).value||0);['merge','colA'].forEach(k=>cfg[k]=document.getElementById(k).value);localStorage.setItem(LS,JSON.stringify(cfg))}
 Object.keys(DEF).forEach(k=>{const el=document.getElementById(k);if(el)el.value=cfg[k]});
 
 /* ===== TSV 파싱 (엑셀 복사본: 따옴표 안 줄바꿈 처리) ===== */
@@ -198,6 +192,7 @@ function buildGrid(dataOnly){
   const blank=(n=1)=>{for(let i=0;i<n;i++)add('','')};
   const fill=()=>{while(next()<W)add('','')};
   const M=cfg.merge==='1';
+  if(dataOnly){const E=EDITS.preview||{};const E2={};Object.keys(E).forEach(k=>{const [ri,c]=k.split(',').map(Number);if(ri>=2)E2[(ri-2)+','+c]=E[k]});G.pid='preview_d';EDITS.preview_d=E2}
   if(!dataOnly){R();blank();add('※ 금주 주요업체','st');fill();
   R();blank();add('팀/지점','h');add('담당자','h');add('코드','h');add('업체명','h',M?2:1);if(!M)add('','h');add('진행단계','h');add('효과금액(年)','h');add('영업 진행사항','h',M?9:1);if(!M)for(let i=0;i<8;i++)add('','h');fill();}
   out.major.forEach(x=>{R();blank();add(x.branch,'b c');add(x.person,'b c');add(x.code,'b c');add(x.name,'b txt',M?2:1);if(!M)add('','b');add(x.stage,'b c');add(x.amt,'b n');add(x.memo,'b txt',M?9:1);if(!M)for(let i=0;i<8;i++)add('','b');fill()});
@@ -235,8 +230,8 @@ function gridToTsv(G){
   applyEdits(G);const skipA=cfg.colA==='0';
   return G.map(r=>{const cells=new Array(G.W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
 }
-function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid(cfg.scope==='data'),true)}
-['merge','colA','scope','capC','capQ','capV','minAmt'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()});
+function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid(false),true)}
+['merge','colA','capC','capQ','capV','minAmt'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()});
 
 /* ===== 복사 ===== */
 function fullHtml(G){
@@ -250,8 +245,8 @@ async function copy(html,text){
   try{const d=document.createElement('div');d.contentEditable=true;d.style.position='fixed';d.style.left='-9999px';d.innerHTML=html;document.body.appendChild(d);
     const s=window.getSelection(),rg=document.createRange();rg.selectNodeContents(d);s.removeAllRanges();s.addRange(rg);const ok=document.execCommand('copy');s.removeAllRanges();d.remove();return ok}catch(e){return false}
 }
-document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const G=buildGrid(cfg.scope==='data');const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀에서 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'};
-document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid(cfg.scope==='data')));document.getElementById('stat').textContent='TSV 복사됨'};
+document.getElementById('copyHtml').onclick=async()=>{if(!out){alert('먼저 자동 작성을 실행하세요');return}const G=buildGrid(true);const ok=await copy(fullHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀에서 붙여넣기':'복사 실패: 미리보기를 드래그해서 복사하세요'};
+document.getElementById('copyTsv').onclick=async()=>{if(!out)return;await navigator.clipboard.writeText(gridToTsv(buildGrid(true)));document.getElementById('stat').textContent='TSV 복사됨'};
 
 /* ===== 입력칸 초기화 버튼 (모든 textarea) ===== */
 function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.title='이 입력칸 비우기';b.onclick=()=>{ta.value='';ta.focus()};ta.parentNode.insertBefore(b,ta)})}
@@ -276,22 +271,20 @@ function listPane(id,title,hint){
   <div class="hint">기간을 비우면 붙여넣은 행 전체를 대상으로 합니다. 날짜 열은 아래 열 매핑의 "시행일/최종방문일"입니다.</div>
   <div class="hint" id="${id}-detect"></div>
   <div class="map" id="${id}-map"></div></div>
-  <div class="card"><h2>2. 선정 기준</h2>
-  <div class="row"><label>계약 최대 <input type="number" id="${id}-capC" value="3"></label><label>견적 최대 <input type="number" id="${id}-capQ" value="4"></label><label>방문 최대 <input type="number" id="${id}-capV" value="2"></label><label>최소 효과금액 <input type="number" id="${id}-minAmt" value="0"></label>
-  <label>부서 열 <select id="${id}-dept"><option value="region">권역</option><option value="">비움</option></select></label>
-  <label>복사 범위 <select id="${id}-scope"><option value="data">내용(데이터 행)만</option><option value="all">제목+헤더 포함</option></select></label></div>
-  <div class="hint">계약 → 견적 → 방문 순, 각 단계는 효과금액 상위순. 병합/A열 옵션은 농산업종 탭의 설정을 따릅니다.</div></div></div>
+  <div class="card"><h2>2. 금주 주요업체 선정 기준</h2>
+  <div class="row"><label>계약 최대 건수 <input type="number" id="${id}-capC" value="3"></label><label>견적 최대 건수 <input type="number" id="${id}-capQ" value="4"></label><label>방문 최대 건수 <input type="number" id="${id}-capV" value="2"></label><label>최소 효과금액 <input type="number" id="${id}-minAmt" value="0"></label></div>
+  <div class="hint">진행단계 순서 계약 → 견적 → 방문, 각 단계 안에서는 효과금액 상위순.</div></div></div>
   <div class="card"><h2>3. 결과 <span id="${id}-stat" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="${id}-copyHtml">엑셀용 복사 (서식 포함)</button><button class="sec" id="${id}-copyTsv">텍스트(TSV) 복사</button>
-  <span class="hint">B열 "부서"부터 시작, 영업진행사항은 J~R 병합. A1(또는 B열 셀)에 붙여넣기.</span></div>
+  <span class="hint">복사는 내용(데이터 행)만 됩니다. B 부서 · C 팀/지점 · D 담당자 · E 코드 · F~G 업체명 · H 진행단계 · I 효과금액 · J~R 영업진행사항. 첫 데이터 행의 A열(또는 B열) 셀을 선택하고 붙여넣기.</span></div>
   <div id="${id}-preview" data-pid="${id}-preview"></div></div>`;
   const L=LISTS[id]={id,rows:[],hdr:[],map:{},hash:'',out:null};
   const $=k=>document.getElementById(id+'-'+k);
   $('run').onclick=()=>listRun(id);
-  const cg=()=>listGrid(id,$('scope').value==='data');
+  const cg=()=>{const G=listGrid(id,true);const E=EDITS[id+'-preview']||{};const E2={};Object.keys(E).forEach(k=>{const [ri,c]=k.split(',').map(Number);if(ri>=2)E2[(ri-2)+','+c]=E[k]});G.pid=id+'-preview_d';EDITS[id+'-preview_d']=E2;return G};
   $('copyHtml').onclick=async()=>{if(!L.out){alert('먼저 자동 작성을 실행하세요');return}const G=cg();const ok=await copy(fullHtml(G),gridToTsv(G));$('stat').textContent=ok?'복사됨 ('+G.length+'행) → 엑셀 첫 데이터 행의 부서 셀에 붙여넣기':'복사 실패'};
   $('copyTsv').onclick=async()=>{if(!L.out)return;await navigator.clipboard.writeText(gridToTsv(cg()));$('stat').textContent='TSV 복사됨'};
-  ['capC','capQ','capV','minAmt','dept','scope'].forEach(k=>$(k).onchange=()=>{if(L.out)listCompute(id)});
+  ['capC','capQ','capV','minAmt'].forEach(k=>$(k).onchange=()=>{if(L.out)listCompute(id)});
 }
 listPane('target','타겟업체','타겟업체 시트에서 행을 복사해 붙여넣기 (기본NO, 사업구분, 팀/권역, 팀/지점, 담당프로, 코드, 업체명, 예상매출, 신규/점유율확대, 주간적용여부, 시행일, 진행단계, 효과금액, 25년 영업진행사항). 헤더 포함 권장.');
 listPane('comp','경쟁사','경쟁사 시트에서 헤더(3줄)와 행을 함께 복사해 붙여넣기. 진행단계 열이 없으면 (계약)건수/효과금액 → 계약, (견적)효과금액 → 견적, 그 외 → 방문으로 자동 판정.');
@@ -346,10 +339,10 @@ function listCompute(id){
   if(from||to)recs=recs.filter(x=>x.date&&(!from||x.date>=from)&&(!to||x.date<=to));
   const cap={계약:+$('capC').value||0,견적:+$('capQ').value||0,방문:+$('capV').value||0},minAmt=+$('minAmt').value||0;
   const major=[];['계약','견적','방문'].forEach(s=>major.push(...recs.filter(x=>x.stage===s&&x.amt>=minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s])));
-  L.out={major,dept:$('dept').value};
+  L.out={major,dept:'region'};
   $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
   $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
-  $('preview').innerHTML=gridToHtml(listGrid(id,$('scope').value==='data'),true);
+  $('preview').innerHTML=gridToHtml(listGrid(id,false),true);
 }
 function listGrid(id,dataOnly){
   const L=LISTS[id];const W=LISTW;const G=[];G.W=W;G.widths=[20,60,85,70,75,85,85,80,90,90,90,90,90,90,90,90,90,90];
