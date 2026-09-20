@@ -80,10 +80,11 @@ table.xl td.bb{border-bottom:.5pt solid #000}
 table.xl td.bl{border-left:.5pt solid #000}
 table.xl td.br{border-right:.5pt solid #000}
 table.xl td.dtl{padding-left:6px}
+.zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<header>영남본부 자료 자동화 <small>영남영업본부 · 주간회의 자료</small></header>
+<header>영남본부 자료 자동화 <small>영남영업본부 · 주간회의 자료</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
 <main>
 <div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
 
@@ -735,6 +736,12 @@ function sumGrid2(dataOnly){
 }
 document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){document.getElementById('sum-prev1').innerHTML=gridToHtml(sumGrid1(),true);document.getElementById('sum-prev2').innerHTML=gridToHtml(sumGrid2(),true)}});
 addClearButtons();
+
+/* ===== 화면 확대/축소 ===== */
+(function(){const main=document.querySelector('main');let z=1;try{z=parseFloat(localStorage.getItem('ui_zoom'))||1}catch(e){}
+  const apply=()=>{z=Math.min(1.5,Math.max(0.5,Math.round(z*10)/10));if('zoom' in main.style){main.style.zoom=z}else{main.style.transform='scale('+z+')';main.style.transformOrigin='top left';main.style.width=(100/z)+'%'}
+    document.getElementById('zoomVal').textContent=Math.round(z*100)+'%';try{localStorage.setItem('ui_zoom',String(z))}catch(e){}};
+  document.getElementById('zoomIn').onclick=()=>{z+=0.1;apply()};document.getElementById('zoomOut').onclick=()=>{z-=0.1;apply()};document.getElementById('zoomReset').onclick=()=>{z=1;apply()};apply()})();
 </script>
 </body>
 </html>

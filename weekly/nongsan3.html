@@ -46,10 +46,11 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .legend{font-size:12px;color:var(--mut);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
+.zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<header>영남본부 자료 자동화 3 <small>영남영업본부 · 업무일지 한 번 붙여넣기 → 농산·단가인상·타겟·경쟁사·건설현장 참조시트 자동 업데이트</small></header>
+<header>영남본부 자료 자동화 3 <small>영남영업본부 · 업무일지 한 번 붙여넣기 → 농산·단가인상·타겟·경쟁사·건설현장 참조시트 자동 업데이트</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
 <main>
 <div class="card" style="padding:10px 16px">
   <div class="row">
@@ -389,6 +390,12 @@ $('diary').addEventListener('cleared',()=>{$('diarystat').textContent='';Object.
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
 addClearButtons();
+
+/* ===== 화면 확대/축소 ===== */
+(function(){const main=document.querySelector('main');let z=1;try{z=parseFloat(localStorage.getItem('ui_zoom'))||1}catch(e){}
+  const apply=()=>{z=Math.min(1.5,Math.max(0.5,Math.round(z*10)/10));if('zoom' in main.style){main.style.zoom=z}else{main.style.transform='scale('+z+')';main.style.transformOrigin='top left';main.style.width=(100/z)+'%'}
+    document.getElementById('zoomVal').textContent=Math.round(z*100)+'%';try{localStorage.setItem('ui_zoom',String(z))}catch(e){}};
+  document.getElementById('zoomIn').onclick=()=>{z+=0.1;apply()};document.getElementById('zoomOut').onclick=()=>{z-=0.1;apply()};document.getElementById('zoomReset').onclick=()=>{z=1;apply()};apply()})();
 </script>
 </body>
 </html>
