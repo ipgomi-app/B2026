@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엔지니어링 자료 자동화</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1c2430;--mut:#66707d;--line:#d9dee5;--navy:#1f3a93;--accent:#2b6cb0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;font-size:14px}
+header{background:#111;color:#fff;padding:14px 20px;font-size:20px;font-weight:700}
+header small{font-weight:400;color:#bbb;margin-left:10px;font-size:13px}
+main{padding:16px 20px 60px;max-width:1800px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--navy)}
+textarea{width:100%;min-height:120px;font:12px/1.4 Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre;overflow:auto}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.row label{display:flex;align-items:center;font-size:12px;color:var(--mut);gap:4px}
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px}
+input[type=number]{width:60px;text-align:right}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer}
+button.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+button:hover{filter:brightness(1.08)}
+button.xs{padding:2px 8px;font-size:11px;float:right;margin-bottom:4px}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+.ok{color:#137333;font-size:12px}
+.bad{color:#b00020;font-size:12px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;align-items:center}
+.tabs button{background:#fff;color:var(--navy);border:1px solid var(--line);border-bottom:3px solid transparent;border-radius:6px 6px 0 0;font-weight:700}
+.tabs button.on{border-bottom-color:var(--navy);background:#e8edf8}
+.tabpane{display:none}.tabpane.on{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.prev{overflow:auto;border:1px solid var(--line);border-radius:6px;padding:10px;background:#fff}
+table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
+table.xl td{border:.5pt solid #000;padding:1px 4px;height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+table.xl td.h{background:#1f3a93;color:#fff;font-weight:700;text-align:center}
+table.xl td.hg{background:#d9d9d9;font-weight:700;text-align:center}
+table.xl td.c{text-align:center}
+table.xl td.n{text-align:right}
+table.xl td.txt{text-align:left}
+table.xl td.upd{background:#fff2cc}
+table.xl td.new{background:#e2f0d9}
+table.xl td[contenteditable]:focus{outline:2px solid #2b6cb0;background:#eef4ff}
+table.xl td.bad{background:#fde2e2!important;color:#b00020}
+.legend{font-size:12px;color:var(--mut);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
+</style>
+</head>
+<body>
+<header>엔지니어링 자료 자동화 <small>영남영업본부 · 수주풀(참조시트) + 권역 업데이트 → 영업추진현황 제출 시트</small></header>
+<main>
+<div class="card" style="padding:10px 16px">
+  <div class="row">
+    <b style="color:var(--navy)">주차 선택</b>
+    <label>날짜 <input type="date" id="wkdate"></label>
+    <span id="wkrange" class="hint" style="margin:0"></span>
+    <label>주차 표기 <input type="text" id="wklabel" style="width:90px" placeholder="9월 3주"></label>
+    <span class="hint" style="margin:0">제출 시트의 "금주" 기준 주차입니다. 표기는 자동 계산되며 직접 고칠 수 있습니다(시트의 주차 표기와 같아야 집계됩니다. 예: "9월 2주").</span>
+  </div>
+</div>
+<div class="grid">
+<div class="card">
+  <h2>1. 참조시트(대상업체 수주풀) 붙여넣기 <span class="tag">지난주 제출본</span></h2>
+  <textarea id="ref" placeholder="지난주 엔지니어링 파일의 '대상업체(수주풀)' 시트를 헤더 포함 전체 복사해서 붙여넣으세요. (팀/권역 ~ 주요 이슈 및 고객사 Needs, 비고, 월구분)"></textarea>
+  <div id="refstat" class="hint"></div>
+</div>
+<div class="card">
+  <h2>2. 권역 업데이트 붙여넣기 <span class="tag">경북 / 부산 / 경남</span></h2>
+  <textarea id="up" style="min-height:120px" placeholder="경북·부산·경남 시트의 업데이트 행(헤더 포함 가능, 같은 양식)을 붙여넣으세요. 세 권역을 한꺼번에 붙여도 되고 나눠 붙여도 됩니다. 코드가 같은 행은 교체, 없는 코드는 추가됩니다."></textarea>
+  <div id="upstat" class="hint"></div>
+</div>
+</div>
+<div class="card">
+  <div class="row" style="margin-bottom:8px">
+    <button id="run">시트 생성</button>
+    <span id="stat" class="ok"></span>
+  </div>
+  <h2>3. 병합된 수주풀 <span class="hint" style="font-weight:400">참조 링크 시트(대상업체 수주풀)를 갱신할 때 사용. 업데이트로 바뀐 행은 노란색</span></h2>
+  <div class="row" style="margin-bottom:8px">
+    <button id="copyPool">수주풀 전체 값 복사 (헤더 제외, A2부터)</button>
+    <button class="sec" id="copyPoolUpd">업데이트된 행만 복사</button>
+    <button class="sec" id="dlPool">수주풀 TSV 파일 저장</button>
+    <label>표시 <select id="poolview"><option value="upd">업데이트된 행만</option><option value="all">전체</option></select></label>
+  </div>
+  <div id="pool" class="prev"></div>
+</div>
+<div class="card">
+  <h2>4. 영업추진현황 제출 시트 <span class="hint" style="font-weight:400">제출 시트 양식(열 위치) 그대로. 표마다 복사하거나 전체를 A1에 붙여넣기</span></h2>
+  <div class="row" style="margin-bottom:8px">
+    <button id="copyAll">전체 시트 값 복사 (A1에 붙여넣기)</button>
+    <button class="sec" id="dlAll">전체 시트 TSV 파일 저장</button>
+    <span class="hint" style="margin:0">줄바꿈이 있는 셀은 따옴표로 묶여 엑셀에서 한 셀 여러 줄로 붙습니다. 각 표 제목 옆 "복사"는 그 표의 데이터 행만 복사합니다(붙여넣을 시작 셀 표시).</span>
+  </div>
+  <div id="out"></div>
+</div>
+</main>
+<script>
+/* ===== 공통 ===== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n};
+function parseTSV(s){
+  const rows=[];let row=[],cell='',q=false;s=s.replace(/\r\n?/g,'\n').replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g,' ').replace(/[\u200C-\u200F\u2028\u2029\u00AD]/g,'');
+  for(let i=0;i<s.length;i++){const ch=s[i];
+    if(q){ if(ch=='"'){ if(s[i+1]=='"'){cell+='"';i++}else q=false } else cell+=ch }
+    else{ if(ch=='"'&&cell===''){q=true}
+      else if(ch=='\t'){row.push(cell);cell=''}
+      else if(ch=='\n'){row.push(cell);rows.push(row);row=[];cell=''}
+      else cell+=ch }
+  }
+  row.push(cell);rows.push(row);
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.onclick=()=>{ta.value='';ta.dispatchEvent(new Event('cleared'));ta.focus()};ta.parentNode.insertBefore(b,ta)})}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}}
+const ORDER={'방문':1,'견적':2,'계약완료':3};
+const stageOf=v=>{v=String(v||'');if(v.includes('계약완료')||v.includes('계약전환완료')||v.includes('계약체결'))return '계약완료';if(v.includes('견적'))return '견적';if(v.includes('방문'))return '방문';return ''};
+/* 주 = 금요일~목요일. 선택한 날짜가 속한 주의 금요일/목요일 */
+function weekOf(dt){const fri=new Date(dt);fri.setDate(dt.getDate()-((dt.getDay()-5+7)%7));const thu=new Date(fri);thu.setDate(fri.getDate()+6);return {fri,thu}}
+/* 주차 표기: 금요일이 속한 달 기준, 그 달의 목요일 개수로 N주 (9/11~9/17=9월3주, 9/25~10/1=9월5주) */
+function weekLabel(y,m,d){const {fri,thu}=weekOf(new Date(y,m-1,d));const M=fri.getMonth();let n=0;/* 엔지니어링 표기: '9월 2주' (띄어쓰기) */
+  for(let x=1;x<=31;x++){const t=new Date(fri.getFullYear(),M,x);if(t.getMonth()!==M)break;if(t.getDay()===4&&t<=thu)n++}
+  if(thu.getMonth()!==M)n++;return (M+1)+'월 '+n+'주'}
+const fmtMD=d=>(d.getMonth()+1)+'/'+d.getDate();
+const ymd=d=>d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+function curWeek(){const v=$('wkdate').value;if(!v)return null;const [y,m,d]=v.split('-').map(Number);const w=weekOf(new Date(y,m-1,d));return {from:ymd(w.fri),to:ymd(w.thu),label:$('wklabel').value.trim()||weekLabel(y,m,d),text:fmtMD(w.fri)+'~'+fmtMD(w.thu)}}
+function onWeekChange(auto){const w=curWeek();if(!w){$('wkrange').textContent='';return}$('wkrange').textContent='기간 '+w.text+' (금~목)';if(auto){const v=$('wkdate').value.split('-').map(Number);$('wklabel').value=weekLabel(v[0],v[1],v[2])}if(POOL)build()}
+function parseDate(s){const m=String(s||'').match(/(\d{4})[\/\-.]?(\d{1,2})[\/\-.]?(\d{1,2})/);return m?{y:+m[1],m:+m[2],d:+m[3],key:m[1]+String(m[2]).padStart(2,'0')+String(m[3]).padStart(2,'0')}:null}
+
+
+/* ===== 수주풀 열 정의 (참조시트 양식) ===== */
+const PC={region:0,person:1,group:2,code:3,name:4,eq:[5,6,7,8,9,10,11,12,13,14],scope:15,stage:16,amt:17,timing:18,plan:19,vnew:20,vre:21,le:22,revisit:23,accomp:24,needs:25,memo:30,month:31,W:32};
+const EQ_NAMES=['자동상하차','스태커크레인','멀티셔틀','복합로봇','AGV/AMR','무인지게차','로봇파렛타이저','모노레일','자동소터','기타설비'];
+const POOL_HDR=['팀/권역','담당자','그룹/일반','코드','업체명','자동\n상하차','스태커\n크레인','멀티셔틀\n시스템','복합로봇\n자동화','AGV\nAMR','무인지게차\nAGF','로봇\n파렛타이져','모노레일','자동소터\n로봇소터','기타 설비','추진과제/범위','진행단계','예상매출\n(억원)','사업시기','방문계획','방문실적\n(신규)','방문실적\n(재방문)','LE동행방문\n실적','재방문여부','동행방문여부','주요 이슈 및 고객사 Needs','','','','','비고\n(매출등급 등)','월구분'];
+const REGIONS=['경북권역','부산권역','경남권역'];
+const CODE_RE=/^[A-Z]?\d{5,7}$/;
+const WEEK_RE=/^(\d{1,2})월\s*(\d)주$/;
+const normWeek=v=>{const m=String(v||'').trim().match(WEEK_RE);return m?m[1]+'월 '+m[2]+'주':String(v||'').trim()};
+function parsePool(raw){const rows=parseTSV(raw);const out=[];let hdrSeen=false;
+  rows.forEach(r=>{const cells=r.map(x=>String(x).replace(/\r/g,'').trim());while(cells.length<PC.W)cells.push('');
+    if(!CODE_RE.test(cells[PC.code])){if(/권역/.test(cells[0])&&/코드/.test(cells.join(' ')))hdrSeen=true;return}
+    if(!/권역$/.test(cells[PC.region])){const r2=REGIONS.find(x=>cells[PC.region].startsWith(x.slice(0,2)));if(r2)cells[PC.region]=r2}
+    [PC.plan,PC.vnew,PC.vre,PC.le].forEach(i=>cells[i]=normWeek(cells[i]));
+    out.push(cells.slice(0,PC.W))});
+  return {rows:out,hdrSeen}}
+let POOL=null,UPD=new Set(),OUT=null;
+/* ===== 병합 ===== */
+function merge(){const ref=parsePool($('ref').value);if(!ref.rows.length){alert('참조시트(수주풀)를 먼저 붙여넣으세요');return false}
+  const up=parsePool($('up').value);const pool=ref.rows.map(r=>r.slice());
+  UPD=new Set();let rep=0,add=0;
+  up.rows.forEach(r=>{const k=r[PC.code]+'|'+r[PC.region];const i=pool.findIndex(x=>x[PC.code]+'|'+x[PC.region]===k);if(i>=0){if(pool[i].join('\t')!==r.join('\t')){pool[i]=r;UPD.add(k);rep++}}else{pool.push(r);UPD.add(k);add++}});
+  POOL=pool;
+  $('refstat').textContent='참조시트 인식: '+ref.rows.length+'행 (경북 '+ref.rows.filter(r=>r[PC.region]==='경북권역').length+', 부산 '+ref.rows.filter(r=>r[PC.region]==='부산권역').length+', 경남 '+ref.rows.filter(r=>r[PC.region]==='경남권역').length+')';
+  $('upstat').textContent=up.rows.length?'업데이트 인식: '+up.rows.length+'행 → 교체 '+rep+'행, 신규 추가 '+add+'행':'업데이트 없음 (참조시트만으로 생성)';
+  return true}
+/* ===== 집계 ===== */
+const isWeek=v=>WEEK_RE.test(v);
+const monthOf=v=>{const m=String(v||'').match(WEEK_RE);return m?+m[1]:0};
+const STG=['정보조사','니즈확인','LE 동행방문','견적','계약'];
+const stgKey=s=>{s=String(s||'');if(/계약/.test(s))return '계약';if(/견적/.test(s))return '견적';if(/니즈/.test(s))return '니즈확인';return '정보조사'};/* 방문/협의 → 정보조사에 포함(제출 시트 기준) */
+function aggregate(wk){const M=monthOf(wk);const A={};
+  const mk=()=>({tgt:[0,0],month:{},cum:{},prog:0,week:{},wsub:[0,0],visit:{wk:{n:[0,0],r:[0,0]},mo:{n:[0,0],r:[0,0]},cum:{n:[0,0],r:[0,0]}},plan:{},act:{},pre:[0,0]});
+  REGIONS.forEach(r=>A[r]=mk());A['영남영업본부']=mk();
+  const addTo=(o,k,amt)=>{o[k]=o[k]||[0,0];o[k][0]++;o[k][1]+=amt};
+  POOL.forEach(r=>{const reg=r[PC.region];if(!A[reg])return;const a=A[reg];const amt=num(r[PC.amt]);const st=stgKey(r[PC.stage]);
+    a.tgt[0]++;a.tgt[1]+=amt;
+    addTo(a.cum,st,amt);if(r[PC.accomp]==='동행방문')addTo(a.cum,'LE 동행방문',amt);
+    if(r[PC.vnew])a.prog++;
+    const vis=[r[PC.vnew],r[PC.vre],r[PC.le]];
+    if(vis.some(v=>monthOf(v)===M&&M)){addTo(a.month,st,amt);if(monthOf(r[PC.le])===M)addTo(a.month,'LE 동행방문',amt)}
+    if(vis.some(v=>v===wk)){addTo(a.week,st,amt);if(r[PC.le]===wk)addTo(a.week,'LE 동행방문',amt);a.wsub[0]++;a.wsub[1]+=amt}
+    const V=a.visit;const isRe=r[PC.revisit]==='재방문';
+    if(r[PC.vnew]===wk){V.wk.n[0]++;V.wk.n[1]+=amt}if(r[PC.vre]===wk){V.wk.r[0]++;V.wk.r[1]+=amt}
+    if(monthOf(r[PC.vnew])===M&&M){V.mo.n[0]++;V.mo.n[1]+=amt}if(monthOf(r[PC.vre])===M&&M){V.mo.r[0]++;V.mo.r[1]+=amt}
+    if(isRe){V.cum.r[0]++;V.cum.r[1]+=amt}else{V.cum.n[0]++;V.cum.n[1]+=amt}
+    if(isWeek(r[PC.plan]))a.plan[r[PC.plan]]=(a.plan[r[PC.plan]]||0)+1;
+    [r[PC.vnew],r[PC.vre]].forEach(v=>{if(isWeek(v))a.act[v]=(a.act[v]||0)+1});
+    if(r[PC.vnew]&&!isWeek(r[PC.vnew])){a.pre[0]++;a.pre[1]++}
+  });
+  const T=A['영남영업본부'];REGIONS.forEach(reg=>{const a=A[reg];T.tgt[0]+=a.tgt[0];T.tgt[1]+=a.tgt[1];T.prog+=a.prog;T.wsub[0]+=a.wsub[0];T.wsub[1]+=a.wsub[1];T.pre[0]+=a.pre[0];T.pre[1]+=a.pre[1];
+    ['month','cum','week'].forEach(g=>Object.keys(a[g]).forEach(k=>{T[g][k]=T[g][k]||[0,0];T[g][k][0]+=a[g][k][0];T[g][k][1]+=a[g][k][1]}));
+    ['wk','mo','cum'].forEach(g=>['n','r'].forEach(x=>{T.visit[g][x][0]+=a.visit[g][x][0];T.visit[g][x][1]+=a.visit[g][x][1]}));
+    Object.keys(a.plan).forEach(k=>T.plan[k]=(T.plan[k]||0)+a.plan[k]);Object.keys(a.act).forEach(k=>T.act[k]=(T.act[k]||0)+a.act[k])});
+  return A}
+/* 주차 목록: 5월 1주 ~ 선택 주차의 달 마지막 주 */
+function weekList(wk){const M=monthOf(wk)||9;const out=[];for(let m=5;m<=M;m++){const last=m===M?Math.max(4,+wk.match(WEEK_RE)[2]):(m===7?5:4);for(let w=1;w<=last;w++)out.push(m+'월 '+w+'주')}return out}
+/* ===== 시트 조립 ===== */
+const dash=v=>(v===0||v==null||v==='')?'-':v;
+const r1=v=>Math.round(v*10)/10;
+function buildSheet(wk){const A=aggregate(wk);const M=monthOf(wk);const S=[];const set=(r,c,v)=>{S[r]=S[r]||[];S[r][c]=v};const secs=[];
+  const put=(r,c,arr)=>arr.forEach((v,i)=>set(r,c+i,v));
+  /* 열 인덱스: A=0 */
+  set(0,1,'■ 엔지니어링 영업추진현황');set(0,23,wk);set(1,1,' - 25년 이후 기진행업체 + 4월 추가업체 + 본부별 추가발굴업체+영업부문 재고증가+냉동냉장+창고');set(2,23,M+'월');
+  set(3,1,'누계 진행현황');set(3,2,'대상업체');set(3,4,'당월');set(3,14,'누계');set(3,25,'진행업체\n누계');set(3,26,'진행율');
+  set(4,4,'정보조사');set(4,6,'니즈확인');set(4,8,'LE 동행방문');set(4,10,'견적');set(4,12,'계약');set(4,14,'정보조사');set(4,16,'니즈확인');set(4,18,'LE 동행방문');set(4,20,'견적');set(4,22,'계약');
+  for(let c=2;c<=23;c+=2){set(5,c,'업체수');set(5,c+1,'금액(억 원)')}
+  const regs=[...REGIONS,'영남영업본부'];
+  regs.forEach((reg,i)=>{const a=A[reg];const r=6+i;set(r,1,reg);set(r,2,a.tgt[0]);set(r,3,r1(a.tgt[1]));
+    STG.forEach((s,j)=>{const m=a.month[s]||[0,0],c=a.cum[s]||[0,0];set(r,4+j*2,dash(m[0]));set(r,5+j*2,dash(r1(m[1])));set(r,14+j*2,dash(c[0]));set(r,15+j*2,dash(r1(c[1])))});
+    set(r,25,a.prog);set(r,26,a.tgt[0]?Math.round(a.prog/a.tgt[0]*100)+'%':'-')});
+  secs.push({name:'표1 누계 진행현황',row:6,col:1,rows:4,cols:26});
+  set(12,1,'금주 진행현황');set(12,2,'금주 실적');set(12,13,'주간 진행업체 소계');
+  STG.forEach((s,j)=>set(13,2+j*2,s));for(let c=2;c<=11;c+=2){set(14,c,'업체수');set(14,c+1,'금액(억 원)')}set(14,13,'업체수');set(14,14,'금액(억 원)');
+  regs.forEach((reg,i)=>{const a=A[reg];const r=15+i;set(r,1,reg);STG.forEach((s,j)=>{const w=a.week[s]||[0,0];set(r,2+j*2,dash(w[0]));set(r,3+j*2,dash(r1(w[1])))});set(r,13,dash(a.wsub[0]));set(r,14,dash(r1(a.wsub[1])))});
+  secs.push({name:'표2 금주 진행현황',row:15,col:1,rows:4,cols:14});
+  set(21,1,'신규/재방문 현황');set(21,2,'금주 실적');set(21,8,'당월 실적');set(21,14,'누계 실적');
+  ['신규방문','재방문','방문계'].forEach((h,j)=>{set(22,2+j*2,h);set(22,8+j*2,h);set(22,14+j*2,h)});for(let c=2;c<=19;c+=2){set(23,c,'업체수');set(23,c+1,'금액(억 원)')}
+  regs.forEach((reg,i)=>{const V=A[reg].visit;const r=24+i;set(r,1,reg);[['wk',2],['mo',8],['cum',14]].forEach(([g,c])=>{const n=V[g].n,x=V[g].r;set(r,c,dash(n[0]));set(r,c+1,dash(r1(n[1])));set(r,c+2,dash(x[0]));set(r,c+3,dash(r1(x[1])));set(r,c+4,dash(n[0]+x[0]));set(r,c+5,dash(r1(n[1]+x[1])))})});
+  secs.push({name:'표3 신규/재방문 현황',row:24,col:1,rows:4,cols:19});
+  const WL=weekList(wk);
+  set(30,1,'방문실적');set(30,2,'구분');set(30,3,'방문계획/방문실적');set(30,3+1+WL.length,'합계');set(30,3+2+WL.length,'누계\n(전월까지)');set(30,3+3+WL.length,'당월');
+  set(31,3,'4월 이전');WL.forEach((w,i)=>set(31,4+i,w));
+  regs.forEach((reg,i)=>{const a=A[reg];const r=32+i*3;const plan=[a.pre[0],...WL.map(w=>a.plan[w]||0)],act=[a.pre[1],...WL.map(w=>a.act[w]||0)];
+    const cumRate=[];let cp=0,ca=0;plan.forEach((p,k)=>{cp+=p;ca+=act[k];cumRate.push(cp?Math.round(ca/cp*100)+'%':'')});
+    const sum=x=>x.reduce((s,v)=>s+v,0);const upto=(x,f)=>x.filter((_,k)=>k===0||f(WL[k-1]));
+    set(r,1,reg);set(r,2,'방문계획');put(r,3,plan.map(dash));set(r+1,1,reg);set(r+1,2,'방문실적');put(r+1,3,act.map(dash));set(r+2,1,reg);set(r+2,2,'누적방문율');put(r+2,3,cumRate);
+    const c0=3+1+WL.length;set(r,c0,sum(plan));set(r,c0+1,sum(upto(plan,w=>monthOf(w)<M)));set(r,c0+2,dash(sum(plan.filter((_,k)=>k>0&&monthOf(WL[k-1])===M))));
+    set(r+1,c0,sum(act));set(r+1,c0+1,sum(upto(act,w=>monthOf(w)<M)));set(r+1,c0+2,dash(sum(act.filter((_,k)=>k>0&&monthOf(WL[k-1])===M))));
+    const rate=(p,x)=>p?Math.round(x/p*100)+'%':'-';set(r+2,c0,rate(sum(plan),sum(act)));set(r+2,c0+1,rate(sum(upto(plan,w=>monthOf(w)<M)),sum(upto(act,w=>monthOf(w)<M))));set(r+2,c0+2,rate(sum(plan.filter((_,k)=>k>0&&monthOf(WL[k-1])===M)),sum(act.filter((_,k)=>k>0&&monthOf(WL[k-1])===M))))});
+  secs.push({name:'표4 방문실적',row:32,col:1,rows:12,cols:3+4+WL.length});
+  /* 표5 진행단계별 사업구분 */
+  const cat=r=>{const eq=PC.eq.map(i=>r[i]);if(eq[1]||eq[2])return '자동화창고';if(eq.some(Boolean))return '단위설비';return /자동화\s*창고|자동창고|셔틀|스태커/.test(r[PC.scope])?'자동화창고':'단위설비'};
+  const ST5=['정보조사','니즈확인','방문/협의','견적','계약'];const s5={'자동화창고':{},'단위설비':{}};
+  POOL.forEach(r=>{const chk=PC.eq.filter(i=>String(r[i]).trim());const cats=new Set(chk.map(i=>(i===6||i===7)?'자동화창고':'단위설비'));if(!cats.size)cats.add(cat(r));const s=stgKey(r[PC.stage]);cats.forEach(k=>{s5[k][s]=(s5[k][s]||0)+1})});
+  set(45,1,'▶ 진행단계별 사업구분');set(46,1,'항목');set(46,2,'사업구분');ST5.forEach((s,j)=>set(46,4+j,s));set(46,9,'합계');
+  const tot={};['자동화창고','단위설비'].forEach((k,i)=>{const r=47+i;set(r,1,k);set(r,2,'소계');let sum=0;ST5.forEach((s,j)=>{const v=s5[k][s]||0;tot[s]=(tot[s]||0)+v;sum+=v;set(r,4+j,dash(v))});set(r,9,sum)});
+  set(49,1,'총계');let tsum=0;ST5.forEach((s,j)=>{tsum+=tot[s]||0;set(49,4+j,dash(tot[s]||0))});set(49,9,tsum);
+  secs.push({name:'표5 진행단계별 사업구분',row:47,col:1,rows:3,cols:9});
+  /* 리스트 */
+  let r=51;const needs=x=>x[PC.needs];
+  const listHdr1=['팀권역','지점','담당자','코드','업체명','업종','지역','업체 연매출','사업구분','세부내용'];
+  const scopeCat=x=>cat(x);
+  const leTarget=POOL.filter(x=>x[PC.accomp]!=='동행방문'&&/동행\s*방문\s*(계획|예정|협의|약속|요청)/.test(needs(x)));
+  set(r,1,'▶ LE 동행방문 대상 리스트');r++;put(r,1,listHdr1);r++;const s6=r;
+  leTarget.forEach(x=>{put(r,1,[x[PC.region],'',x[PC.person],x[PC.code],x[PC.name],'','','',scopeCat(x),needs(x)]);r++});
+  secs.push({name:'LE 동행방문 대상 리스트',row:s6,col:1,rows:leTarget.length,cols:10});r++;
+  set(r,1,'▶ LE 차주 방문요청 리스트');r++;put(r,1,listHdr1);r++;r++;
+  const listHdr2=['구분','팀/권역','담당자','코드','업체명','','추진과제/범위','','진행단계','예상매출\n(억원)','사업시기','주요 이슈 및 고객사 Needs'];
+  const row2=x=>[x[PC.revisit]==='재방문'?'기존':'신규',x[PC.region],x[PC.person],x[PC.code],x[PC.name],'',x[PC.scope],'',x[PC.stage],x[PC.amt],x[PC.timing],needs(x)];
+  const stRank=s=>({'견적':4,'계약':5,'니즈확인':3,'방문/협의':2}[String(s).trim()]||1);
+  const wkRows=POOL.filter(x=>x[PC.vnew]===wk||x[PC.vre]===wk).sort((a,b)=>stRank(b[PC.stage])-stRank(a[PC.stage])||num(b[PC.amt])-num(a[PC.amt]));
+  set(r,1,'▶ 금주 주요 업체');r++;put(r,1,listHdr2);r++;const s7=r;wkRows.forEach(x=>{put(r,1,row2(x));r++});secs.push({name:'금주 주요 업체 ('+wk+' 방문 '+wkRows.length+'개)',row:s7,col:1,rows:wkRows.length,cols:12});r++;
+  const leRows=POOL.filter(x=>x[PC.le]===wk);set(r,1,'▶ 전주 LE 동행방문 업체');r++;put(r,1,listHdr2);r++;const s8=r;leRows.forEach(x=>{put(r,1,row2(x));r++});secs.push({name:'전주 LE 동행방문 업체 ('+leRows.length+'개)',row:s8,col:1,rows:leRows.length,cols:12});r++;
+  const reRows=POOL.filter(x=>x[PC.vre]===wk);set(r,1,'▶ 전주 재방문 업체');r++;put(r,1,listHdr2);r++;const s9=r;reRows.forEach(x=>{put(r,1,row2(x));r++});secs.push({name:'전주 재방문 업체 ('+reRows.length+'개)',row:s9,col:1,rows:reRows.length,cols:12});r++;
+  set(r,1,'▶본부 주요업체(니즈/견적+매출액 상위 업체)');r++;r++;
+  set(r,1,'◎  금주 주요 업체');r++;put(r,1,['주차','팀/권역','담당자','코드','업체명','','추진과제/범위','','진행단계','예상매출\n(억원)','사업시기','추가 진행 현황']);r++;const s10=r;
+  const topRows=POOL.filter(x=>stRank(x[PC.stage])>=3);
+  const wkTop=wkRows.filter(x=>stRank(x[PC.stage])>=3);wkTop.forEach(x=>{put(r,1,[wk,x[PC.region],x[PC.person],x[PC.code],x[PC.name],'',x[PC.scope],'',x[PC.stage],x[PC.amt],x[PC.timing],needs(x)]);r++});
+  secs.push({name:'본부 금주 주요 업체 (니즈확인 이상, 금주 방문 '+wkTop.length+'개)',row:s10,col:1,rows:wkTop.length,cols:12});r++;
+  set(r,1,'◎  본부 니즈/견적 주요 업체 리스트 '+topRows.length+'업체');r++;put(r,1,['팀/권역','담당자','그룹/일반','코드','업체명','추진과제/범위','진행단계','예상매출(억원)','사업시기','주요 이슈 및 고객사 Needs','','','','','추가진행 주차','추가 진행현황']);r++;const s11=r;
+  topRows.sort((a,b)=>REGIONS.indexOf(a[PC.region])-REGIONS.indexOf(b[PC.region])||stRank(b[PC.stage])-stRank(a[PC.stage])||num(b[PC.amt])-num(a[PC.amt]));
+  topRows.forEach(x=>{const vis=(x[PC.vnew]===wk||x[PC.vre]===wk);put(r,1,[x[PC.region],x[PC.person],x[PC.group],x[PC.code],x[PC.name],x[PC.scope],x[PC.stage],x[PC.amt],x[PC.timing],needs(x),'','','','',vis?wk:'','']);r++});
+  secs.push({name:'본부 니즈/견적 주요 업체 리스트 ('+topRows.length+'개)',row:s11,col:1,rows:topRows.length,cols:16});
+  const W=Math.max(...S.map(x=>x?x.length:0),27);for(let i=0;i<S.length;i++){S[i]=S[i]||[];while(S[i].length<W)S[i].push('');for(let c=0;c<W;c++)if(S[i][c]==null)S[i][c]=''}
+  return {S,secs,W}}
+/* ===== 출력 ===== */
+const colName=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+const cellTsv=v=>{let x=String(v??'').replace(/\t/g,' ').replace(/\r\n?/g,'\n');return x.includes('\n')||x.includes('"')?'"'+x.replace(/"/g,'""')+'"':x};
+const tsvOf=(rows,c0=0,c1=null)=>rows.map(r=>r.slice(c0,c1==null?r.length:c1).map(cellTsv).join('\t')).join('\r\n');
+function download(name,text){const b=new Blob(['﻿'+text],{type:'text/tab-separated-values;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function renderPool(){if(!POOL)return;const rows=$('poolview').value==='all'?POOL:POOL.filter(r=>UPD.has(r[PC.code]+'|'+r[PC.region]));
+  let h='<table class="xl"><tr>'+POOL_HDR.map(x=>'<td class="hg" style="max-width:120px">'+esc(x.replace(/\n/g,' '))+'</td>').join('')+'</tr>';
+  rows.forEach(r=>{const u=UPD.has(r[PC.code]+'|'+r[PC.region]);h+='<tr>'+r.map((v,i)=>'<td class="'+(i===PC.needs?'txt':'c')+(u?' upd':'')+'" style="max-width:'+(i===PC.needs?'520px':'110px')+'" title="'+esc(v)+'">'+esc(String(v).split('\n')[0].slice(0,60))+'</td>').join('')+'</tr>'});
+  $('pool').innerHTML=h+'</table>'+(rows.length?'':'<div class="hint">표시할 행이 없습니다</div>')}
+function renderOut(){const {S,secs,W}=OUT;let h='';
+  h+='<div class="row" style="margin-bottom:6px;flex-wrap:wrap">'+secs.map((s,i)=>'<button class="sec" data-sec="'+i+'" style="padding:4px 10px;font-size:12px">'+esc(s.name)+' 복사 → '+colName(s.col)+(s.row+1)+'</button>').join('')+'</div>';
+  h+='<div class="prev" style="max-height:70vh"><table class="xl"><tr><td class="hg"></td>'+Array.from({length:W},(_,c)=>'<td class="hg">'+colName(c)+'</td>').join('')+'</tr>';
+  S.forEach((r,ri)=>{h+='<tr><td class="hg">'+(ri+1)+'</td>'+r.map((v,c)=>{const s=String(v);const isN=typeof v==='number';return '<td class="'+(isN?'n':'c')+'" style="max-width:'+(c===12||c===10||c===25?'420px':'110px')+';white-space:'+(s.includes('\n')?'pre-wrap;text-align:left':'nowrap')+'" title="'+esc(s)+'">'+esc(s.length>200?s.slice(0,200)+'…':s)+'</td>'}).join('')+'</tr>'});
+  $('out').innerHTML=h+'</table></div>';
+  $('out').querySelectorAll('button[data-sec]').forEach(b=>b.onclick=async()=>{const s=secs[+b.dataset.sec];const rows=S.slice(s.row,s.row+s.rows);const ok=await copyText(tsvOf(rows,s.col,s.col+s.cols));$('stat').textContent=ok?s.name+' '+rows.length+'행 복사됨 → 제출 시트 '+colName(s.col)+(s.row+1)+' 셀을 선택하고 붙여넣기':'복사 실패'})}
+function build(){if(!merge())return;const wk=$('wklabel').value.trim();if(!wk||!isWeek(wk)){alert('주차 표기를 "9월 2주" 형식으로 입력하세요');return}
+  OUT=buildSheet(wk);renderPool();renderOut();$('stat').textContent='생성 완료: 수주풀 '+POOL.length+'행, '+wk+' 기준'}
+$('run').onclick=build;$('poolview').onchange=renderPool;
+$('copyPool').onclick=async()=>{if(!POOL)return;const ok=await copyText(tsvOf(POOL));$('stat').textContent=ok?'수주풀 '+POOL.length+'행 복사됨 → 대상업체(수주풀) 시트 A2에 붙여넣기':'복사 실패'};
+$('copyPoolUpd').onclick=async()=>{if(!POOL)return;const rows=POOL.filter(r=>UPD.has(r[PC.code]+'|'+r[PC.region]));const ok=await copyText(tsvOf(rows));$('stat').textContent=ok?'업데이트 행 '+rows.length+'행 복사됨':'복사 실패'};
+$('dlPool').onclick=()=>{if(!POOL)return;download('대상업체_수주풀.tsv',tsvOf([POOL_HDR,...POOL]))};
+$('copyAll').onclick=async()=>{if(!OUT)return;const ok=await copyText(tsvOf(OUT.S));$('stat').textContent=ok?'전체 시트 '+OUT.S.length+'행 복사됨 → 제출 시트 A1에 붙여넣기':'복사 실패'};
+$('dlAll').onclick=()=>{if(!OUT)return;download('엔지니어링_영업추진현황.tsv',tsvOf(OUT.S))};
+['ref','up'].forEach(id=>$(id).addEventListener('cleared',()=>{POOL=null;OUT=null;$('pool').innerHTML='';$('out').innerHTML='';$('refstat').textContent='';$('upstat').textContent='';$('stat').textContent=''}));
+$('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
+(()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
+addClearButtons();
+</script>
+</body>
+</html>
