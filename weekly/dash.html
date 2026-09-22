@@ -360,13 +360,15 @@ function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,
   return {list:out,matched}}
 /* 계약·견적 요약 표준화: 소재지, 업종, 제안 문구, 단가, 물동량, 예상매출 */
 /* 계약·견적 요약: 원문을 그대로 쓰되 띄어쓰기·쉼표 정리, 물동량 천 단위 쉼표, 예상매출 표기 규칙(1,000천원 미만은 천원, 이상은 억) 적용 */
-function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kind==='단가인상')return q.name+': '+m;
+/* 요약용 업체명: 괄호·대괄호 내용 제거, (주)·(유) 등 법인 표기는 유지 */
+function shortName(n){return String(n||'').replace(/\((주|유|합|재)\)/g,'\u0002$1\u0003').replace(/\[[^\]]*\]|\([^)]*\)/g,'').replace(/\u0002/g,'(').replace(/\u0003/g,')').replace(/\s+/g,' ').trim()||String(n||'')}
+function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kind==='단가인상')return shortName(q.name)+' : '+m;
   m=m.replace(/(\d),(\d)/g,'$1\u0001$2').replace(/\s*,\s*/g,', ').replace(/\s*,\s*,/g,',').replace(/\u0001/g,',').replace(/\s+([.)])/g,'$1').replace(/,\s*$/,'');
   m=m.replace(/물동량\s*:?\s*([\d,\.]+)\s*(매|박스|개|대|롤|톤|EA)?\s*(\/\s*(년|월))?/g,(_,n,u,sl,per)=>'물동량 '+Number(n.replace(/,/g,'')).toLocaleString('en-US')+(u||'매')+'/'+(per||'년'));
   const sales=q.amt?'예상매출 '+(q.amt<1000?q.amt.toLocaleString('en-US')+'천원/년':(q.amt/100000).toFixed(2).replace(/\.?0+$/,'')+'억/년'):'';
   if(sales){if(/예상매출/.test(m))m=m.replace(/예상매출\s*:?\s*[\d,\.]+\s*(억|천원|만원|원)?(\s*\/\s*년)?/,sales);else m+=', '+sales}
   m=m.replace(/(?<![,:]\s?)\s(?=(물동량|예상매출|효과금액))/g,', ').replace(/(?<![,:]\s?)\s(?=(N1\d|P1\d|IN1\d|R\d{2}|EL\d{2})\s*\d{2,3}\/)/g,', ');
-  return q.name+': '+m.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim()}
+  return shortName(q.name)+' : '+m.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim()}
 function quoteRow(q){const cat=q.kind==='단가인상'?'단가인상':q.biz+' '+q.kind;const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};const sum=stdMemo(q);
   return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[cat],items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum,n:0}}
 /* ===== 실행 ===== */
