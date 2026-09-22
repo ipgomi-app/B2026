@@ -113,7 +113,10 @@ function parseTSV(s){
       else cell+=ch }
   }
   row.push(cell);rows.push(row);
-  return rows.filter(r=>r.some(c=>c.trim()!==''));
+  const out=rows.filter(r=>r.some(c=>c.trim()!==''));
+  /* 따옴표가 짝이 안 맞아 여러 줄이 한 셀로 뭉친 경우 → 따옴표 무시하고 줄/탭으로만 분리 */
+  const lines=s.split('\n').filter(l=>l.trim());if(lines.length>=2&&out.length<lines.length/2)return lines.map(l=>l.split('\t'));
+  return out;
 }
 function addClearButtons(){document.querySelectorAll('main textarea').forEach(ta=>{if(ta.dataset.clr)return;ta.dataset.clr='1';const b=document.createElement('button');b.className='sec xs';b.textContent='초기화';b.onclick=()=>{ta.value='';ta.dispatchEvent(new Event('cleared'));ta.focus()};ta.parentNode.insertBefore(b,ta)})}
 async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
@@ -306,10 +309,10 @@ const CFORM_RE=/^\d{2}-(PALLET|물류기기|SCM|산업자재유통|기타|RRPP|�
 const CFORM_BIZ={PALLET:'PPS',물류기기:'산업자재유통',SCM:'SCM',산업자재유통:'산업자재유통',기타:'산업자재유통',RRPP:'글로벌비즈',지게차:'지게차',폴드팩:'글로벌비즈',글로벌비즈:'글로벌비즈'};
 const CONTRACT_KINDS=/신규계약/;
 /* 열 위치에 의존하지 않고 각 셀의 패턴으로 항목을 찾는다 */
-const isDate=v=>/^\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2}$/.test(v);const numv=v=>parseFloat(String(v).replace(/[^\d.\-]/g,''))||0;
+const isDate=v=>/^\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2}(\s|$)/.test(v);const numv=v=>parseFloat(String(v).replace(/[^\d.\-]/g,''))||0;
 const STATUS_RE=/^(결재완료|반려|결재중|결재대기|상신|임시저장|승인|재작성)$/;
 function findCols(r){const c=r.map(x=>String(x||'').trim());const idx=re=>c.findIndex(x=>re.test(x));
-  const date=idx(/^\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2}$/);const form=idx(CFORM_RE);if(form<0)return null;
+  const date=c.findIndex(x=>isDate(x)&&!/오전|오후/.test(x));const form=idx(CFORM_RE);if(form<0)return null;
   const code=c.findIndex((x,i)=>i!==date&&/^\d{6}$/.test(x));const name=code>=0?code+1:-1;
   const emp=c.findIndex((x,i)=>i>date&&i<form&&/^[가-힣]{2,4}\d?$/.test(x)&&!/지점$/.test(x)&&i!==name);
   const br=idx(/^[가-힣]+지점$/);const gubun=idx(/^\d{2}-(신규계약|단가인상|단가인하|관리계약|계약조건변경|재계약|계약종료|재출고개선|단가원복)$/);
@@ -335,6 +338,9 @@ function quoteFixedRow(r){const F=findCols(r);if(!F||F.date<0||F.name<0)return n
   const item=biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 견적',{dtl:[{text:memo}]});
   const amt=Math.round(numv(c(F.amt))/1000);const br=(c(F.br).match(/[가-힣]+지점/)||[''])[0];
   return {date:parseDate(c(F.date)),emp:c(F.emp).replace(/\s+/g,''),code:c(F.code),name:c(F.name),biz,kind:'견적',item,amt,memo,notes:F.notes.join(' / '),status,br,wkTxt:c(F.date),fixed:true}}
+function diagQuote(raw){const rows=parseTSV(raw);if(!rows.length)return '내용 없음';const r=rows[0];const c=r.map(x=>String(x||'').trim());
+  const has=[['날짜',c.some(x=>isDate(x))],['계약형태(01-PALLET 등)',c.some(x=>CFORM_RE.test(x))],['코드(6자리)',c.some(x=>/^\d{6}$/.test(x))],['계약구분/견적서',c.some(x=>/^\d{2}-(신규계약|단가인상|단가인하|재계약|관리계약|계약조건변경|계약종료)|견적서/.test(x))]];
+  return rows.length+'행, 첫 행 '+r.length+'열 · 첫 행에서 찾은 항목: '+(has.filter(h=>h[1]).map(h=>h[0]).join(', ')||'없음')+' / 못 찾은 항목: '+(has.filter(h=>!h[1]).map(h=>h[0]).join(', ')||'없음')+' (탭으로 구분된 원본 그대로 붙여야 합니다)'}
 function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,hdr=null;const matched=[];let fixedN=0,rejected=0;const skipped={};
   rows.forEach(r=>{if(!r.some(x=>String(x).trim()))return;
     const cr=mode==='contract'?contractRow(r):quoteFixedRow(r);if(cr){if(cr.skip){skipped[cr.skip]=(skipped[cr.skip]||0)+1;return}if(/반려/.test(cr.status)){rejected++;return}const e=EMP2[cr.emp]||EMP2[cr.emp.replace(/\d+$/,'')]||{};cr.br=cr.br||e.br||'';cr.reg=e.reg||(CITY2BR.find(x=>x[1]===cr.br)||[])[2]||'';out.push(cr);fixedN++;return}const cand=quoteHeader(r);const score=Object.keys(cand).length;
@@ -372,7 +378,7 @@ function build(){const wk=curWeek();
     const items={},camt={};cats.forEach(c=>{items[c]=itemOf(c,d);camt[c]=Math.max(0,...d.parts.filter(pt=>classify({...pt,parts:[pt]}).includes(c)).map(pt=>diaryInfo(pt).amt||0))||null});
     return {d,br:e.br||'미지정',reg:e.reg||'기타',cats,items,camt,stage:stageOfDiary(d,cats),amt,sum:summary(d,cats),n:d.parts.length}});
   const inWkQ=q=>!EXCLUDE_EMP.includes(q.emp.replace(/\d+$/,''))&&($('allweeks').checked||!q.date||!wk||(q.date.key>=wk.from&&q.date.key<=wk.to));
-  const statTxt=(lbl,Q,n,raw)=>Q.list.length?lbl+' 인식: '+Q.list.length+'건'+(n!==Q.list.length?' 중 기간 내 '+n+'건':'')+' · '+Q.matched.join(' / '):(raw.trim()?lbl+' 형식을 인식하지 못했습니다':'');
+  const statTxt=(lbl,Q,n,raw)=>Q.list.length?lbl+' 인식: '+Q.list.length+'건'+(n!==Q.list.length?' 중 기간 내 '+n+'건':'')+' · '+Q.matched.join(' / '):(raw.trim()?lbl+' 형식을 인식하지 못했습니다 · '+diagQuote(raw):'');
   const QC=parseQuote($('contract').value,'contract'),QQ=parseQuote($('quote').value,'quote');
   const cIn=QC.list.filter(inWkQ),qIn=QQ.list.filter(inWkQ);
   [...cIn,...qIn].forEach(q=>rows.push(quoteRow(q)));
