@@ -61,15 +61,20 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
     <label><input type="checkbox" id="allweeks"> 기간 무시(붙여넣은 전체)</label>
   </div>
 </div>
-<div class="grid">
 <div class="card">
   <h2>1. 업무일지 붙여넣기 <span class="tag">전 지점 통합 조회 결과</span></h2>
   <textarea id="diary" placeholder="업무일지 조회 결과(VISIT_DAT 또는 PRG_GUBUN 헤더 + 상세 행)를 그대로 붙여넣으세요. 여러 지점 결과를 이어 붙여도 됩니다."></textarea>
   <div id="diarystat" class="hint"></div>
 </div>
+<div class="grid">
 <div class="card">
-  <h2>2. 품의/견적 데이터 붙여넣기 <span class="tag">계약·견적 집계용</span></h2>
-  <textarea id="quote" placeholder="품의/견적 시트를 머리글 포함 그대로 붙여넣으세요(담당, 부서/지점, 업체명, 계약형태, 구분(계약/견적), 계약구분(신규/경쟁사), 품목, 예상매출액, 내용, 일자 등 열을 자동 인식). 여러 시트를 이어 붙여도 됩니다."></textarea>
+  <h2>2. 계약 데이터 붙여넣기 <span class="tag">계약 조회 결과</span></h2>
+  <textarea id="contract" style="min-height:140px" placeholder="계약 조회 결과를 그대로 붙여넣으세요(등록일, 담당, 코드, 업체명, 계약형태, … 계약구분, 예상매출액, 내용 순의 머리글 없는 형식). 신규계약만 계약으로, 단가인상은 단가인상으로 집계하고 반려는 제외합니다."></textarea>
+  <div id="contractstat" class="hint"></div>
+</div>
+<div class="card">
+  <h2>3. 견적 데이터 붙여넣기 <span class="tag">견적 조회 결과</span></h2>
+  <textarea id="quote" style="min-height:140px" placeholder="견적 조회 결과를 그대로 붙여넣으세요(회사, 결재, 등록일, 결재상태, 코드, 업체명, 제목, 지점코드, 지점, 사번, 담당, 문서구분, 계약형태, … 예상매출액, 규격, … 내용 순의 머리글 없는 형식). 반려는 제외합니다."></textarea>
   <div id="quotestat" class="hint"></div>
 </div>
 </div>
@@ -315,13 +320,13 @@ function quoteFixedRow(r){const c=i=>String(r[i]||'').trim();if(!/견적/.test(c
   const item=biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 견적',{dtl:[{text:memo}]});
   const amt=Math.round((parseFloat(c(32).replace(/[^\d.\-]/g,''))||0)/1000);const br=(c(8).match(/[가-힣]+지점/)||[c(8)])[0];
   return {date:parseDate(c(2)),emp:c(10).replace(/\s+/g,''),code:c(4),name:c(5),biz,kind:'견적',item,amt,memo,status,br,wkTxt:c(2),fixed:true}}
-function parseQuote(raw){const rows=parseTSV(raw);const out=[];let hm=null,hdr=null;const matched=[];let fixedN=0,rejected=0;const skipped={};
+function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,hdr=null;const matched=[];let fixedN=0,rejected=0;const skipped={};
   rows.forEach(r=>{if(!r.some(x=>String(x).trim()))return;
-    const cr=contractRow(r)||quoteFixedRow(r);if(cr){if(cr.skip){skipped[cr.skip]=(skipped[cr.skip]||0)+1;return}if(/반려/.test(cr.status)){rejected++;return}const e=EMP2[cr.emp]||EMP2[cr.emp.replace(/\d+$/,'')]||{};cr.br=cr.br||e.br||'';cr.reg=e.reg||(CITY2BR.find(x=>x[1]===cr.br)||[])[2]||'';out.push(cr);fixedN++;return}const cand=quoteHeader(r);const score=Object.keys(cand).length;
+    const cr=mode==='contract'?contractRow(r):quoteFixedRow(r);if(cr){if(cr.skip){skipped[cr.skip]=(skipped[cr.skip]||0)+1;return}if(/반려/.test(cr.status)){rejected++;return}const e=EMP2[cr.emp]||EMP2[cr.emp.replace(/\d+$/,'')]||{};cr.br=cr.br||e.br||'';cr.reg=e.reg||(CITY2BR.find(x=>x[1]===cr.br)||[])[2]||'';out.push(cr);fixedN++;return}const cand=quoteHeader(r);const score=Object.keys(cand).length;
     if(score>=3&&(!hm||score>=Object.keys(hm).length-1)&&cand.name!==undefined){const ok=Object.keys(cand).filter(k=>['emp','name','biz','kind','amt'].includes(k)).length>=2;if(ok){hm=cand;hdr=r;matched.push(Object.entries(cand).map(([k,i])=>k+'='+String(r[i]).trim()).join(', '));return}}
     if(!hm)return;const g=k=>hm[k]===undefined?'':String(r[hm[k]]||'').trim();
     const name=g('name');if(!name)return;
-    const line=r.join(' ');const kindT=g('kind')||line;const kind=/계약/.test(kindT)&&!/견적/.test(g('kind')||'')?'계약':/견적|품의/.test(kindT)?'견적':'견적';
+    const line=r.join(' ');const kindT=g('kind')||line;const kind=mode==='contract'?(/단가인상/.test(g('kind')+' '+g('newc'))?'단가인상':'계약'):'견적';
     const bizT=g('biz')+' '+g('item')+' '+g('memo');let bz=bizFromText(bizT).filter(b=>b!=='PPS');const biz=bz.length?bz[0]:'PPS';
     const newc=g('newc');const item=biz==='PPS'?(/경쟁/.test(newc+' '+g('memo'))?'경쟁사':'신규'):(g('item')||itemOf(biz+' '+kind,{dtl:[{text:bizT}]}));
     let amt=parseFloat(g('amt').replace(/[^\d.\-]/g,''))||0;
@@ -330,7 +335,7 @@ function parseQuote(raw){const rows=parseTSV(raw);const out=[];let hm=null,hdr=n
     out.push({date,emp,br:brN,reg,code:g('code'),name,biz,kind,item,amt,memo:g('memo')||line.replace(/\s+/g,' ').trim().slice(0,200),wkTxt:g('date')})});
   /* 금액 단위: 시트에 1,000,000 이상 값이 하나라도 있으면 원 단위로 보고 전체를 천원으로 환산 */
   if(out.some(q=>Math.abs(q.amt)>=1000000))out.forEach(q=>q.amt=Math.round(q.amt/1000));
-  if(fixedN)matched.unshift('계약/견적 조회 고정열 '+fixedN+'건'+(rejected?' (반려 '+rejected+'건 제외)':'')+(Object.keys(skipped).length?' (제외: '+Object.entries(skipped).map(([k,v])=>k+' '+v).join(', ')+')':''));
+  if(fixedN)matched.unshift('조회 형식 '+fixedN+'건'+(rejected?' (반려 '+rejected+'건 제외)':'')+(Object.keys(skipped).length?' (제외: '+Object.entries(skipped).map(([k,v])=>k+' '+v).join(', ')+')':''));
   return {list:out,matched}}
 function quoteRow(q){const cat=q.kind==='단가인상'?'단가인상':q.biz+' '+q.kind;const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};
   return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[cat],items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum:q.memo,n:0}}
@@ -342,9 +347,12 @@ function build(){const wk=curWeek();
   const rows=mergeByCode(inWk).map(d=>{const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);const cats=classify(d);const amt=d.parts.map(x=>diaryInfo(x).amt).find(a=>a)||null;
     const items={},camt={};cats.forEach(c=>{items[c]=itemOf(c,d);camt[c]=Math.max(0,...d.parts.filter(pt=>classify({...pt,parts:[pt]}).includes(c)).map(pt=>diaryInfo(pt).amt||0))||null});
     return {d,br:e.br||'미지정',reg:e.reg||'기타',cats,items,camt,stage:stageOfDiary(d,cats),amt,sum:summary(d,cats),n:d.parts.length}});
-  const Q=parseQuote($('quote').value);const qIn=Q.list.filter(q=>!EXCLUDE_EMP.includes(q.emp.replace(/\d+$/,''))).filter(q=>$('allweeks').checked||!q.date||!wk||(q.date.key>=wk.from&&q.date.key<=wk.to));
-  qIn.forEach(q=>rows.push(quoteRow(q)));
-  $('quotestat').textContent=Q.list.length?'품의/견적 인식: '+Q.list.length+'건'+(qIn.length!==Q.list.length?' 중 기간 내 '+qIn.length+'건':'')+' · 열 매칭: '+Q.matched.join(' / '):($('quote').value.trim()?'품의/견적 머리글을 인식하지 못했습니다(담당·업체명·계약형태·구분·금액 열 필요)':'');
+  const inWkQ=q=>!EXCLUDE_EMP.includes(q.emp.replace(/\d+$/,''))&&($('allweeks').checked||!q.date||!wk||(q.date.key>=wk.from&&q.date.key<=wk.to));
+  const statTxt=(lbl,Q,n,raw)=>Q.list.length?lbl+' 인식: '+Q.list.length+'건'+(n!==Q.list.length?' 중 기간 내 '+n+'건':'')+' · '+Q.matched.join(' / '):(raw.trim()?lbl+' 형식을 인식하지 못했습니다':'');
+  const QC=parseQuote($('contract').value,'contract'),QQ=parseQuote($('quote').value,'quote');
+  const cIn=QC.list.filter(inWkQ),qIn=QQ.list.filter(inWkQ);
+  [...cIn,...qIn].forEach(q=>rows.push(quoteRow(q)));
+  $('contractstat').textContent=statTxt('계약',QC,cIn.length,$('contract').value);$('quotestat').textContent=statTxt('견적',QQ,qIn.length,$('quote').value);
   OUT=rows;$('diarystat').textContent='업무일지 인식: '+ALL.length+'건'+(wk&&!$('allweeks').checked?' 중 '+wk.text+' 기간 '+inWk.length+'건':'')+' → 업체 '+rows.filter(r=>!r.q).length+'개, 담당자 '+new Set(rows.filter(r=>!r.q).map(r=>r.d.emp)).size+'명';
   const sel=$('catf');const cur=sel.value;sel.innerHTML='<option value="">전체</option>'+CATS.map(c=>'<option'+(c===cur?' selected':'')+'>'+c+'</option>').join('');
   render();$('stat').textContent='생성 완료: '+rows.length+'건'}
@@ -406,6 +414,7 @@ $('copyList').onclick=async()=>{if(!OUT)return;const rows=visible().sort((a,b)=>
   const t=[['날짜','권역','지점','담당자','코드','업체명','분류','품목','단계','금액(천원)','요약'],...rows.map(r=>[dateStr(r.d),r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.cats.join('/'),r.cats.map(c=>r.items[c]).filter(Boolean).join('/'),r.stage||'',r.amt||'',r.sum])];
   const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'상세 목록 '+rows.length+'건 복사됨':'복사 실패'};
 $('quote').addEventListener('cleared',()=>{$('quotestat').textContent=''});
+$('contract').addEventListener('cleared',()=>{$('contractstat').textContent=''});
 $('diary').addEventListener('cleared',()=>{ALL=[];OUT=null;$('sum').innerHTML='';$('detail').innerHTML='';$('cards').innerHTML='';$('diarystat').textContent='';$('stat').textContent=''});
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
