@@ -88,6 +88,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
     <span class="hint" style="margin:0">집계표: 권역·지점·담당자별 분류 건수. 상세 목록: 날짜, 권역, 지점, 담당자, 코드, 업체명, 분류, 단계, 금액(천원), 요약. 값만 복사되어 엑셀 선택 셀부터 붙습니다.</span>
   </div>
   <div id="sum" class="prev" style="margin-bottom:12px"></div>
+  <div id="catlist" style="margin-bottom:12px;display:none"></div>
   <div id="detail"></div>
 </div>
 </main>
@@ -280,6 +281,17 @@ function classify(d){const typ=d.dtl.map(x=>x.typ).join(' ');const all=d.dtl.map
   if(/재고실사/.test(typ))c.add('재고실사');
   if(/미수금|보증/.test(typ))c.add('미수금');
   return CATS.filter(x=>c.has(x))}
+/* 품목 판정: PPS는 신규/경쟁사, 나머지 사업은 품목명 */
+function itemOf(cat,d){const all=d.dtl.map(x=>x.text).join(' ');const biz=cat.replace(/ (계약|견적)$/,'');const m=re=>(all.match(re)||[])[0]||'';
+  if(biz==='PPS')return /경쟁사\s*전환|경쟁사\s*(사용|업체|계약)|재전환|전환\s*견적|AJ/.test(all)?'경쟁사':'신규';
+  if(biz==='산업자재유통'){if(/스트레치|스트래치|필름/.test(all))return '필름';if(/박스/.test(all))return '박스';if(/테이프/.test(all))return '테이프';if(/파렛트|팔레트/.test(all))return '파렛트';if(/랩/.test(all))return '랩';return ''}
+  if(biz==='SCM')return m(/윙바디|운송|라토스|보관/);
+  if(biz==='지게차'){const k=m(/전동|디젤|리치|C\/B|LPG/i);return k?k+' 지게차':'지게차'}
+  if(biz==='글로벌비즈'){const r=all.match(/\bR\d{2}/);if(r)return r[0];if(/FOLDPAC/i.test(all))return 'FOLDPAC';if(/포워딩/.test(all))return '포워딩';return ''}
+  if(cat==='단가인상')return detectKind(all);
+  if(cat==='엔지니어링')return m(ENG_RE).replace(/엔지니어링/,'');
+  return ''}
+function catLabel(cat,d){const biz=cat.replace(/ (계약|견적)$/,'');if(biz==='글로벌비즈'){const all=d.dtl.map(x=>x.text).join(' ');return /포워딩/.test(all)&&!/RRPP/i.test(all)?'포워딩':'RRPP'}return biz}
 function stageOfDiary(d,cats){const all=d.dtl.map(x=>x.text).join(' ');if(cats.includes('엔지니어링'))return engStage(all);if(cats.some(c=>c.endsWith(' 계약')))return '계약';const i=diaryInfo(d);return i.stage}
 function summary(d,cats){if(cats.includes('엔지니어링')){const m=engMemo(d);if(m)return m.replace(/\n/g,' / ')}const infos=d.parts.map(x=>diaryInfo(x));const amt=infos.map(i=>i.amt).find(a=>a);const memo=composeMemo(infos,'',amt,infos.some(i=>i.stage==='견적')?'견적':'방문');return memo||infos.map(i=>i.memo).find(m=>m)||''}
 /* 같은 업체(코드)의 일지를 한 행으로 합침 */
@@ -292,14 +304,17 @@ function build(){const wk=curWeek();const emap=parseEmap($('emap').value);
   ALL=parseDiary($('diary').value);
   const inWk=ALL.filter(d=>!EXCLUDE_EMP.includes(String(d.emp).replace(/\d+$/,''))).filter(d=>$('allweeks').checked||(d.date&&wk&&d.date.key>=wk.from&&d.date.key<=wk.to));
   const rows=mergeByCode(inWk).map(d=>{const e=emap[d.emp]||EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);const cats=classify(d);const amt=d.parts.map(x=>diaryInfo(x).amt).find(a=>a)||null;
-    return {d,br:e.br||'미지정',reg:e.reg||'기타',cats,stage:stageOfDiary(d,cats),amt,sum:summary(d,cats),n:d.parts.length}});
+    const items={};cats.forEach(c=>items[c]=itemOf(c,d));
+    return {d,br:e.br||'미지정',reg:e.reg||'기타',cats,items,stage:stageOfDiary(d,cats),amt,sum:summary(d,cats),n:d.parts.length}});
   OUT=rows;$('diarystat').textContent='업무일지 인식: '+ALL.length+'건'+(wk&&!$('allweeks').checked?' 중 '+wk.text+' 기간 '+inWk.length+'건':'')+' → 업체 '+rows.length+'개, 담당자 '+new Set(rows.map(r=>r.d.emp)).size+'명';
   const sel=$('catf');const cur=sel.value;sel.innerHTML='<option value="">전체</option>'+CATS.map(c=>'<option'+(c===cur?' selected':'')+'>'+c+'</option>').join('');
   render();$('stat').textContent='생성 완료: '+rows.length+'건'}
 function visible(){const f=$('catf').value;return OUT.filter(r=>!f||r.cats.includes(f))}
 function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops').checked;
   const cnt={};CATS.forEach(c=>cnt[c]=rows.filter(r=>r.cats.includes(c)).length);
-  $('cards').innerHTML=CATS.map(c=>'<div style="border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:#fff;min-width:96px;text-align:center"><div style="font-size:11px;color:var(--mut)">'+c+'</div><div style="font-size:20px;font-weight:700;color:var(--navy)">'+cnt[c]+'</div></div>').join('');
+  const selCat=$('catf').value;$('cards').innerHTML=CATS.map(c=>'<div class="card" data-cat="'+esc(c)+'" style="cursor:pointer;border:2px solid '+(c===selCat?'var(--navy)':'var(--line)')+';border-radius:8px;padding:6px 12px;background:'+(c===selCat?'#eef3fb':'#fff')+';min-width:96px;text-align:center"><div style="font-size:11px;color:var(--mut)">'+c+'</div><div style="font-size:20px;font-weight:700;color:var(--navy)">'+cnt[c]+'</div></div>').join('');
+  $('cards').querySelectorAll('.card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
+  renderCatList(selCat);
   /* 집계표 */
   const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};rows.forEach(r=>{const k=key(r).join('|');(groups[k]=groups[k]||{k:key(r),rows:[]}).rows.push(r)});
   const cols=CATS.slice();const emp=$('mode').value==='emp';
@@ -325,11 +340,20 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
       h+='</table></div>'});
     h+='</details>'});
   $('detail').innerHTML=h||'<div class="hint">표시할 일지가 없습니다</div>'}
+const LIST_HDR=['날짜','분류','품목','단계','권역','지점','담당자','코드','업체명','금액(천원)','요약'];
+const dateStr=d=>d.date?d.date.y+'-'+String(d.date.m).padStart(2,'0')+'-'+String(d.date.d).padStart(2,'0'):'';
+function listRow(r,cat){return [dateStr(r.d),catLabel(cat,r.d),r.items[cat]||'',/ 계약$/.test(cat)?'계약':/ 견적$/.test(cat)?'견적':(r.stage||''),r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.amt||'',r.sum]}
+function renderCatList(cat){const box=$('catlist');if(!cat||!OUT){box.style.display='none';box.innerHTML='';OUT&&(OUT.catTable=null);return}
+  const rows=OUT.filter(r=>r.cats.includes(cat)).sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp}));
+  const T=[LIST_HDR,...rows.map(r=>listRow(r,cat))];OUT.catTable=T;
+  box.style.display='';box.innerHTML='<div class="row" style="align-items:center;gap:8px;margin-bottom:4px"><b style="color:var(--navy)">'+esc(cat)+' '+rows.length+'건</b><button class="sec" id="copyCat">목록 값 복사</button></div>'+
+    '<div class="prev"><table class="xl"><tr>'+LIST_HDR.map(h=>'<td class="hg">'+esc(h)+'</td>').join('')+'</tr>'+T.slice(1).map(r=>'<tr>'+r.map((v,i)=>'<td class="'+(i===9?'n':i===10?'txt':'c')+'"'+(i===10?' style="white-space:normal;max-width:520px"':'')+'>'+(typeof v==='number'?v.toLocaleString('en-US'):esc(v))+'</td>').join('')+'</tr>').join('')+'</table></div>';
+  $('copyCat').onclick=async()=>{const ok=await copyText(T.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?cat+' 목록 '+rows.length+'건 복사됨':'복사 실패'}}
 const cellTsv=v=>{let x=String(v??'').replace(/\t/g,' ').replace(/\r\n?/g,'\n');return x.includes('\n')||x.includes('"')?'"'+x.replace(/"/g,'""')+'"':x};
 $('run').onclick=build;['mode','catf','hideops'].forEach(id=>$(id).onchange=render);$('allweeks').onchange=()=>{if(ALL.length)build()};
 $('copySum').onclick=async()=>{if(!OUT)return;const ok=await copyText(OUT.sumTable.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'집계표 복사됨':'복사 실패'};
 $('copyList').onclick=async()=>{if(!OUT)return;const rows=visible().sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp}));
-  const t=[['날짜','권역','지점','담당자','코드','업체명','분류','단계','금액(천원)','요약'],...rows.map(r=>[r.d.date?r.d.date.y+'-'+String(r.d.date.m).padStart(2,'0')+'-'+String(r.d.date.d).padStart(2,'0'):'',r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.cats.join('/'),r.stage||'',r.amt||'',r.sum])];
+  const t=[['날짜','권역','지점','담당자','코드','업체명','분류','품목','단계','금액(천원)','요약'],...rows.map(r=>[dateStr(r.d),r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.cats.join('/'),r.cats.map(c=>r.items[c]).filter(Boolean).join('/'),r.stage||'',r.amt||'',r.sum])];
   const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'상세 목록 '+rows.length+'건 복사됨':'복사 실패'};
 $('diary').addEventListener('cleared',()=>{ALL=[];OUT=null;$('sum').innerHTML='';$('detail').innerHTML='';$('cards').innerHTML='';$('diarystat').textContent='';$('stat').textContent=''});
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
