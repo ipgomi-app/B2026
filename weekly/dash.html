@@ -359,7 +359,7 @@ function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kin
   m=m.replace(/물동량\s*:?\s*([\d,\.]+)\s*(매|박스|개|대|롤|톤|EA)?\s*(\/\s*(년|월))?/g,(_,n,u,sl,per)=>'물동량 '+Number(n.replace(/,/g,'')).toLocaleString('en-US')+(u||'매')+'/'+(per||'년'));
   const sales=q.amt?'예상매출 '+(q.amt<1000?q.amt.toLocaleString('en-US')+'천원/년':(q.amt/100000).toFixed(2).replace(/\.?0+$/,'')+'억/년'):'';
   if(sales){if(/예상매출/.test(m))m=m.replace(/예상매출\s*:?\s*[\d,\.]+\s*(억|천원|만원|원)?(\s*\/\s*년)?/,sales);else m+=', '+sales}
-  m=m.replace(/(?<![,:]\s?)\s(?=(물동량|예상매출|효과금액)\b)/g,', ').replace(/(?<![,:]\s?)\s(?=(N1\d|P1\d|IN1\d|R\d{2}|EL\d{2})\s*\d{2,3}\/)/g,', ');
+  m=m.replace(/(?<![,:]\s?)\s(?=(물동량|예상매출|효과금액))/g,', ').replace(/(?<![,:]\s?)\s(?=(N1\d|P1\d|IN1\d|R\d{2}|EL\d{2})\s*\d{2,3}\/)/g,', ');
   return q.name+': '+m.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim()}
 function quoteRow(q){const cat=q.kind==='단가인상'?'단가인상':q.biz+' '+q.kind;const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};const sum=stdMemo(q);
   return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[cat],items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum,n:0}}
