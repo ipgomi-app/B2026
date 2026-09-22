@@ -279,10 +279,10 @@ function classify(d){const typ=d.dtl.map(x=>x.typ).join(' ');const all=d.dtl.map
 /* 품목 판정: PPS는 신규/경쟁사, 나머지 사업은 품목명 */
 function itemOf(cat,d){const all=d.dtl.map(x=>x.text).join(' ');const biz=cat.replace(/ (계약|견적)$/,'');const m=re=>(all.match(re)||[])[0]||'';
   if(biz==='PPS')return /경쟁사\s*전환|경쟁사\s*(사용|업체|계약)|재전환|전환\s*견적|AJ/.test(all)?'경쟁사':'신규';
-  if(biz==='산업자재유통'){if(/스트레치|스트래치|필름/.test(all))return '필름';if(/박스/.test(all))return '박스';if(/테이프/.test(all))return '테이프';if(/파렛트|팔레트/.test(all))return '파렛트';if(/랩/.test(all))return '랩';return ''}
-  if(biz==='SCM')return m(/윙바디|운송|라토스|보관/);
+  if(biz==='산업자재유통'){const L=[[/파렛트\s*네트/,'파렛트네트'],[/스트레치|스트래치|필름/,'필름'],[/EPS\s*박스|스티로폼/i,'EPS박스'],[/라벨/,'라벨지'],[/테이프/,'테이프'],[/박스/,'박스'],[/보냉|아이스팩|냉매/,'보냉재'],[/용기/,'용기'],[/파렛트|팔레트|PALLET/i,'파렛트'],[/랩/,'랩'],[/봉투|비닐/,'비닐'],[/장비|기기/,'물류기기']];for(const [re,n] of L)if(re.test(all))return n;return ''}
+  if(biz==='SCM')return m(/윙바디|운송|보관|도급|하역|라토스|물류센터/);
   if(biz==='지게차'){const k=m(/전동|디젤|리치|C\/B|LPG/i);return k?k+' 지게차':'지게차'}
-  if(biz==='글로벌비즈'){const r=all.match(/\bR\d{2}/);if(r)return r[0];if(/FOLDPAC/i.test(all))return 'FOLDPAC';if(/포워딩/.test(all))return '포워딩';return ''}
+  if(biz==='글로벌비즈'){const r=all.match(/\bR\d{2}/);if(r)return r[0];if(/FOLDPAC|폴드팩/i.test(all))return '폴드팩';if(/포워딩|수출|수입|통관/.test(all))return '포워딩';return ''}
   if(cat==='단가인상')return detectKind(all);
   if(cat==='엔지니어링')return m(ENG_RE).replace(/엔지니어링/,'');
   return ''}
@@ -296,16 +296,16 @@ function mergeByCode(list){const g={};list.forEach(d=>{const k=d.code+'|'+d.emp;
 /* ===== 품의/견적 데이터 ===== */
 const QKEYS=[['emp',/담당자|담당|영업담당|사원/],['br',/지점|부서/],['reg',/권역/],['name',/업체명|거래처명|고객명|업체|거래처/],['code',/코드|CST/i],['biz',/계약형태|사업(구분|항목)|사업|형태/],['kind',/^구분$|계약\/견적|진행(구분|단계)|상태|유형/],['newc',/계약구분|신규\/경쟁|신규|경쟁/],['item',/품목|규격|제품/],['amt',/예상매출|매출액|금액/],['date',/일자|날짜|등록일|주차|년\/월/],['memo',/내용|비고|특이사항/]];
 function quoteHeader(row){const m={};const used=new Set();for(const [k,re] of QKEYS){for(let i=0;i<row.length;i++){const h=String(row[i]||'').trim();if(!h||used.has(i))continue;if(re.test(h)){m[k]=i;used.add(i);break}}}return m}
-/* 계약 조회(머리글 없는 고정 열) : 0 등록일, 1 담당, 2 코드, 3 업체명, 4 계약형태, 7 재전환, 8 경쟁사, 9 품목군, 10 품목, 11 계약구분, 12 단가인상종류, 13 예상매출액, 14 효과금액, 18 규격, 32 내용, 그 뒤 결재상태(결재완료/반려) */
+/* 계약 조회(머리글 없는 고정 열) : 0 등록일, 1 담당, 2 코드, 3 업체명, 4 계약형태, 7 재전환, 8 경쟁사, 11 계약구분(신규계약만 계약, 단가인상은 단가인상, 나머지 제외), 12 단가인상종류, 13 예상매출액, 14 효과금액, 18 규격, 32 내용, 그 뒤 결재상태(결재완료/반려) */
 const CFORM_RE=/^\d{2}-(PALLET|물류기기|SCM|산업자재유통|기타|RRPP|지게차|폴드팩|글로벌비즈)/;
-const CFORM_BIZ={PALLET:'PPS',물류기기:'지게차',SCM:'SCM',산업자재유통:'산업자재유통',기타:'산업자재유통',RRPP:'글로벌비즈',지게차:'지게차',폴드팩:'글로벌비즈',글로벌비즈:'글로벌비즈'};
-const CONTRACT_KINDS=/신규계약|관리계약|계약조건변경|재계약|재출고개선/;
+const CFORM_BIZ={PALLET:'PPS',물류기기:'산업자재유통',SCM:'SCM',산업자재유통:'산업자재유통',기타:'산업자재유통',RRPP:'글로벌비즈',지게차:'지게차',폴드팩:'글로벌비즈',글로벌비즈:'글로벌비즈'};
+const CONTRACT_KINDS=/신규계약/;
 function contractRow(r){const c=i=>String(r[i]||'').trim();if(!CFORM_RE.test(c(4))||!parseDate(c(0)))return null;
   const status=r.map(x=>String(x).trim()).find(x=>/^(결재완료|반려|결재중|결재대기|상신|임시저장)$/.test(x))||'';
   const form=c(4).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const gubun=c(11).replace(/^\d{2}-/,'');const memo=c(32);
   let kind='';if(CONTRACT_KINDS.test(gubun))kind='계약';else if(/단가인상/.test(gubun))kind='단가인상';else return {skip:gubun||'구분없음',name:c(3)};
   const comp=/재전환|전환/.test(c(7))||/^\d{2}-/.test(c(8))||/경쟁사\s*전환|경쟁사\s*(이탈|사용)/.test(memo);
-  const item=kind==='단가인상'?c(12).replace(/^\d{2}-/,''):biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():(c(10)||c(9)||itemOf(biz+' 계약',{dtl:[{text:memo}]}));
+  const item=kind==='단가인상'?c(12).replace(/^\d{2}-/,''):biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 계약',{dtl:[{text:memo}]});
   const num=v=>parseFloat(String(v).replace(/[^\d.\-]/g,''))||0;const amt=Math.round((kind==='단가인상'?num(c(14)):num(c(13)))/1000);
   return {date:parseDate(c(0)),emp:c(1).replace(/\s+/g,''),code:c(2),name:c(3),biz,kind,item,amt,memo:(kind==='단가인상'?c(12).replace(/^\d{2}-/,'')+' / ':'')+memo,status,gubun,wkTxt:c(0),fixed:true}}
 /* 견적 조회(머리글 없는 고정 열) : 2 등록일, 3 결재상태, 4 코드, 5 업체명, 8 지점, 10 담당, 11 문서구분(21-견적서), 12 계약형태, 13 재전환/점유율확대, 14 경쟁사, 32 예상매출액, 33 규격, 40 내용 */
