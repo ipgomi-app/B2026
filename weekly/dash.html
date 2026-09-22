@@ -314,7 +314,7 @@ const STATUS_RE=/^(결재완료|반려|결재중|결재대기|상신|임시저�
 function findCols(r){const c=r.map(x=>String(x||'').trim());const idx=re=>c.findIndex(x=>re.test(x));
   const date=c.findIndex(x=>isDate(x)&&!/오전|오후/.test(x));const form=idx(CFORM_RE);if(form<0)return null;
   const code=c.findIndex((x,i)=>i!==date&&/^\d{6}$/.test(x));const name=code>=0?code+1:-1;
-  const emp=c.findIndex((x,i)=>i>date&&i<form&&/^[가-힣]{2,4}\d?$/.test(x)&&!/지점$/.test(x)&&i!==name);
+  const emp=c.findIndex((x,i)=>i>date&&i<form&&/^[가-힣]{2,4}\d?$/.test(x)&&!/지점$/.test(x)&&!/결재|반려|승인|상신|정상|완료|대기|재작성/.test(x)&&i!==name&&i!==code);
   const br=idx(/^[가-힣]+지점$/);const gubun=idx(/^\d{2}-(신규계약|단가인상|단가인하|관리계약|계약조건변경|재계약|계약종료|재출고개선|단가원복)$/);
   const comp=idx(/^\d{2}-(재전환|해당없음|점유율확대|신규전환|전환)$/);const compName=c.findIndex((x,i)=>i>form&&/^\d{2}-[A-Za-z가-힣]{1,10}$/.test(x)&&i!==gubun&&i!==comp&&!/등급|임대|타용도|SCM|계약처|보증|미가입|연간|일반|신규|견적서|표준/.test(x));
   const priceKind=idx(/^\d{2}-(PLT렌탈료|렌탈료|재입고개선|성수기|센터이용료|재출고|단가)/);
@@ -390,23 +390,27 @@ function build(){const wk=curWeek();
   render();$('stat').textContent='생성 완료: '+rows.length+'건'}
 function visible(){const f=$('catf').value;return OUT.filter(r=>!f||r.cats.includes(f))}
 function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops').checked;
-  const cnt={};CATS.forEach(c=>cnt[c]=rows.filter(r=>r.cats.includes(c)).length);
+  const cnt={};CATS.forEach(c=>cnt[c]=OUT.filter(r=>r.cats.includes(c)).length);
   const selCat=$('catf').value;$('cards').innerHTML=CATS.map(c=>'<div class="card" data-cat="'+esc(c)+'" style="cursor:pointer;border:2px solid '+(c===selCat?'var(--navy)':'var(--line)')+';border-radius:8px;padding:6px 12px;background:'+(c===selCat?'#eef3fb':'#fff')+';min-width:96px;text-align:center"><div style="font-size:11px;color:var(--mut)">'+c+'</div><div style="font-size:20px;font-weight:700;color:var(--navy)">'+cnt[c]+'</div></div>').join('');
   $('cards').querySelectorAll('.card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
   renderCatList(selCat);
   /* 집계표 */
-  const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};rows.forEach(r=>{const k=key(r).join('|');(groups[k]=groups[k]||{k:key(r),rows:[]}).rows.push(r)});
+  const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};
+  /* 지점/담당자 행은 내장 명단 전체를 먼저 깔고, 데이터에만 있는 키를 뒤에 추가 (필터와 무관하게 전체 행 유지) */
+  const isEmp=$('mode').value==='emp';REG_ORDER.forEach(reg=>Object.keys(ORG[reg]||{}).forEach(br=>{if(isEmp)ORG[reg][br].forEach(e=>{if(!EXCLUDE_EMP.includes(e))groups[[reg,br,e].join('|')]={k:[reg,br,e],rows:[]}});else groups[[reg,br].join('|')]={k:[reg,br],rows:[]}}));
+  OUT.forEach(r=>{const k=key(r).join('|');if(!groups[k])groups[k]={k:key(r),rows:[]}});
+  rows.forEach(r=>{const k=key(r).join('|');groups[k].rows.push(r)});
   const emp=$('mode').value==='emp';
   const G=Object.values(groups).sort((a,b)=>sortKey({reg:a.k[0],br:a.k[1],emp:a.k[2]},{reg:b.k[0],br:b.k[1],emp:b.k[2]}));
   const keyH=['권역','지점',...(emp?['담당자']:[])];const BIZ_LBL={'글로벌비즈':'RRPP/포워딩'};
   const cntOf=(list,c)=>list.filter(r=>r.cats.includes(c)).length,amtOf=(list,c)=>list.filter(r=>r.cats.includes(c)).reduce((s,r)=>s+(r.camt[c]||r.amt||0),0);
   /* 표1: 사업별 계약/견적 건수·금액 */
-  const stats1=list=>[list.reduce((s,r)=>s+r.n,0),list.filter(r=>!r.q).length,...BIZ.flatMap(b=>[cntOf(list,b+' 계약'),amtOf(list,b+' 계약'),cntOf(list,b+' 견적'),amtOf(list,b+' 견적')]),...['계약','견적'].flatMap(k=>[BIZ.reduce((s,b)=>s+cntOf(list,b+' '+k),0),BIZ.reduce((s,b)=>s+amtOf(list,b+' '+k),0)])];
+  const stats1=list=>{const A=list.__all||list;return [A.reduce((s,r)=>s+r.n,0),A.filter(r=>!r.q).length,...BIZ.flatMap(b=>[cntOf(list,b+' 계약'),amtOf(list,b+' 계약'),cntOf(list,b+' 견적'),amtOf(list,b+' 견적')]),...['계약','견적'].flatMap(k=>[BIZ.reduce((s,b)=>s+cntOf(list,b+' '+k),0),BIZ.reduce((s,b)=>s+amtOf(list,b+' '+k),0)])]};
   /* 표2: 기타 분류 건수 */
   const CATS2=['농산업종','엔지니어링','단가인상','경쟁사','재고실사','미수금'];const stats2=list=>CATS2.map(c=>cntOf(list,c));
-  const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length)return;gs.forEach(g=>{T.push([...g.k,...stats(g.rows)]);flags.push('')});
-      T.push([reg,'',...(emp?['']:[]),...stats(gs.flatMap(g=>g.rows))]);flags.push('sub')});
-    T.push(['영남영업본부','',...(emp?['']:[]),...stats(rows)]);flags.push('tot');return {T,flags}};
+  const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length)return;gs.forEach(g=>{const L=g.rows.slice();L.__all=OUT.filter(r=>key(r).join('|')===g.k.join('|'));T.push([...g.k,...stats(L)]);flags.push('')});
+      const SL=gs.flatMap(g=>g.rows);SL.__all=OUT.filter(r=>key(r)[0]===reg);T.push([reg,'',...(emp?['']:[]),...stats(SL)]);flags.push('sub')});
+    const TL=rows.slice();TL.__all=OUT;T.push(['영남영업본부','',...(emp?['']:[]),...stats(TL)]);flags.push('tot');return {T,flags}};
   const h1a=[...keyH,'방문건수','업체수',...BIZ.flatMap(b=>[BIZ_LBL[b]||b,'','','']),'합계','','',''];const h1b=[...keyH.map(()=>''),'','',...BIZ.flatMap(()=>['계약','','견적','']),'계약','','견적',''];const h1c=[...keyH.map(()=>''),'','',...BIZ.flatMap(()=>['건수','금액','건수','금액']),'건수','금액','건수','금액'];
   const S1=rowsOf(stats1),S2=rowsOf(stats2);
   const z=T=>T.map(r=>r.map(v=>v===0?'':v));OUT.sumTable=[h1a,h1b,h1c,...z(S1.T)];OUT.sumTable2=[[...keyH,...CATS2],...z(S2.T)];
@@ -414,7 +418,7 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
   const nk=keyH.length;const hg=(t,cs,rs)=>'<td class="hg" style="text-align:center"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+'>'+esc(t)+'</td>';
   const head1='<tr>'+keyH.map(h=>hg(h,1,3)).join('')+hg('방문건수',1,3)+hg('업체수',1,3)+[...BIZ.map(b=>BIZ_LBL[b]||b),'합계'].map(b=>hg(b,4,1)).join('')+'</tr>'+
     '<tr>'+[...BIZ,'합계'].map(()=>hg('계약',2,1)+hg('견적',2,1)).join('')+'</tr>'+'<tr>'+[...BIZ,'합계'].map(()=>[hg('건수'),hg('금액'),hg('건수'),hg('금액')].join('')).join('')+'</tr>';
-  $('sum').innerHTML='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)</div><table class="xl">'+head1+body(S1.T,S1.flags)+'</table>'+
+  $('sum').innerHTML='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)'+(selCat?' <span class="tag">필터: '+esc(selCat)+'</span>':'')+'</div><table class="xl">'+head1+body(S1.T,S1.flags)+'</table>'+
     '<div style="font-weight:700;color:var(--navy);margin:12px 0 4px">② 기타 분류 건수</div><table class="xl"><tr>'+[...keyH,...CATS2].map(h=>hg(h)).join('')+'</tr>'+body(S2.T,S2.flags)+'</table>';
   /* 상세 */
   const byBr={};rows.filter(r=>!r.q).forEach(r=>{const k=r.reg+'|'+r.br;(byBr[k]=byBr[k]||[]).push(r)});
