@@ -305,21 +305,36 @@ function quoteHeader(row){const m={};const used=new Set();for(const [k,re] of QK
 const CFORM_RE=/^\d{2}-(PALLET|물류기기|SCM|산업자재유통|기타|RRPP|지게차|폴드팩|글로벌비즈)/;
 const CFORM_BIZ={PALLET:'PPS',물류기기:'산업자재유통',SCM:'SCM',산업자재유통:'산업자재유통',기타:'산업자재유통',RRPP:'글로벌비즈',지게차:'지게차',폴드팩:'글로벌비즈',글로벌비즈:'글로벌비즈'};
 const CONTRACT_KINDS=/신규계약/;
-function contractRow(r){const c=i=>String(r[i]||'').trim();if(!CFORM_RE.test(c(4))||!parseDate(c(0)))return null;
-  const status=r.map(x=>String(x).trim()).find(x=>/^(결재완료|반려|결재중|결재대기|상신|임시저장)$/.test(x))||'';
-  const form=c(4).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const gubun=c(11).replace(/^\d{2}-/,'');const memo=c(32);
-  let kind='';if(CONTRACT_KINDS.test(gubun))kind='계약';else if(/단가인상/.test(gubun))kind='단가인상';else return {skip:gubun||'구분없음',name:c(3)};
-  const comp=/재전환|전환/.test(c(7))||/^\d{2}-/.test(c(8))||/경쟁사\s*전환|경쟁사\s*(이탈|사용)/.test(memo);
-  const item=kind==='단가인상'?c(12).replace(/^\d{2}-/,''):biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 계약',{dtl:[{text:memo}]});
-  const num=v=>parseFloat(String(v).replace(/[^\d.\-]/g,''))||0;const amt=Math.round((kind==='단가인상'?num(c(14)):num(c(13)))/1000);
-  return {date:parseDate(c(0)),emp:c(1).replace(/\s+/g,''),code:c(2),name:c(3),biz,kind,item,amt,memo:(kind==='단가인상'?c(12).replace(/^\d{2}-/,'')+' / ':'')+memo,status,gubun,wkTxt:c(0),fixed:true}}
-/* 견적 조회(머리글 없는 고정 열) : 2 등록일, 3 결재상태, 4 코드, 5 업체명, 8 지점, 10 담당, 11 문서구분(21-견적서), 12 계약형태, 13 재전환/점유율확대, 14 경쟁사, 32 예상매출액, 33 규격, 40 내용 */
-function quoteFixedRow(r){const c=i=>String(r[i]||'').trim();if(!/견적/.test(c(11))||!CFORM_RE.test(c(12))||!parseDate(c(2)))return null;
-  const status=c(3);const form=c(12).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const memo=c(40);
-  const comp=/재전환|점유율|전환/.test(c(13))||/^\d{2}-/.test(c(14))||/경쟁사\s*(전환|재전환|이탈|사용|방어)/.test(memo);
+/* 열 위치에 의존하지 않고 각 셀의 패턴으로 항목을 찾는다 */
+const isDate=v=>/^\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2}$/.test(v);const numv=v=>parseFloat(String(v).replace(/[^\d.\-]/g,''))||0;
+const STATUS_RE=/^(결재완료|반려|결재중|결재대기|상신|임시저장|승인|재작성)$/;
+function findCols(r){const c=r.map(x=>String(x||'').trim());const idx=re=>c.findIndex(x=>re.test(x));
+  const date=idx(/^\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2}$/);const form=idx(CFORM_RE);if(form<0)return null;
+  const code=c.findIndex((x,i)=>i!==date&&/^\d{6}$/.test(x));const name=code>=0?code+1:-1;
+  const emp=c.findIndex((x,i)=>i>date&&i<form&&/^[가-힣]{2,4}\d?$/.test(x)&&!/지점$/.test(x)&&i!==name);
+  const br=idx(/^[가-힣]+지점$/);const gubun=idx(/^\d{2}-(신규계약|단가인상|단가인하|관리계약|계약조건변경|재계약|계약종료|재출고개선|단가원복)$/);
+  const comp=idx(/^\d{2}-(재전환|해당없음|점유율확대|신규전환|전환)$/);const compName=c.findIndex((x,i)=>i>form&&/^\d{2}-[A-Za-z가-힣]{1,10}$/.test(x)&&i!==gubun&&i!==comp&&!/등급|임대|타용도|SCM|계약처|보증|미가입|연간|일반|신규|견적서|표준/.test(x));
+  const priceKind=idx(/^\d{2}-(PLT렌탈료|렌탈료|재입고개선|성수기|센터이용료|재출고|단가)/);
+  const memo=c.reduce((best,x,i)=>x.length>best.len&&/[가-힣]/.test(x)&&!STATUS_RE.test(x)?{i,len:x.length}:best,{i:-1,len:14}).i;
+  const status=idx(STATUS_RE);const docType=idx(/^\d{2}-?견적/);
+  const after=gubun>=0?gubun:form;const amt=c.findIndex((x,i)=>i>after&&/^-?[\d,]+$/.test(x)&&Math.abs(numv(x))>=1000);
+  const eff=amt>=0&&/^-?[\d,]+$/.test(c[amt+1]||'')?amt+1:-1;
+  const notes=c.filter((x,i)=>i>memo&&i!==status&&x.length>=4&&/[가-힣]/.test(x)&&!isDate(x)&&!/^\d{2}-/.test(x)&&!/^(정상|미가입|가입중|종료|전자계약인감)$/.test(x)&&!/오전|오후/.test(x));
+  return {c,date,form,code,name,emp,br,gubun,comp,compName,priceKind,memo,status,docType,amt,eff,notes}}
+function contractRow(r){const F=findCols(r);if(!F||F.date<0||F.name<0)return null;const c=i=>i>=0?F.c[i]||'':'';
+  if(F.docType>=0)return null;/* 견적서 행은 견적 칸에서 처리 */
+  const form=c(F.form).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const gubun=c(F.gubun).replace(/^\d{2}-/,'');const memo=c(F.memo);const status=c(F.status);
+  let kind='';if(CONTRACT_KINDS.test(gubun))kind='계약';else if(/단가인상/.test(gubun))kind='단가인상';else return {skip:gubun||'구분없음',name:c(F.name)};
+  const comp=/재전환|전환/.test(c(F.comp))||F.compName>=0||/경쟁사\s*전환|경쟁사\s*(이탈|사용)/.test(memo);
+  const item=kind==='단가인상'?c(F.priceKind).replace(/^\d{2}-/,''):biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 계약',{dtl:[{text:memo}]});
+  const amt=Math.round((kind==='단가인상'?numv(c(F.eff)):numv(c(F.amt)))/1000);const br=(c(F.br).match(/[가-힣]+지점/)||[''])[0];
+  return {date:parseDate(c(F.date)),emp:c(F.emp).replace(/\s+/g,''),code:c(F.code),name:c(F.name),biz,kind,item,amt,memo:(kind==='단가인상'?c(F.priceKind).replace(/^\d{2}-/,'')+' / ':'')+memo,notes:F.notes.join(' / '),status,gubun,br,wkTxt:c(F.date),fixed:true}}
+function quoteFixedRow(r){const F=findCols(r);if(!F||F.date<0||F.name<0)return null;const c=i=>i>=0?F.c[i]||'':'';
+  const status=c(F.status);const form=c(F.form).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const memo=c(F.memo);
+  const comp=/재전환|점유율|전환/.test(c(F.comp))||F.compName>=0||/경쟁사\s*(전환|재전환|이탈|사용|방어)/.test(memo);
   const item=biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 견적',{dtl:[{text:memo}]});
-  const amt=Math.round((parseFloat(c(32).replace(/[^\d.\-]/g,''))||0)/1000);const br=(c(8).match(/[가-힣]+지점/)||[c(8)])[0];
-  return {date:parseDate(c(2)),emp:c(10).replace(/\s+/g,''),code:c(4),name:c(5),biz,kind:'견적',item,amt,memo,status,br,wkTxt:c(2),fixed:true}}
+  const amt=Math.round(numv(c(F.amt))/1000);const br=(c(F.br).match(/[가-힣]+지점/)||[''])[0];
+  return {date:parseDate(c(F.date)),emp:c(F.emp).replace(/\s+/g,''),code:c(F.code),name:c(F.name),biz,kind:'견적',item,amt,memo,notes:F.notes.join(' / '),status,br,wkTxt:c(F.date),fixed:true}}
 function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,hdr=null;const matched=[];let fixedN=0,rejected=0;const skipped={};
   rows.forEach(r=>{if(!r.some(x=>String(x).trim()))return;
     const cr=mode==='contract'?contractRow(r):quoteFixedRow(r);if(cr){if(cr.skip){skipped[cr.skip]=(skipped[cr.skip]||0)+1;return}if(/반려/.test(cr.status)){rejected++;return}const e=EMP2[cr.emp]||EMP2[cr.emp.replace(/\d+$/,'')]||{};cr.br=cr.br||e.br||'';cr.reg=e.reg||(CITY2BR.find(x=>x[1]===cr.br)||[])[2]||'';out.push(cr);fixedN++;return}const cand=quoteHeader(r);const score=Object.keys(cand).length;
@@ -391,8 +406,8 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
     T.push(['영남영업본부','',...(emp?['']:[]),...stats(rows)]);flags.push('tot');return {T,flags}};
   const h1a=[...keyH,'방문건수','업체수',...BIZ.flatMap(b=>[BIZ_LBL[b]||b,'','','']),'합계','','',''];const h1b=[...keyH.map(()=>''),'','',...BIZ.flatMap(()=>['계약','','견적','']),'계약','','견적',''];const h1c=[...keyH.map(()=>''),'','',...BIZ.flatMap(()=>['건수','금액','건수','금액']),'건수','금액','건수','금액'];
   const S1=rowsOf(stats1),S2=rowsOf(stats2);
-  OUT.sumTable=[h1a,h1b,h1c,...S1.T];OUT.sumTable2=[[...keyH,...CATS2],...S2.T];
-  const body=(T,flags)=>T.map((r,i)=>'<tr>'+r.map(v=>'<td class="'+(typeof v==='number'?'n':'c')+(flags[i]?' bd':'')+'" style="'+(typeof v==='number'&&v===0?'background:#fff;color:#bbb':flags[i]==='sub'?'background:#fff2cc;':flags[i]==='tot'?'background:#dce6f1;':'')+'">'+(typeof v==='number'?v.toLocaleString('en-US'):esc(v))+'</td>').join('')+'</tr>').join('');
+  const z=T=>T.map(r=>r.map(v=>v===0?'':v));OUT.sumTable=[h1a,h1b,h1c,...z(S1.T)];OUT.sumTable2=[[...keyH,...CATS2],...z(S2.T)];
+  const body=(T,flags)=>T.map((r,i)=>'<tr>'+r.map(v=>'<td class="'+(typeof v==='number'?'n':'c')+(flags[i]?' bd':'')+'" style="'+(flags[i]==='sub'?'background:#fff2cc;':flags[i]==='tot'?'background:#dce6f1;':'')+'">'+(typeof v==='number'?(v===0?'':v.toLocaleString('en-US')):esc(v))+'</td>').join('')+'</tr>').join('');
   const nk=keyH.length;const hg=(t,cs,rs)=>'<td class="hg" style="text-align:center"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+'>'+esc(t)+'</td>';
   const head1='<tr>'+keyH.map(h=>hg(h,1,3)).join('')+hg('방문건수',1,3)+hg('업체수',1,3)+[...BIZ.map(b=>BIZ_LBL[b]||b),'합계'].map(b=>hg(b,4,1)).join('')+'</tr>'+
     '<tr>'+[...BIZ,'합계'].map(()=>hg('계약',2,1)+hg('견적',2,1)).join('')+'</tr>'+'<tr>'+[...BIZ,'합계'].map(()=>[hg('건수'),hg('금액'),hg('건수'),hg('금액')].join('')).join('')+'</tr>';
