@@ -78,7 +78,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
     <button id="run">대시보드 생성</button>
     <label>보기 <select id="mode"><option value="branch">지점별</option><option value="emp">담당자별</option></select></label>
     <label>분류 필터 <select id="catf"><option value="">전체</option></select></label>
-    <label><input type="checkbox" id="hideops" checked> 운영관리(수불·재고·회수·미수금)는 표에서 접기</label>
+    <label><input type="checkbox" id="hideops" checked> 분류 없는 일지(수불·신규업체 방문 등)는 상세에서 접기</label>
     <span id="stat" class="ok"></span>
   </div>
   <div id="cards" class="row" style="gap:8px;margin-bottom:10px"></div>
@@ -257,20 +257,30 @@ function parseEmap(raw){const m={};raw.split(/\r?\n/).forEach(l=>{const f=l.trim
 function guessBr(addr){for(const [re,br,reg] of CITY2BR)if(re.test(addr))return {br,reg};return {br:'',reg:''}}
 /* ===== 분류 ===== */
 const FARM_RE=/농산|농협|APC|영농|청과|과일|채소|산지유통|농업회사|버섯|감귤|김치|축협|원예|양봉|곡물|미곡|RPC/;
-const OPS_RE=/수불|재고실사|공파렛트|입고미회수|미수금|보증|문제해결|실착지|회수|신규업체|폐기|분실|법적/;
-const CATS=['계약','견적','농산업종','엔지니어링','단가인상','경쟁사','산업자재/SCM','운영관리','기타'];
+const EXCLUDE_EMP=['이민승'];
+const BIZ=['PPS','산업자재유통','SCM','지게차','글로벌비즈'];
+const CATS=[...BIZ.flatMap(b=>[b+' 계약',b+' 견적']),'농산업종','엔지니어링','단가인상','경쟁사','재고실사','미수금'];
+const DASH_BIZ_RE={'글로벌비즈':/RRPP|FOLDPAC|포워딩|글로벌비즈/i,'지게차':/지게차|물류장비/,'SCM':/\bSCM\b|윙바디|라토스|운송\s*(견적|계약)/,'산업자재유통':/산업자재유통|스트레치|스트래치|랩\s*(견적|계약)|(박스|필름|테이프)\s*(견적|계약)/,'PPS':/PALLET|파렛트|팔레트|PPS|N1\d|P1\d/i};
+function bizFromText(t){return BIZ.filter(b=>DASH_BIZ_RE[b].test(t))}
+/* 사업 구분: ① 계약형태/제목[태그] 필드 ② 일지 구분(DTL_TYP_NAM) ③ 본문의 견적/계약 앞뒤 15자 키워드, 모두 없으면 PPS */
+function bizOf(typ,all){const forms=(all.match(/(계약형태|제목)\s*:\s*\[?[^\n\]]{1,20}/g)||[]).join(' ');
+  let r=bizFromText(forms);if(!r.length)r=bizFromText(typ.replace(/SCM\/산업자재유통|RRPP\/FOLDPAC/g,''));
+  if(!r.length){const near=(all.match(/[^\n]{0,15}(견적|계약)[^\n]{0,15}/g)||[]).join(' | ');r=bizFromText(near)}
+  return r.length?r:['PPS']}
 function classify(d){const typ=d.dtl.map(x=>x.typ).join(' ');const all=d.dtl.map(x=>x.text).join(' ')+' '+typ;const cat=diaryCategory(d);const c=new Set();
-  if(/신규계약|계약완료|계약체결|계약서\s*(작성|체결)|계약\s*완료|재계약/.test(typ+' '+all)&&!/견적서/.test(all))c.add('계약');
-  if(/견적서|견적\s*(요청|제안|제출|진행|완료)|RRPP견적|견적금액/.test(all))c.add('견적');
+  /* 계약/견적은 일지 건별로 판정(같은 업체의 파렛트 계약 + 산업자재 견적을 섞지 않음) */
+  (d.parts||[d]).forEach(pt=>{const pty=pt.dtl.map(x=>x.typ).join(' ');const pa=pt.dtl.map(x=>x.text).join(' ')+' '+pty;
+    const isQuote=/견적서|견적\s*(요청|제안|제출|진행|완료)|RRPP견적|견적금액/.test(pa);
+    const isContract=/신규계약/.test(pty)||(/신규계약|계약완료|계약체결|계약서\s*(작성|체결)|계약\s*완료|재계약/.test(pa)&&!/견적서/.test(pa));
+    if(isQuote||isContract)bizOf(pty,pa).forEach(b=>{if(isContract)c.add(b+' 계약');if(isQuote)c.add(b+' 견적')})});
   if(/엔지니어링|CES/.test(typ)||/프로젝트\s*구분\s*:\s*엔지니어링/.test(all)||(ENG_RE.test(all)&&!/PPS|파렛트/.test(all)))c.add('엔지니어링');
-  if(PRICE_CAT_RE.test(cat)||(!NONSALES_RE.test(cat)&&PALLET_RE.test(all)&&detectKind(all)!==''&&!/경쟁사\s*전환|재전환|신규\s*계약/.test(all)))c.add('단가인상');
+  if(PRICE_CAT_RE.test(cat)||(!NONSALES_RE.test(cat)&&PALLET_RE.test(all)&&detectKind(all)!==''&&!/경쟁사\s*전환|재전환|신규\s*계약/.test(all)&&!/산업자재유통|물류장비|RRPP/.test(typ)))c.add('단가인상');
   if(/경쟁사/.test(typ))c.add('경쟁사');
-  if(/산업자재|SCM|물류장비|RRPP|지게차/.test(typ)||/스트레치|필름|박스|테이프|지게차\s*(견적|계약)/.test(all))c.add('산업자재/SCM');
   if(FARM_RE.test(d.name+' '+all))c.add('농산업종');
-  if(OPS_RE.test(typ)&&!c.size)c.add('운영관리');
-  if(!c.size)c.add('기타');
-  return [...c]}
-function stageOfDiary(d,cats){const all=d.dtl.map(x=>x.text).join(' ');if(cats.includes('엔지니어링'))return engStage(all);if(cats.includes('계약'))return '계약';const i=diaryInfo(d);return i.stage}
+  if(/재고실사/.test(typ))c.add('재고실사');
+  if(/미수금|보증/.test(typ))c.add('미수금');
+  return CATS.filter(x=>c.has(x))}
+function stageOfDiary(d,cats){const all=d.dtl.map(x=>x.text).join(' ');if(cats.includes('엔지니어링'))return engStage(all);if(cats.some(c=>c.endsWith(' 계약')))return '계약';const i=diaryInfo(d);return i.stage}
 function summary(d,cats){if(cats.includes('엔지니어링')){const m=engMemo(d);if(m)return m.replace(/\n/g,' / ')}const infos=d.parts.map(x=>diaryInfo(x));const amt=infos.map(i=>i.amt).find(a=>a);const memo=composeMemo(infos,'',amt,infos.some(i=>i.stage==='견적')?'견적':'방문');return memo||infos.map(i=>i.memo).find(m=>m)||''}
 /* 같은 업체(코드)의 일지를 한 행으로 합침 */
 function mergeByCode(list){const g={};list.forEach(d=>{const k=d.code+'|'+d.emp;(g[k]=g[k]||[]).push(d)});
@@ -280,7 +290,7 @@ function mergeByCode(list){const g={};list.forEach(d=>{const k=d.code+'|'+d.emp;
 let ALL=[],OUT=null;
 function build(){const wk=curWeek();const emap=parseEmap($('emap').value);
   ALL=parseDiary($('diary').value);
-  const inWk=ALL.filter(d=>$('allweeks').checked||(d.date&&wk&&d.date.key>=wk.from&&d.date.key<=wk.to));
+  const inWk=ALL.filter(d=>!EXCLUDE_EMP.includes(String(d.emp).replace(/\d+$/,''))).filter(d=>$('allweeks').checked||(d.date&&wk&&d.date.key>=wk.from&&d.date.key<=wk.to));
   const rows=mergeByCode(inWk).map(d=>{const e=emap[d.emp]||EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);const cats=classify(d);const amt=d.parts.map(x=>diaryInfo(x).amt).find(a=>a)||null;
     return {d,br:e.br||'미지정',reg:e.reg||'기타',cats,stage:stageOfDiary(d,cats),amt,sum:summary(d,cats),n:d.parts.length}});
   OUT=rows;$('diarystat').textContent='업무일지 인식: '+ALL.length+'건'+(wk&&!$('allweeks').checked?' 중 '+wk.text+' 기간 '+inWk.length+'건':'')+' → 업체 '+rows.length+'개, 담당자 '+new Set(rows.map(r=>r.d.emp)).size+'명';
@@ -292,7 +302,7 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
   $('cards').innerHTML=CATS.map(c=>'<div style="border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:#fff;min-width:96px;text-align:center"><div style="font-size:11px;color:var(--mut)">'+c+'</div><div style="font-size:20px;font-weight:700;color:var(--navy)">'+cnt[c]+'</div></div>').join('');
   /* 집계표 */
   const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};rows.forEach(r=>{const k=key(r).join('|');(groups[k]=groups[k]||{k:key(r),rows:[]}).rows.push(r)});
-  const cols=CATS.filter(c=>!(hideops&&c==='운영관리'));const emp=$('mode').value==='emp';
+  const cols=CATS.slice();const emp=$('mode').value==='emp';
   const G=Object.values(groups).sort((a,b)=>sortKey({reg:a.k[0],br:a.k[1],emp:a.k[2]},{reg:b.k[0],br:b.k[1],emp:b.k[2]}));
   const hdr=['권역','지점',...(emp?['담당자']:[]),'방문건수','업체수',...cols,'금액계(천원)'];const nk=emp?3:2;
   const stats=list=>{const n=list.reduce((s,r)=>s+r.n,0),u=list.length,amt=list.reduce((s,r)=>s+(r.amt||0),0);return [n,u,...cols.map(c=>list.filter(r=>r.cats.includes(c)).length),amt]};
@@ -307,11 +317,11 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
   let h='';Object.keys(byBr).sort((a,b)=>{const [ar,ab]=a.split('|'),[br_,bb]=b.split('|');return sortKey({reg:ar,br:ab},{reg:br_,br:bb})}).forEach(k=>{const [reg,br]=k.split('|');const list=byBr[k];
     const byEmp={};list.forEach(r=>(byEmp[r.d.emp]=byEmp[r.d.emp]||[]).push(r));
     h+='<details open style="margin-bottom:8px"><summary style="cursor:pointer;font-weight:700;color:var(--navy);font-size:14px">'+esc(reg+' · '+br)+' <span class="hint" style="margin:0">'+list.length+'개 업체 · '+Object.keys(byEmp).length+'명</span></summary>';
-    Object.keys(byEmp).sort((a,b)=>empIdx(a)-empIdx(b)||a.localeCompare(b)).forEach(emp=>{const L=byEmp[emp];const main=L.filter(r=>!(hideops&&r.cats.length===1&&r.cats[0]==='운영관리'));const ops=L.length-main.length;
-      h+='<div style="margin:6px 0 10px 12px"><b>'+esc(emp)+'</b> <span class="hint" style="margin:0">'+L.length+'개 업체'+(ops?' (운영관리 '+ops+'건 접힘)':'')+' · '+CATS.filter(c=>c!=='운영관리'&&L.some(r=>r.cats.includes(c))).map(c=>c+' '+L.filter(r=>r.cats.includes(c)).length).join(', ')+'</span>';
+    Object.keys(byEmp).sort((a,b)=>empIdx(a)-empIdx(b)||a.localeCompare(b)).forEach(emp=>{const L=byEmp[emp];const main=L.filter(r=>!(hideops&&!r.cats.length));const ops=L.length-main.length;
+      h+='<div style="margin:6px 0 10px 12px"><b>'+esc(emp)+'</b> <span class="hint" style="margin:0">'+L.length+'개 업체'+(ops?' (분류없음 '+ops+'건 접힘)':'')+' · '+CATS.filter(c=>L.some(r=>r.cats.includes(c))).map(c=>c+' '+L.filter(r=>r.cats.includes(c)).length).join(', ')+'</span>';
       h+='<table class="xl" style="margin-top:4px;width:100%"><colgroup><col style="width:60px"><col style="width:70px"><col style="width:180px"><col style="width:120px"><col style="width:70px"><col style="width:70px"><col></colgroup>';
       main.sort((a,b)=>(b.d.date?b.d.date.key:'').localeCompare(a.d.date?a.d.date.key:'')).forEach(r=>{h+='<tr><td class="c">'+esc(r.d.days.join(','))+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt" title="'+esc(r.d.name)+'">'+esc(r.d.name)+'</td><td class="c" style="white-space:normal">'+r.cats.map(c=>'<span class="tag" style="margin:1px">'+esc(c)+'</span>').join('')+'</td><td class="c">'+esc(r.stage||'')+'</td><td class="n">'+(r.amt?r.amt.toLocaleString('en-US'):'')+'</td><td class="txt" style="white-space:normal" title="'+esc(r.d.dtl.map(x=>x.text).join('\n'))+'">'+esc(r.sum)+'</td></tr>'});
-      if(ops&&hideops)h+='<tr><td colspan="7" class="hint" style="border:0">운영관리 '+ops+'건: '+esc(L.filter(r=>r.cats.length===1&&r.cats[0]==='운영관리').map(r=>r.d.name).join(', '))+'</td></tr>';
+      if(ops&&hideops)h+='<tr><td colspan="7" class="hint" style="border:0">분류없음 '+ops+'건: '+esc(L.filter(r=>!r.cats.length).map(r=>r.d.name).join(', '))+'</td></tr>';
       h+='</table></div>'});
     h+='</details>'});
   $('detail').innerHTML=h||'<div class="hint">표시할 일지가 없습니다</div>'}
