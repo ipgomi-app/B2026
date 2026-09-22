@@ -353,19 +353,14 @@ function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,
   if(fixedN)matched.unshift('조회 형식 '+fixedN+'건'+(rejected?' (반려 '+rejected+'건 제외)':'')+(Object.keys(skipped).length?' (제외: '+Object.entries(skipped).map(([k,v])=>k+' '+v).join(', ')+')':''));
   return {list:out,matched}}
 /* 계약·견적 요약 표준화: 소재지, 업종, 제안 문구, 단가, 물동량, 예상매출 */
-function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kind==='단가인상')return m;
-  m=m.replace(/(\d),(\d)/g,'$1\u0001$2').replace(/\s*,\s*/g,', ').replace(/\u0001/g,',');const N=t=>t.replace(/,/g,'');
-  const pm=m.match(/(\d{2,3})\s*원?\s*\/\s*(\d,?\d{3})\s*원?\s*\/\s*(\d,?\d{2,3})/);const price=pm?N(pm[1])+'/'+N(pm[2])+'/'+N(pm[3]):'';
-  const spec=(m.match(/\b(N1\d|P1\d|IN1\d|R\d{2}[A-Z]?|EL\d{2}|E\d{2})\b/)||[''])[0];
-  const vm=m.match(/물동량\s*:?\s*([\d,\.]+)\s*(매|박스|개|대|롤|톤|EA)?\s*(\/\s*(년|월))?/);const vol=vm?'물동량 '+Number(N(vm[1])).toLocaleString('en-US')+(vm[2]||'매')+'/'+(vm[4]||'년'):'';
+/* 계약·견적 요약: 원문을 그대로 쓰되 띄어쓰기·쉼표 정리, 물동량 천 단위 쉼표, 예상매출 표기 규칙(1,000천원 미만은 천원, 이상은 억) 적용 */
+function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kind==='단가인상')return q.name+': '+m;
+  m=m.replace(/(\d),(\d)/g,'$1\u0001$2').replace(/\s*,\s*/g,', ').replace(/\s*,\s*,/g,',').replace(/\u0001/g,',').replace(/\s+([.)])/g,'$1').replace(/,\s*$/,'');
+  m=m.replace(/물동량\s*:?\s*([\d,\.]+)\s*(매|박스|개|대|롤|톤|EA)?\s*(\/\s*(년|월))?/g,(_,n,u,sl,per)=>'물동량 '+Number(n.replace(/,/g,'')).toLocaleString('en-US')+(u||'매')+'/'+(per||'년'));
   const sales=q.amt?'예상매출 '+(q.amt<1000?q.amt.toLocaleString('en-US')+'천원/년':(q.amt/100000).toFixed(2).replace(/\.?0+$/,'')+'억/년'):'';
-  const drop=/견적|제안|계약|전환|물동량|예상매출|단가|규격|적용|제출|첨부|중도매인|\d/;
-  let desc=m.split(/,\s*/).map(t=>t.trim()).filter(t=>t&&!drop.test(t)).slice(0,2);
-  if(!desc.length){const w=m.replace(/경쟁사|재전환|전환|견적|제안|신규|계약|PPS|파렛트/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(t=>t&&!/\d/.test(t)).slice(0,2);desc=w}
-  const comp=q.item==='경쟁사';const re=/재전환/.test(m);const bl=catLabel(q.biz,{dtl:[{text:m}]});const it=q.item||'';const prod=(new RegExp(bl,'i').test(it)?it:(bl+' '+it)).trim();
-  let phrase;if(q.kind==='계약')phrase=q.biz==='PPS'?(comp?'경쟁사 '+(re?'재전환':'전환')+' 계약':'PPS 신규 계약'):prod+' 신규 계약';
-  else phrase=q.biz==='PPS'?(comp?'경쟁사 '+(re?'재전환':'전환')+' 제안':'PPS 신규 제안'):prod+' 제안';
-  return q.name+': '+[...desc,phrase.replace(/\s+/g,' '),[spec&&spec!==it?spec:'',price?price+'원':''].filter(Boolean).join(' '),vol,sales].filter(Boolean).join(', ')}
+  if(sales){if(/예상매출/.test(m))m=m.replace(/예상매출\s*:?\s*[\d,\.]+\s*(억|천원|만원|원)?(\s*\/\s*년)?/,sales);else m+=', '+sales}
+  m=m.replace(/(?<![,:]\s?)\s(?=(물동량|예상매출|효과금액)\b)/g,', ').replace(/(?<![,:]\s?)\s(?=(N1\d|P1\d|IN1\d|R\d{2}|EL\d{2})\s*\d{2,3}\/)/g,', ');
+  return q.name+': '+m.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim()}
 function quoteRow(q){const cat=q.kind==='단가인상'?'단가인상':q.biz+' '+q.kind;const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};const sum=stdMemo(q);
   return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[cat],items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum,n:0}}
 /* ===== 실행 ===== */
@@ -433,8 +428,9 @@ function renderCatList(cat){const box=$('catlist');if(!cat||!OUT){box.style.disp
   const rows=OUT.filter(r=>r.cats.includes(cat)).sort((a,b)=>((b.camt[cat]||b.amt||0)-(a.camt[cat]||a.amt||0))||sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp}));
   const T=[LIST_HDR,...rows.map(r=>listRow(r,cat))];OUT.catTable=T;
   box.style.display='';box.innerHTML='<div class="row" style="align-items:center;gap:8px;margin-bottom:4px"><b style="color:var(--navy)">'+esc(cat)+' '+rows.length+'건</b><button class="sec" id="copyCat">목록 값 복사</button></div>'+
-    '<div class="prev"><table class="xl"><tr><td class="hg">복사</td>'+LIST_HDR.map(h=>'<td class="hg">'+esc(h)+'</td>').join('')+'</tr>'+T.slice(1).map((r,ri)=>'<tr><td class="c" style="padding:0 2px"><button class="sec rowcopy" data-i="'+ri+'" style="padding:1px 6px;font-size:11px">복사</button></td>'+r.map((v,i)=>'<td class="'+(i===9?'n':i===10?'txt':'c')+'"'+(i===10?' style="white-space:normal;max-width:520px"':'')+'>'+(typeof v==='number'?v.toLocaleString('en-US'):esc(v))+'</td>').join('')+'</tr>').join('')+'</table></div>';
+    '<div class="prev"><table class="xl"><tr><td class="hg">복사</td>'+LIST_HDR.map(h=>'<td class="hg">'+esc(h)+'</td>').join('')+'</tr>'+T.slice(1).map((r,ri)=>'<tr><td class="c" style="padding:0 2px"><button class="sec rowcopy" data-i="'+ri+'" style="padding:1px 6px;font-size:11px">복사</button></td>'+r.map((v,i)=>'<td class="'+(i===9?'n':i===10?'txt':'c')+'"'+(i===10?' contenteditable="true" data-i="'+ri+'" title="클릭해서 직접 수정할 수 있습니다" style="white-space:normal;max-width:520px"':'')+'>'+(typeof v==='number'?v.toLocaleString('en-US'):esc(v))+'</td>').join('')+'</tr>').join('')+'</table></div>';
   $('copyCat').onclick=async()=>{const ok=await copyText(T.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?cat+' 목록 '+rows.length+'건 복사됨':'복사 실패'};
+  box.querySelectorAll('td[contenteditable]').forEach(td=>td.oninput=()=>{const r=rows[+td.dataset.i];r.sum=td.textContent.trim();T[+td.dataset.i+1][10]=r.sum});
   box.querySelectorAll('button.rowcopy').forEach(b=>b.onclick=async()=>{const r=rows[+b.dataset.i];const ok=await copyText(r.sum||'');$('stat').textContent=ok?r.d.name+' 요약 복사됨':'복사 실패'})}
 const cellTsv=v=>{let x=String(v??'').replace(/\t/g,' ').replace(/\r\n?/g,'\n');return x.includes('\n')||x.includes('"')?'"'+x.replace(/"/g,'""')+'"':x};
 $('run').onclick=build;['mode','catf','hideops'].forEach(id=>$(id).onchange=render);$('allweeks').onchange=()=>{if(ALL.length)build()};
