@@ -408,9 +408,10 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
   const stats1=list=>{const A=list.__all||list;return [A.reduce((s,r)=>s+r.n,0),A.filter(r=>!r.q).length,...BIZ.flatMap(b=>[cntOf(list,b+' 계약'),amtOf(list,b+' 계약'),cntOf(list,b+' 견적'),amtOf(list,b+' 견적')]),...['계약','견적'].flatMap(k=>[BIZ.reduce((s,b)=>s+cntOf(list,b+' '+k),0),BIZ.reduce((s,b)=>s+amtOf(list,b+' '+k),0)])]};
   /* 표2: 기타 분류 건수 */
   const CATS2=['농산업종','엔지니어링','단가인상','경쟁사','재고실사','미수금'];const stats2=list=>CATS2.map(c=>cntOf(list,c));
-  const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length)return;gs.forEach(g=>{const L=g.rows.slice();L.__all=OUT.filter(r=>key(r).join('|')===g.k.join('|'));T.push([...g.k,...stats(L)]);flags.push('')});
+  const activeRegs=REG_ORDER.filter(reg=>OUT.some(r=>r.reg===reg));/* 데이터가 있는 권역만 표시 */
+  const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length||!activeRegs.includes(reg))return;gs.forEach(g=>{const L=g.rows.slice();L.__all=OUT.filter(r=>key(r).join('|')===g.k.join('|'));T.push([...g.k,...stats(L)]);flags.push('')});
       const SL=gs.flatMap(g=>g.rows);SL.__all=OUT.filter(r=>key(r)[0]===reg);T.push([reg,'',...(emp?['']:[]),...stats(SL)]);flags.push('sub')});
-    const TL=rows.slice();TL.__all=OUT;T.push(['영남영업본부','',...(emp?['']:[]),...stats(TL)]);flags.push('tot');return {T,flags}};
+    if(activeRegs.length>1){const TL=rows.slice();TL.__all=OUT;T.push(['영남영업본부','',...(emp?['']:[]),...stats(TL)]);flags.push('tot')}return {T,flags}};
   const h1a=[...keyH,'방문건수','업체수',...BIZ.flatMap(b=>[BIZ_LBL[b]||b,'','','']),'합계','','',''];const h1b=[...keyH.map(()=>''),'','',...BIZ.flatMap(()=>['계약','','견적','']),'계약','','견적',''];const h1c=[...keyH.map(()=>''),'','',...BIZ.flatMap(()=>['건수','금액','건수','금액']),'건수','금액','건수','금액'];
   const S1=rowsOf(stats1),S2=rowsOf(stats2);
   const z=T=>T.map(r=>r.map(v=>v===0?'':v));OUT.sumTable=[h1a,h1b,h1c,...z(S1.T)];OUT.sumTable2=[[...keyH,...CATS2],...z(S2.T)];
