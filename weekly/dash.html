@@ -343,7 +343,7 @@ function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kin
   const pm=m.match(/(\d{2,3})\s*원?\s*\/\s*(\d,?\d{3})\s*원?\s*\/\s*(\d,?\d{2,3})/);const price=pm?N(pm[1])+'/'+N(pm[2])+'/'+N(pm[3]):'';
   const spec=(m.match(/\b(N1\d|P1\d|IN1\d|R\d{2}[A-Z]?|EL\d{2}|E\d{2})\b/)||[''])[0];
   const vm=m.match(/물동량\s*:?\s*([\d,\.]+)\s*(매|박스|개|대|롤|톤|EA)?\s*(\/\s*(년|월))?/);const vol=vm?'물동량 '+Number(N(vm[1])).toLocaleString('en-US')+(vm[2]||'매')+'/'+(vm[4]||'년'):'';
-  const sales=q.amt?'예상매출 '+(q.amt<=1000?q.amt.toLocaleString('en-US')+'천원/년':(q.amt/100000).toFixed(2).replace(/\.?0+$/,'')+'억/년'):'';
+  const sales=q.amt?'예상매출 '+(q.amt<1000?q.amt.toLocaleString('en-US')+'천원/년':(q.amt/100000).toFixed(2).replace(/\.?0+$/,'')+'억/년'):'';
   const drop=/견적|제안|계약|전환|물동량|예상매출|단가|규격|적용|제출|첨부|중도매인|\d/;
   let desc=m.split(/,\s*/).map(t=>t.trim()).filter(t=>t&&!drop.test(t)).slice(0,2);
   if(!desc.length){const w=m.replace(/경쟁사|재전환|전환|견적|제안|신규|계약|PPS|파렛트/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(t=>t&&!/\d/.test(t)).slice(0,2);desc=w}
