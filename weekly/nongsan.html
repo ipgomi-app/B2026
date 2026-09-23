@@ -86,8 +86,21 @@ table.xl td.dtl{padding-left:6px}
 <body>
 <header>영남본부 자료 자동화 <small>영남영업본부 · 주간회의 자료</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
 <main>
-<div class="tabs"><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
+<div class="tabs"><button data-tab="data">데이터</button><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
 
+<div class="tabpane" id="pane-data">
+<div class="card">
+  <h2>데이터 붙여넣기 <span class="tag">각 자료를 먼저 붙여 두면 단가인상·경쟁사·금주요약 탭에서 사용</span></h2>
+  <div class="hint">아래 칸에 자료를 붙여 넣기만 하면 됩니다. 각 탭의 처리 로직은 그대로이며, 연결은 순차적으로 추가됩니다.</div>
+  <div class="grid">
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">1. MS 계약</h3><textarea id="dMsC" style="min-height:120px" placeholder="계약 조회 결과(MS)를 그대로 붙여넣기"></textarea><div id="dMsC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">2. MS 견적</h3><textarea id="dMsQ" style="min-height:120px" placeholder="견적 조회 결과(MS)를 그대로 붙여넣기"></textarea><div id="dMsQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">3. 손익개선</h3><textarea id="dProfit" style="min-height:120px" placeholder="손익개선(단가인상 등) 시트를 그대로 붙여넣기"></textarea><div id="dProfit-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">4. 미수금</h3><textarea id="dRecv" style="min-height:120px" placeholder="미수금 시트를 그대로 붙여넣기"></textarea><div id="dRecv-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">5. 주간영업실적</h3><textarea id="dWeek" style="min-height:120px" placeholder="주간영업실적 시트를 그대로 붙여넣기"></textarea><div id="dWeek-stat" class="hint"></div></div>
+  </div>
+</div>
+</div>
 <div class="tabpane on" id="pane-farm">
 <div class="card">
   <h2>1. 금주 데이터 붙여넣기 (엑셀에서 필터된 행 복사 → 붙여넣기)</h2>
@@ -552,6 +565,7 @@ function prGrid2(dataOnly){
   return G;
 }
 ['merge'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{if(PR.out)prRender()}));
+['dMsC','dMsQ','dProfit','dRecv','dWeek'].forEach(id=>{const ta=document.getElementById(id);const st=document.getElementById(id+'-stat');const upd=()=>{const n=ta.value.split(/\r?\n/).filter(l=>l.trim()).length;st.textContent=n?'붙여넣은 행: '+n+'행':''};ta.addEventListener('input',upd);ta.addEventListener('cleared',upd)});
 addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
