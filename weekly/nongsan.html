@@ -105,7 +105,6 @@ table.xl td.dtl{padding-left:6px}
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">MHE 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheQ" style="min-height:110px" placeholder="MHE 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheQ-stat" class="hint"></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">MHE 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheC" style="min-height:110px" placeholder="MHE 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheC-stat" class="hint"></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">미수금 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원</span></h3><textarea id="dRecv" style="min-height:110px" placeholder="미수금 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dRecv-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">주간영업실적</h3><textarea id="dWeek" style="min-height:110px" placeholder="주간영업실적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dWeek-stat" class="hint"></div></div>
   </div>
 </div>
 </div>
@@ -523,7 +522,10 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   $('copy2').onclick=async()=>{if(!PR.out)return;const G=prGrid2($('scope').value==='data');$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 ('+G.length+'행, 제목·헤더 없음)':'복사 실패'};
 })();
 function prRun(){
-  const $=k=>document.getElementById('pr-'+k);const raw=$('src').value;if(!raw.trim()){alert('데이터를 붙여넣으세요');return}
+  const $=k=>document.getElementById('pr-'+k);let raw=$('src').value;
+  if(!raw.trim()){const d=document.getElementById('dProfit');const draw=d?d.value:'';
+    if(draw.trim()){const f=filterYN(draw);if(!confirm('단가인상 탭에 붙인 자료가 없습니다.\n데이터 탭의 손익개선 자료(영남 소속 '+f.kept+'행)를 가져와 작성할까요?'))return;$('src').value=f.tsv;$('src').dataset.fromData='1';raw=$('src').value}
+    else{alert('데이터를 붙여넣으세요 (단가인상 탭 또는 데이터 탭의 손익개선 칸)');return}}
   PR.rows=parseTSV(raw);EDITS['pr-prev1']={};EDITS['pr-prev2']={};
   if(raw!==PR.hash){PR.hash=raw;
     let first=PR.rows.findIndex(r=>r.some(isCode)&&r.some(c=>/권역$/.test((c||'').trim())));if(first<0)first=0;
@@ -592,7 +594,7 @@ const ORG={'경북권역':{'구미지점':['김후락','오대욱','안무진'],
   '부산권역':{'양산지점':['김재호','한상민'],'울산지점':['배종일','차수범'],'부산지점':['최승현','김상훈','고봉재','안훈준'],'포항지점':['박훈원']},
   '경남권역':{'김해지점':['문용욱','최영수','이상윤'],'진주지점':['이종근1','정준혁','권청대'],'창원지점':['이태영','허성종'],'제주지점':['최도용','서태식']}};
 const YN_BR=new Set(),YN_EMP=new Set();Object.values(ORG).forEach(o=>Object.entries(o).forEach(([br,es])=>{YN_BR.add(br);es.forEach(e=>YN_EMP.add(e))}));
-const DATA_MAP=[['dPpsQ','sum-src-ppsQ'],['dPpsC','sum-src-ppsC'],['dProfit','pr-src'],['dScmQ','sum-src-scmQ'],['dScmC','sum-src-scmC'],['dIndQ','sum-src-indQ'],['dIndC','sum-src-indC'],['dMheQ','sum-src-mheQ'],['dMheC','sum-src-mheC'],['dRecv',''],['dWeek','']];
+const DATA_MAP=[['dPpsQ','sum-src-ppsQ'],['dPpsC','sum-src-ppsC'],['dProfit',''],['dScmQ','sum-src-scmQ'],['dScmC','sum-src-scmC'],['dIndQ','sum-src-indQ'],['dIndC','sum-src-indC'],['dMheQ','sum-src-mheQ'],['dMheC','sum-src-mheC'],['dRecv','']];
 const tsvCell=v=>{let x=String(v??'').replace(/\t/g,' ');return /[\n"]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
 function filterYN(raw,opt){const rows=parseTSV(raw);const isData=r=>r.some(c=>/^\d{5,7}$/.test(String(c||'').trim()));let first=rows.findIndex(isData);if(first<0)first=rows.length;
   const hdr=rows.slice(0,first),data=rows.slice(first);
@@ -607,7 +609,7 @@ DATA_MAP.forEach(([id,target])=>{const ta=document.getElementById(id);const st=d
     if(!raw.trim()){st.textContent='';if(tgt&&tgt.dataset.fromData==='1'){tgt.value='';delete tgt.dataset.fromData}return}
     const f=filterYN(raw,id==='dRecv'?{group:true}:null);let msg='붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행'+(f.total-f.kept?' (제외 '+(f.total-f.kept)+')':'');
     if(tgt){if(tgt.value.trim()&&tgt.dataset.fromData!=='1')msg+=' · 대상 탭에 직접 붙인 자료가 있어 전달하지 않음';else{tgt.value=f.tsv;tgt.dataset.fromData='1';msg+=' · '+(target.startsWith('sum')?'금주요약':'단가인상')+' 탭에 전달됨';if(target==='pr-src'&&typeof prRun==='function'){try{prRun();msg+=' (단가인상 자동 작성)'}catch(e){}}}}
-    else msg+=' · 보관됨(연결 예정)';st.textContent=msg};
+    else msg+=id==='dProfit'?' · 단가인상 탭에서 자동 작성 시 사용':id==='dRecv'?' · 미수금 탭에서 사용':' · 보관됨';st.textContent=msg};
   ta.addEventListener('input',upd);ta.addEventListener('cleared',upd)});
 /* ===== 미수금 탭 ===== */
 const RECV_GROUPS=['법조치','회생채권','결제지연'];const REG_SHORT=r=>String(r||'').replace('권역','');
