@@ -72,7 +72,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 </div>
 <div class="card">
   <h2>2. 업무일지 붙여넣기 <span class="tag">금주 활동</span></h2>
-  <textarea id="diary" placeholder="업무일지 조회 결과(PRG_GUBUN ... 행과 DIARY_NUM/DTL_TYP/HEAD_DTL 상세 행)를 그대로 복사해서 붙여넣으세요."></textarea>
+  <textarea id="diary" placeholder="업무일지 조회 결과(PRG_GUBUN … 또는 VISIT_DAT … DIARY_NUM 머리글 행과 DIARY_NUM/DTL_TYP/HEAD_DTL 상세 행)를 그대로 복사해서 붙여넣으세요."></textarea>
   <div id="diarystat" class="hint"></div>
 </div>
 </div>
@@ -158,11 +158,14 @@ function parseRef(raw){
 function parseDiary(raw){
   const lines=raw.replace(/\r/g,'').split('\n');const out=[];let mainH=null,cur=null;
   for(const line of lines){if(!line.trim())continue;const f=line.split('\t');
-    if(f[0]==='PRG_GUBUN'){mainH=f;continue}
-    if(f[1]==='DIARY_NUM'&&f[2]==='DTL_TYP')continue;
-    if(mainH&&f[0]&&f[0]!=='PRG_GUBUN'&&/^\d{6,}$/.test(String(f[1]||'').trim())&&f[0].trim()!==''){
-      const g=k=>{const i=mainH.indexOf(k);return i>=0?String(f[i]||'').trim():''};
-      cur={num:g('DIARY_NUM'),date:parseDate(g('VISIT_DAT')),emp:g('VISIT_EMP_NAM'),code:g('CST_COD'),name:g('CST_NAM'),group:g('TF_GROUP'),addr:g('ZIP_ADDR'),dtl:[]};out.push(cur);continue}
+    const F=f.map(x=>String(x||'').trim());
+    /* 머리글: PRG_GUBUN 형식 또는 VISIT_DAT 형식(VISIT_DAT … CST_COD … DIARY_NUM) 모두 인식 */
+    if(F[0]==='PRG_GUBUN'||(F.includes('VISIT_DAT')&&F.includes('DIARY_NUM')&&F.includes('CST_COD'))){mainH=F;continue}
+    if(F[1]==='DIARY_NUM'&&F[2]==='DTL_TYP')continue;
+    if(F.every(x=>/^[A-Z_]+$/.test(x)||x===''))continue;/* 잘린 머리글 조각(RTL_STC_QTY DIARY_NUM 등) */
+    if(!mainH&&/^\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}$/.test(F[0])&&/^\d{6,}$/.test(F[F.length-1]||''))mainH=['VISIT_DAT','VISIT_EMP','VISIT_EMP_NAM','DIARY_TYP_NAM','CST_COD','CST_NAM','TEL_NUM','ZIP_ADDR','STC_QTY','ACT_STC_QTY','LOADED_QTY','OTH_CST_QTY','OTH_USE_QTY','VOID_QTY','ETC_DESC','RTL_STC_QTY','DIARY_NUM'];/* 머리글 없이 시작한 VISIT_DAT 형식 */
+    if(mainH&&F[0]){const g=k=>{const i=mainH.indexOf(k);return i>=0?(F[i]||''):''};const dn=g('DIARY_NUM');
+      if(/^\d{6,}$/.test(dn)&&/\d{4}/.test(g('VISIT_DAT'))){cur={num:dn,date:parseDate(g('VISIT_DAT')),emp:g('VISIT_EMP_NAM')||g('VISIT_EMP'),code:g('CST_COD'),name:g('CST_NAM'),group:g('TF_GROUP'),addr:g('ZIP_ADDR'),dtl:[]};out.push(cur);continue}}
     if(f[0].trim()===''&&/^\d{6,}$/.test(String(f[1]||'').trim())){const num_=f[1].trim();let tgt=out.find(x=>x.num===num_)||cur;if(tgt)tgt.dtl.push({typ:String(f[3]||'').trim(),text:f.slice(4).join(' ').trim()})}
   }
   return out.filter(x=>x.code);
