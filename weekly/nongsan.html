@@ -54,6 +54,8 @@ table.cfg input[type=text]{width:80px}
 .rp-foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--mut)}
 .rp-foot button{background:#fff;color:var(--accent);border:1px solid var(--accent);padding:2px 8px;font-size:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 /* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
 table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
@@ -90,14 +92,20 @@ table.xl td.dtl{padding-left:6px}
 
 <div class="tabpane" id="pane-data">
 <div class="card">
-  <h2>데이터 붙여넣기 <span class="tag">각 자료를 먼저 붙여 두면 단가인상·경쟁사·금주요약 탭에서 사용</span></h2>
-  <div class="hint">아래 칸에 자료를 붙여 넣기만 하면 됩니다. 각 탭의 처리 로직은 그대로이며, 연결은 순차적으로 추가됩니다.</div>
-  <div class="grid">
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">1. MS 계약</h3><textarea id="dMsC" style="min-height:120px" placeholder="계약 조회 결과(MS)를 그대로 붙여넣기"></textarea><div id="dMsC-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">2. MS 견적</h3><textarea id="dMsQ" style="min-height:120px" placeholder="견적 조회 결과(MS)를 그대로 붙여넣기"></textarea><div id="dMsQ-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">3. 손익개선</h3><textarea id="dProfit" style="min-height:120px" placeholder="손익개선(단가인상 등) 시트를 그대로 붙여넣기"></textarea><div id="dProfit-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">4. 미수금</h3><textarea id="dRecv" style="min-height:120px" placeholder="미수금 시트를 그대로 붙여넣기"></textarea><div id="dRecv-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">5. 주간영업실적</h3><textarea id="dWeek" style="min-height:120px" placeholder="주간영업실적 시트를 그대로 붙여넣기"></textarea><div id="dWeek-stat" class="hint"></div></div>
+  <h2>데이터 붙여넣기 <span class="tag">자료를 먼저 붙이면 금주요약·단가인상 탭에 자동 전달</span></h2>
+  <div class="hint">전사 시트를 그대로 붙여도 내장 명단(경북·부산·경남 권역의 지점/담당자)에 속한 행만 골라 씁니다. 각 탭의 처리 로직은 그대로입니다.</div>
+  <div class="grid3">
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">1. PPS 견적</h3><textarea id="dPpsQ" style="min-height:110px" placeholder="PPS 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">2. PPS 계약</h3><textarea id="dPpsC" style="min-height:110px" placeholder="PPS 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">3. 손익개선(단가인상)</h3><textarea id="dProfit" style="min-height:110px" placeholder="손익개선(단가인상) 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dProfit-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">4. SCM 견적</h3><textarea id="dScmQ" style="min-height:110px" placeholder="SCM 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">5. SCM 계약</h3><textarea id="dScmC" style="min-height:110px" placeholder="SCM 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">6. 산업자재유통 견적</h3><textarea id="dIndQ" style="min-height:110px" placeholder="산업자재유통 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">7. 산업자재유통 계약</h3><textarea id="dIndC" style="min-height:110px" placeholder="산업자재유통 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">8. MHE 견적</h3><textarea id="dMheQ" style="min-height:110px" placeholder="MHE 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">9. MHE 계약</h3><textarea id="dMheC" style="min-height:110px" placeholder="MHE 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">10. 미수금</h3><textarea id="dRecv" style="min-height:110px" placeholder="미수금 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dRecv-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">11. 주간영업실적</h3><textarea id="dWeek" style="min-height:110px" placeholder="주간영업실적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dWeek-stat" class="hint"></div></div>
   </div>
 </div>
 </div>
@@ -565,7 +573,24 @@ function prGrid2(dataOnly){
   return G;
 }
 ['merge'].forEach(k=>document.getElementById(k).addEventListener('change',()=>{if(PR.out)prRender()}));
-['dMsC','dMsQ','dProfit','dRecv','dWeek'].forEach(id=>{const ta=document.getElementById(id);const st=document.getElementById(id+'-stat');const upd=()=>{const n=ta.value.split(/\r?\n/).filter(l=>l.trim()).length;st.textContent=n?'붙여넣은 행: '+n+'행':''};ta.addEventListener('input',upd);ta.addEventListener('cleared',upd)});
+/* ===== 데이터 탭: 내장 명단 필터 + 각 탭으로 전달 ===== */
+const ORG={'경북권역':{'구미지점':['김후락','오대욱','안무진'],'영천지점':['이기선','이정훈','이상훈'],'대구지점':['윤귀열','박승훈','박찬현','윤정목'],'안동지점':['김원세','김강민']},
+  '부산권역':{'양산지점':['김재호','한상민'],'울산지점':['배종일','차수범'],'부산지점':['최승현','김상훈','고봉재','안훈준'],'포항지점':['박훈원']},
+  '경남권역':{'김해지점':['문용욱','최영수','이상윤'],'진주지점':['이종근1','정준혁','권청대'],'창원지점':['이태영','허성종'],'제주지점':['최도용','서태식']}};
+const YN_BR=new Set(),YN_EMP=new Set();Object.values(ORG).forEach(o=>Object.entries(o).forEach(([br,es])=>{YN_BR.add(br);es.forEach(e=>YN_EMP.add(e))}));
+const DATA_MAP=[['dPpsQ','sum-src-ppsQ'],['dPpsC','sum-src-ppsC'],['dProfit','pr-src'],['dScmQ','sum-src-scmQ'],['dScmC','sum-src-scmC'],['dIndQ','sum-src-indQ'],['dIndC','sum-src-indC'],['dMheQ','sum-src-mheQ'],['dMheC','sum-src-mheC'],['dRecv',''],['dWeek','']];
+const tsvCell=v=>{let x=String(v??'').replace(/\t/g,' ');return /[\n"]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+function filterYN(raw){const rows=parseTSV(raw);const isData=r=>r.some(c=>/^\d{5,7}$/.test(String(c||'').trim()));let first=rows.findIndex(isData);if(first<0)first=rows.length;
+  const hdr=rows.slice(0,first),data=rows.slice(first);
+  const ok=r=>{const cells=r.map(c=>String(c||'').trim());return cells.some(c=>YN_BR.has(c))||cells.some(c=>YN_EMP.has(c))||cells.some(c=>/^(경북|경남|부산)권역$/.test(c))};
+  const keep=data.filter(ok);return {total:data.length,kept:keep.length,tsv:[...hdr,...keep].map(r=>r.map(tsvCell).join('\t')).join('\n')}}
+DATA_MAP.forEach(([id,target])=>{const ta=document.getElementById(id);const st=document.getElementById(id+'-stat');if(!ta)return;
+  const upd=()=>{const raw=ta.value;const tgt=target?document.getElementById(target):null;
+    if(!raw.trim()){st.textContent='';if(tgt&&tgt.dataset.fromData==='1'){tgt.value='';delete tgt.dataset.fromData}return}
+    const f=filterYN(raw);let msg='붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행'+(f.total-f.kept?' (제외 '+(f.total-f.kept)+')':'');
+    if(tgt){if(tgt.value.trim()&&tgt.dataset.fromData!=='1')msg+=' · 대상 탭에 직접 붙인 자료가 있어 전달하지 않음';else{tgt.value=f.tsv;tgt.dataset.fromData='1';msg+=' · '+(target.startsWith('sum')?'금주요약':'단가인상')+' 탭에 전달됨';if(target==='pr-src'&&typeof prRun==='function'){try{prRun();msg+=' (단가인상 자동 작성)'}catch(e){}}}}
+    else msg+=' · 보관됨(연결 예정)';st.textContent=msg};
+  ta.addEventListener('input',upd);ta.addEventListener('cleared',upd)});
 addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
