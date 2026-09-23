@@ -671,8 +671,8 @@ const SUMCUM_DEF={pps신규:[379,1268942],pps재전환:[91,879790],pps단가인�
 const SUM={data:{},out:null};
 (function(){
   const el=document.getElementById('pane-sum');
-  el.innerHTML=`<div class="card"><h2>1. 금주 데이터 붙여넣기 (헤더 포함, 각 칸 따로)</h2>
-  <div class="grid" id="sum-inputs"></div>
+  el.innerHTML=`<div class="card"><details id="sum-inputs-wrap"><summary style="cursor:pointer"><h2 style="display:inline;margin:0">1. 금주 데이터 붙여넣기 (헤더 포함, 각 칸 따로)</h2> <span class="hint" style="margin:0">▶ 펼치기/접기 · 비워 두면 작성 시 데이터 탭 자료를 가져올지 물어봅니다</span></summary>
+  <div class="grid" id="sum-inputs" style="margin-top:8px"></div></details>
   <div class="row" style="margin-top:10px">
     <label>주차 <input type="text" id="sum-week" placeholder="9월3주" style="min-width:90px"></label>
     <label>기간 문구 <input type="text" id="sum-range" placeholder="9월 11일~ 9월 17일까지" style="min-width:180px"></label>
