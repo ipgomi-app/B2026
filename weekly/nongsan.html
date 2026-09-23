@@ -151,12 +151,22 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <div class="tabpane" id="pane-price"></div>
 <div class="tabpane" id="pane-sum"></div>
 <div class="tabpane" id="pane-recv">
+<div class="grid">
+<div class="card"><h2>1. 금주현황 붙여넣기 <span class="hint" style="margin:0">권역 소계 3행 + 본부계 (업체수·보증보험 미가입·1~6개월·소계·미수채권 총계·지난주·지난주 수금액)</span></h2>
+  <textarea id="recv-cur" style="min-height:90px" placeholder="경북권역 소계	175	57	82,758,954 … 
+부산권역 소계 …
+경남권역 소계 …
+본부계 …"></textarea><div class="hint" id="recv-cur-stat"></div></div>
+<div class="card"><h2>2. 미수금 데이터 붙여넣기 <span class="hint" style="margin:0">데이터 탭의 미수금 칸과 같은 자료 (금액 단위 원)</span></h2>
+  <textarea id="recv-src" style="min-height:90px" placeholder="미수금 시트를 머리글 포함 그대로 붙여넣기 (데이터 탭에 붙인 자료가 있으면 자동으로 채워짐)"></textarea><div class="hint" id="recv-src-stat"></div></div>
+</div>
 <div class="card">
-  <h2>미수금 현황 <span class="tag">데이터 탭의 미수금 자료 사용 · 영남 소속 · 100만원 이상</span></h2>
+  <h2>3. 미수금 현황 <span class="tag">영남 소속 · 100만원 이상</span></h2>
   <div class="row" style="margin-bottom:8px">
     <label>청구월 <input type="text" id="recv-month" placeholder="7" style="width:60px"> 월</label>
     <label>기준금액(원) <input type="number" id="recv-min" value="1000000" style="width:110px"></label>
     <button id="recv-run">미수금 작성</button>
+    <button id="recv-copycur" style="display:none">금주현황 복사 (서식 포함)</button>
     <button class="sec" id="recv-copysum">요약표 값 복사 (숫자만)</button>
     <button id="recv-copyall">전체 서식 복사 (제목~상세, A1부터)</button>
     <button id="recv-copyfmt">상세 서식 복사 (법조치 행부터, A열)</button>
@@ -164,6 +174,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <span id="recv-stat" class="ok"></span>
   </div>
   <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다. 서식 복사: 엑셀 상세표의 기존 데이터 행을 지운 뒤 첫 데이터 행의 A열을 선택하고 일반 붙여넣기(Ctrl+V)하면 구분 병합·배경색·테두리·숫자 형식이 함께 들어갑니다.</div>
+  <div id="recv-cur-out" class="prev" style="margin-top:8px"></div>
   <div id="recv-out" class="prev" style="margin-top:8px"></div>
 </div>
 </div>
@@ -641,15 +652,45 @@ function filterYN(raw,opt){const rows=parseTSV(raw);const isData=r=>r.some(c=>/^
   const keep=data.filter(ok);return {total:data.length,kept:keep.length,tsv:[...hdr,...keep].map(r=>r.map(tsvCell).join('\t')).join('\n')}}
 DATA_MAP.forEach(([id,target])=>{const ta=document.getElementById(id);const st=document.getElementById(id+'-stat');if(!ta)return;
   const upd=()=>{const raw=ta.value;const tgt=target?document.getElementById(target):null;
-    if(!raw.trim()){st.textContent='';if(tgt&&tgt.dataset.fromData==='1'){tgt.value='';delete tgt.dataset.fromData}return}
+    if(!raw.trim()){st.textContent='';if(tgt&&tgt.dataset.fromData==='1'){tgt.value='';delete tgt.dataset.fromData}if(id==='dRecv'){const rs=document.getElementById('recv-src');if(rs&&rs.dataset.fromData==='1'){rs.value='';delete rs.dataset.fromData;document.getElementById('recv-src-stat').textContent=''}}return}
     const f=filterYN(raw,id==='dRecv'?{group:true}:null);let msg='붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행'+(f.total-f.kept?' (제외 '+(f.total-f.kept)+')':'');
     if(tgt){if(tgt.value.trim()&&tgt.dataset.fromData!=='1')msg+=' · 대상 탭에 직접 붙인 자료가 있어 전달하지 않음';else{tgt.value=f.tsv;tgt.dataset.fromData='1';msg+=' · '+(target.startsWith('sum')?'금주요약':'단가인상')+' 탭에 전달됨';if(target==='pr-src'&&typeof prRun==='function'){try{prRun();msg+=' (단가인상 자동 작성)'}catch(e){}}}}
-    else msg+=id==='dProfit'?' · 단가인상 탭에서 자동 작성 시 사용':id==='dRecv'?' · 미수금 탭에서 사용':' · 금주요약 탭에서 작성 시 사용';st.textContent=msg};
+    else msg+=id==='dProfit'?' · 단가인상 탭에서 자동 작성 시 사용':id==='dRecv'?' · 미수금 탭에서 사용':' · 금주요약 탭에서 작성 시 사용';st.textContent=msg;
+    if(id==='dRecv'){const rs=document.getElementById('recv-src');if(rs&&(!rs.value.trim()||rs.dataset.fromData==='1')&&rs.value!==raw){rs.value=raw;rs.dataset.fromData='1';document.getElementById('recv-src-stat').textContent='데이터 탭에서 가져옴: '+f.total+'행 → 영남 소속 '+f.kept+'행'}}};
   ta.addEventListener('input',upd);ta.addEventListener('cleared',upd);if(id==='dPpsQ'||id==='dPpsC'){const rc=()=>{if(LISTS.comp&&LISTS.comp.out)listCompute('comp')};ta.addEventListener('input',rc);ta.addEventListener('cleared',rc)}});
 /* ===== 미수금 탭 ===== */
 const RECV_GROUPS=['법조치','회생채권','결제지연'];const REG_SHORT=r=>String(r||'').replace('권역','');
-let RECV=null;
-function recvBuild(){const raw=document.getElementById('dRecv').value;if(!raw.trim()){alert('데이터 탭의 미수금 칸에 자료를 먼저 붙여넣으세요');return}
+let RECV=null,RECV_CUR=null;
+const CUR_H1=['업체수','보증보험(금)','1개월경과','2개월경과','3개월경과','4개월경과','5개월경과','6개월이상','소계'],CUR_H2=['업체수','금액','업체수','금액','업체수','금액'];
+function recvCurBuild(){const raw=document.getElementById('recv-cur').value;RECV_CUR=null;const st=document.getElementById('recv-cur-stat');document.getElementById('recv-cur-out').innerHTML='';document.getElementById('recv-copycur').style.display='none';
+  if(!raw.trim()){st.textContent='';return}
+  const rows=parseTSV(raw).map(r=>r.map(c=>String(c||'').trim())).filter(r=>r.some(c=>c));const out=[];
+  rows.forEach(r=>{const lab=r.find(c=>/소계|본부계|합계/.test(c)&&/[가-힣]/.test(c));if(!lab)return;const nums=r.filter(c=>/^[\d,.\-]+$/.test(c)&&/\d/.test(c)).map(num);if(nums.length<9)return;
+    out.push({label:lab.replace(/\s+/g,' '),tot:/본부계|합계/.test(lab),a:nums.slice(0,9),b:nums.slice(9,15)})});
+  if(!out.length){st.textContent='인식 실패: "○○권역 소계 / 본부계" 행과 숫자 열이 필요합니다';return}
+  RECV_CUR=out;st.textContent='인식: '+out.length+'행 ('+out.map(x=>x.label).join(', ')+')';
+  document.getElementById('recv-cur-out').innerHTML='<div style="overflow:auto">'+recvCurHtml(true)+'</div>';document.getElementById('recv-copycur').style.display=''}
+function recvCurHtml(preview){const C={navy:'#1f4e79',grn:'#70ad47',org:'#c55a11',lg:'#e2efda',yel:'#ffe699',g2:'#92d050',y2:'#ffc000',gy:'#f2f2f2'};
+  const td=(v,st,attr)=>'<td style="'+RF+(st||'')+'"'+(attr||'')+'>'+v+'</td>';const hd=(v,bg,attr,fg)=>td(v,'background:'+bg+';color:'+(fg||'#fff')+';text-align:center;font-weight:700;white-space:normal;',attr);
+  const gap=()=>'<td style="border:0;width:8px"></td>';const NUMC=(v,st)=>td(v?(preview?fmtWon(v):v):'-',(st||'')+RACC);
+  let h='<table style="border-collapse:collapse">';
+  h+='<tr>'+hd('본부',C.navy,' rowspan="2"')+hd('팀/권역',C.navy,' rowspan="2"')+hd('지점',C.navy,' rowspan="2"')+hd('담당자',C.navy,' rowspan="2"')+hd('업체수',C.grn)+hd('보증보험(금)<br>미가입업체',C.navy,' rowspan="2"')+hd('금액',C.org,' colspan="7"')+gap()+hd('미수채권 총계',C.g2,' colspan="2"','#000')+hd('지난주',C.y2,' colspan="2"','#000')+hd('지난주 수금액',C.y2,' colspan="2"','#000')+'</tr>';
+  h+='<tr>'+hd('소계',C.grn)+CUR_H1.slice(2).map(t=>hd(t,C.org)).join('')+gap()+CUR_H2.map((t,i)=>hd(t,i<2?C.g2:C.y2,'','#000')).join('')+'</tr>';
+  RECV_CUR.forEach((x,i)=>{const bg='background:'+(x.tot?C.yel:C.lg)+';';const fw=x.tot?'font-weight:700;':'';h+='<tr>';
+    if(i===0)h+=td('영남영업본부','background:'+C.yel+';text-align:center;font-weight:700;'+(preview?'box-shadow:inset 0 0 0 3px #d00;':''),' rowspan="'+RECV_CUR.length+'"');
+    h+=td(esc(x.label),bg+fw+'text-align:center;',' colspan="3"');
+    h+=NUMC(x.a[0],bg+'font-weight:700;')+NUMC(x.a[1],bg+'font-weight:700;color:#c00;')+x.a.slice(2).map(v=>NUMC(v,bg+fw)).join('')+gap()+x.b.map(v=>NUMC(v,bg+fw)).join('')+'</tr>'});
+  return h+'</table>'}
+function recvCurText(){return RECV_CUR.map((x,i)=>[i?'':'영남영업본부',x.label,'','',...x.a,'','',...x.b].map(v=>typeof v==='number'?(v||''):v).join('\t')).join('\r\n')}
+document.getElementById('recv-copycur').onclick=async()=>{if(!RECV_CUR){alert('먼저 금주현황을 붙여넣고 미수금 작성을 실행하세요');return}
+  const ok=await writeBoth(XLHTML(recvCurHtml(false)),recvCurText());document.getElementById('recv-stat').textContent=ok?'금주현황 '+RECV_CUR.length+'행 서식 포함 복사됨 → 엑셀 본부 셀(영남영업본부) 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
+document.getElementById('recv-src').addEventListener('input',()=>{const rs=document.getElementById('recv-src');delete rs.dataset.fromData;const d=document.getElementById('dRecv');if(d&&d.value!==rs.value){d.value=rs.value;d.dispatchEvent(new Event('input'))}
+  const f=rs.value.trim()?filterYN(rs.value,{group:true}):null;document.getElementById('recv-src-stat').textContent=f?'붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행':''});
+document.getElementById('recv-src').addEventListener('cleared',()=>{const rs=document.getElementById('recv-src');delete rs.dataset.fromData;document.getElementById('recv-src-stat').textContent=''});
+document.getElementById('recv-cur').addEventListener('cleared',()=>{RECV_CUR=null;document.getElementById('recv-cur-out').innerHTML='';document.getElementById('recv-cur-stat').textContent='';document.getElementById('recv-copycur').style.display='none'});
+function recvBuild(){const rs=document.getElementById('recv-src');let raw=rs.value;if(!raw.trim()){raw=document.getElementById('dRecv').value;if(raw.trim()){rs.value=raw;rs.dataset.fromData='1'}}
+  recvCurBuild();
+  if(!raw.trim()){if(RECV_CUR){document.getElementById('recv-out').innerHTML='';document.getElementById('recv-stat').textContent='금주현황만 작성됨 (미수금 데이터 없음)';return}alert('2. 미수금 데이터 칸(또는 데이터 탭의 미수금 칸)에 자료를 먼저 붙여넣으세요');return}
   const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const hdr=rows[0]||[];const H=hdr.map(x=>String(x||'').replace(/\s+/g,''));
   const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};
   const C={g:0,br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),code:col(['거래처↓','거래처코드','코드'],3),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입'],9),gamt:col(['보증금액'],10),law:col(['법조치현황','법조치'],11)};
@@ -708,7 +749,7 @@ document.getElementById('recv-copyfmt').onclick=async()=>{if(!RECV){alert('먼�
   const ok=await writeBoth(XLHTML(recvHtml(rows,false)),rows.map(recvLine).join('\r\n'));
   document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 서식 포함 복사됨 → 엑셀 첫 데이터 행 A열 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
 document.getElementById('recv-copyall').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=recvTable();const rows=T.filter(r=>r.t==='d'||r.t==='sum');
-  const html=XLHTML(recvSumHtml()+'<br>'+recvHtml(rows,true));const text=T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
+  const html=XLHTML((RECV_CUR?recvCurHtml(false)+'<br>':'')+recvSumHtml()+'<br>'+recvHtml(rows,true));const text=(RECV_CUR?recvCurText()+'\r\n\r\n':'')+T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
   const ok=await writeBoth(html,text);document.getElementById('recv-stat').textContent=ok?'제목·요약표·상세표 전체를 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
 document.getElementById('recv-copysum').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='s'||r.t==='st');
   const ok=await copy('',rows.map(r=>r.cells.slice(1).map(v=>v||'').join('\t')).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'요약표 숫자 4행×5열 복사됨 → 엑셀 요약표의 법조치 행 전체업체 셀 선택 후 붙여넣기':'복사 실패'};
