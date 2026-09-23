@@ -337,6 +337,14 @@ function fullHtml(G){
   return '<html><head><meta charset="utf-8"><style>/* 출력표'+css+'</style></head><body>'+gridToHtml(G||buildGrid())+'</body></html>';
 }
 /* 값만 복사: 클립보드에 탭 구분 텍스트만 넣어 엑셀 Ctrl+V 시 창 없이 값만 붙고 시트 서식·병합은 유지 */
+/* 서식 포함 복사: 예상매출 문구를 빨간 글씨로 (엑셀에서 일반 붙여넣기 Ctrl+V 시 적용, '값 붙여넣기'는 글자색 없이 텍스트만) */
+async function copyRich(G,text){
+  const RED=/(예상매출\s*[\d.,]+\s*(?:억|천원|만원)[^,\s]*(?:\/년|\/건)?)/g;const skipA=cfg.colA==='0'&&!G.noSkip;
+  let h='<table>';G.forEach(r=>{h+='<tr>';const cells=new Array(G.W).fill(null);r.cells.forEach(c=>{cells[c.col]=c});(skipA?cells.slice(1):cells).forEach(c=>{if(!c){h+='<td></td>';return}
+    let v=cellVal(c,false);let t=esc(String(v??''));if(c.rich)t=t.replace(RED,'<font color="#ff0000">$1</font>');h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+'>'+t+'</td>'});h+='</tr>'});h+='</table>';
+  const html='<html><head><meta charset="utf-8"></head><body>'+h+'</body></html>';
+  try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}catch(e){}
+  return copy('',text)}
 async function copy(html,text){
   try{await navigator.clipboard.writeText(text);return true}catch(e){}
   try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}
@@ -703,7 +711,7 @@ const SUM={data:{},out:null};
   <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="sum-val1">값 복사 (D5부터)</button><button class="sec" id="sum-copy1">표 전체 값 복사 (A1부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
   <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">값 복사 (D열부터)</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약부터 산업자재유통 견적까지 24줄이 복사됩니다. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">값 복사 (D열부터)</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약 첫 줄(10 건 / 0.4 억)부터 마지막 줄까지 전부 복사됩니다. 예상매출 문구는 빨간 글씨로 들어가므로 일반 붙여넣기(Ctrl+V)를 쓰세요. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
   document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="k"${SUMSPEC[k].unit==='k'?' selected':''}>천원</option><option value="w"${SUMSPEC[k].unit==='w'?' selected':''}>원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option><option value="auto">자동</option></select></label>
     <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
   const $=k=>document.getElementById('sum-'+k);
@@ -722,7 +730,7 @@ const SUM={data:{},out:null};
   const g2=(noMerge)=>{const keep=cfg.merge;if(noMerge)cfg.merge='0';const G=sumGrid2(true);cfg.merge=keep;
     // 미리보기(제목행·A~C열 포함)에서 수정한 값을 내용만 그리드 좌표(행-1, 열-3)로 옮김
     const E=EDITS['sum-prev2']||{};const E2={};Object.keys(E).forEach(k=>{const [r,c]=k.split(',').map(Number);if(c>=3)E2[(r-1)+','+(c-3)]=E[k]});G.pid='sum-prev2d';EDITS['sum-prev2d']=E2;return G};
-  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'값 복사됨 (PPS 계약 첫 줄의 건수/금액 셀에 붙여넣기)':'복사 실패'};
+  $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copyRich(G,gridToTsv(G)))?'복사됨 ('+G.length+'행) → 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열) 선택 후 Ctrl+V (예상매출은 빨간 글씨)':'복사 실패'};
 })();
 const norm=v=>String(v||'').replace(/\s+/g,'');
 const weekOf=v=>{v=String(v||'');const w=v.match(/(\d+)\s*주/),m=v.match(/(\d+)\s*월/);return w?{w:+w[1],m:m?+m[1]:null}:null};
