@@ -185,19 +185,21 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <div class="card"><h2>1. KPP 미수채권현황 › 업체별 세부 <span class="hint" style="margin:0">(기준 자료, 금액 단위 원)</span></h2><textarea id="mg-prev" style="min-height:130px" placeholder="KPP 미수채권현황 > 업체별 세부 표를 머리글 포함 그대로 붙여넣기 (관리부서명, 관리담당자명, 거래처, 거래처명, 합계, 연체개월, 결제기일, 신용등급, 가입여부, 금액, 가능여부, 금액, 금액, 법조치현황)"></textarea><div class="hint" id="mg-prev-stat"></div></div>
 <div class="card"><h2>2. AMS 채권관리현황 › 월별(업체현황) <span class="hint" style="margin:0">(청구년월·수금일·완납 판정용)</span></h2><textarea id="mg-mon" style="min-height:130px" placeholder="AMS 월별(업체현황) 표를 그대로 붙여넣기 (청구년월, 거래처 코드·명, 등급, 결재, 조건, 청구부서, 청구담당, 수금담당, 재무담당, 미수금, 최종입금전표일, 최종입금전표 생성일). '합 계' 행은 무시됩니다"></textarea><div class="hint" id="mg-mon-stat"></div></div>
 <div class="card"><h2>3. 수금 데이터 <span class="hint" style="margin:0">(수금금액용 · 형식 추후 지정)</span></h2><textarea id="mg-pay" style="min-height:130px" placeholder="수금(입금) 내역 자료를 붙여넣기. 코드와 금액이 있는 행이면 같은 코드의 금액을 합쳐 수금금액에 넣습니다 (형식이 정해지면 다시 맞춤)"></textarea><div class="hint" id="mg-pay-stat"></div></div>
+<div class="card"><h2>4. 전주 내역 데이터 <span class="hint" style="margin:0">(지난주 출력표 → 전주 세부내역 자동 입력)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
 </div>
 <div class="card"><h2>3. 취합 결과 <span class="tag">영남 소속 · 기준금액 이상 · 법조치/회생채권/결제지연</span></h2>
   <div class="row" style="margin-bottom:8px">
     <label>금주 기간 <input type="date" id="mg-from"> ~ <input type="date" id="mg-to"></label>
     <label>기준금액(원) <input type="number" id="mg-min" value="1000000" style="width:110px"></label>
     <button id="mg-run">취합 작성</button>
-    <button id="mg-copyfmt">상세 서식 복사 (법조치 행부터, B열 구분 셀)</button>
-    <button id="mg-copyfmt2">상세 서식 복사 (수금완납 제외)</button>
+    <button id="mg-copyfmt">전체 서식 복사 (제목~상세, A1부터)</button>
+    <button id="mg-copyfmt2">전체 서식 복사 (수금완납 제외)</button>
     <button class="sec" id="mg-copyfull">수금완납 업체만 서식 복사</button>
+    <button class="sec" id="mg-copyrows">상세 행만 서식 복사 (B열 구분 셀)</button>
     <button class="sec" id="mg-copy">상세 값 복사 (텍스트만)</button>
     <button class="sec" id="mg-copytsv">미수금 시트 형식 복사</button>
     <span id="mg-stat" class="ok"></span></div>
-  <div class="hint">1번 시트가 기준입니다. 구분은 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고, 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다. 최종입금전표일이 금주 기간 안이면 금주수금 O. 수금금액은 3번 수금 데이터에서 넣고, 잔여 미수금 = 미수채권 − 수금금액. 결과는 미수금 탭에도 표시되며 세부 진행내역·수금금액은 표에서 직접 수정할 수 있습니다.</div>
+  <div class="hint">1번 시트가 기준입니다. 구분은 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고, 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다. 최종입금전표일이 금주 기간 안이면 금주수금 O. 수금금액은 3번 수금 데이터에서 넣고, 잔여 미수금 = 미수채권 − 수금금액. 4번 지난주 출력표의 세부 진행내역은 '전주 세부내역'에 들어가고 금주 세부내역은 표에서 직접 입력합니다. 결과는 미수금 탭에도 표시되며 세부 진행내역·수금금액은 표에서 직접 수정할 수 있습니다.</div>
   <div id="merge-out" class="prev" style="margin-top:8px"></div>
 </div>
 </div>
@@ -377,7 +379,7 @@ function fullHtml(G){
 async function copyRich(G,text){
   const RED=/(예상매출\s*[\d.,]+\s*(?:억|천원|만원)[^,\s]*(?:\/년|\/건)?)/g;const skipA=cfg.colA==='0'&&!G.noSkip;
   let h='<table>';G.forEach(r=>{h+='<tr>';const cells=new Array(G.W).fill(null);r.cells.forEach(c=>{cells[c.col]=c});(skipA?cells.slice(1):cells).forEach(c=>{if(!c){h+='<td></td>';return}
-    let v=cellVal(c,false);let t=esc(String(v??''));if(c.rich)t=t.replace(RED,'<font color="#ff0000">$1</font>');h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+'>'+t+'</td>'});h+='</tr>'});h+='</table>';
+    let v=cellVal(c,false);let t=esc(String(v??''));if(c.rich)t=t.replace(RED,'<font color="#ff0000">$1</font>');h+='<td style="font-family:\'맑은 고딕\';font-size:10pt"'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+'>'+t+'</td>'});h+='</tr>'});h+='</table>';
   const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><meta name="ProgId" content="Excel.Sheet"></head><body>'+h+'</body></html>';
   try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}catch(e){}
   return copy('',text)}
@@ -718,12 +720,12 @@ function recvBuild(){const rs=document.getElementById('recv-src');let raw=rs.val
   const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const hdr=rows[0]||[];const H=hdr.map(x=>String(x||'').replace(/\s+/g,''));
   const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};
   const hasG=H.findIndex(h=>h==='구분')>=0;
-  const C={g:hasG?H.findIndex(h=>h==='구분'):-1,br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),code:col(['거래처↓','거래처코드','코드','거래처'],3),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금','합계'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입','가입여부'],9),gamt:col(['보증금액'],-1),law:col(['법조치현황','법조치'],11),ym:col(['청구년월'],-1),wk:col(['금주수금'],-1),pd:col(['수금일'],-1),paid:col(['수금금액'],-1)};
+  const C={g:hasG?H.findIndex(h=>h==='구분'):-1,br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),code:col(['거래처↓','거래처코드','코드','거래처'],3),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금','합계'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입','가입여부'],9),gamt:col(['보증금액'],-1),law:col(['법조치현황','법조치'],11),ym:col(['청구년월'],-1),wk:col(['금주수금'],-1),pd:col(['수금일'],-1),paid:col(['수금금액'],-1),mp:col(['전주세부','전주내역'],-1)};
   if(C.gamt<0)C.gamt=(C.ins>=0&&/금액/.test(H[C.ins+1]||''))?C.ins+1:10;
   const min=+document.getElementById('recv-min').value||0;const g=(r,i)=>String(r[i]||'').trim();
   const grpOf=(gv,law)=>{gv=gv.replace(/지연결제/,'결제지연');if(RECV_GROUPS.includes(gv))return gv;if(/회생/.test(law))return '회생채권';if(law)return '법조치';return '결제지연'};
   const list=rows.slice(1).map(r=>{const law0=g(r,C.law).replace(/\s+/g,' ').trim();let grp=grpOf(C.g>=0?g(r,C.g):'',law0);const br=g(r,C.br);const key=Object.keys(BR2REG).find(b=>br.startsWith(b));
-    return {grp,reg:key?REG_SHORT(BR2REG[key]):'',br,emp:g(r,C.emp),code:g(r,C.code),name:g(r,C.name),amt:num(g(r,C.amt)),mon:g(r,C.mon).replace(/\s/g,''),due:g(r,C.due),grade:g(r,C.grade),ins:g(r,C.ins),gamt:num(g(r,C.gamt)),law:g(r,C.law).replace(/\s+/g,' ').trim(),ym:C.ym>=0?g(r,C.ym):'',wk:C.wk>=0?g(r,C.wk):'',pd:C.pd>=0?g(r,C.pd):'',memo:'',paid:C.paid>=0?num(g(r,C.paid)):0}}).filter(x=>x.code&&x.amt>=min);
+    return {grp,reg:key?REG_SHORT(BR2REG[key]):'',br,emp:g(r,C.emp),code:g(r,C.code),name:g(r,C.name),amt:num(g(r,C.amt)),mon:g(r,C.mon).replace(/\s/g,''),due:g(r,C.due),grade:g(r,C.grade),ins:g(r,C.ins),gamt:num(g(r,C.gamt)),law:g(r,C.law).replace(/\s+/g,' ').trim(),ym:C.ym>=0?g(r,C.ym):'',wk:C.wk>=0?g(r,C.wk):'',pd:C.pd>=0?g(r,C.pd):'',memoPrev:C.mp>=0?g(r,C.mp):'',memo:'',paid:C.paid>=0?num(g(r,C.paid)):0}}).filter(x=>x.code&&x.amt>=min);
   RECV={list,month:document.getElementById('recv-month').value.trim(),min};recvRender();
   document.getElementById('recv-stat').textContent='작성 완료: '+list.length+'건 (영남 소속 '+f.kept+'행 중 '+fmtWon(min)+'원 이상)'}
 const fmtWon=v=>v?Math.round(v).toLocaleString('en-US'):'-';
@@ -731,54 +733,54 @@ function recvTable(filterFn){const L=filterFn?RECV.list.filter(filterFn):RECV.li
   T.push({t:'title',cells:[title]});T.push({t:'h',cells:['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금']});
   const tot={n:0,a:0,pn:0,p:0};RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp);const n=g.length,a=g.reduce((s,x)=>s+x.amt,0),pn=g.filter(x=>x.paid>0).length,p=g.reduce((s,x)=>s+x.paid,0);tot.n+=n;tot.a+=a;tot.pn+=pn;tot.p+=p;T.push({t:'s',grp:gp,cells:[gp,n,a,pn,p,a-p]})});
   T.push({t:'st',cells:['합계',tot.n,tot.a,tot.pn,tot.p,tot.a-tot.p]});T.push({t:'blank',cells:[]});
-  /* 상세: 0구분 1권역 2지점 3담당 4코드 5거래처 6미수채권 7연체개월 8결제기일 9신용등급 10보증가입여부 11보증금액 12법조치현황 13세부진행내역 14수금금액 15잔여 16청구년월 17금주수금 18최종수금일 */
+  /* 상세: 0구분 1권역 2지점 3담당 4코드 5거래처 6미수채권 7연체개월 8결제기일 9신용등급 10보증가입여부 11보증금액 12법조치현황 13전주세부내역 14금주세부내역 15수금금액 16잔여 17청구년월 18금주수금 19최종수금일 */
   T.push({t:'h2',cells:RECV_H2});
   const insYN=x=>x.ins&&/^[OX]$/i.test(x.ins)?x.ins.toUpperCase():(x.gamt>0?'O':'X');
   RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp).sort((a,b)=>b.amt-a.amt);if(!g.length)return;
-    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,String(x.br||'').replace(/지점$/,''),x.emp||'',x.code,x.name,x.amt,x.mon,x.due,x.grade||'',insYN(x),x.gamt,x.law,x.memo,x.paid,x.amt-x.paid,x.ym||'',x.wk||'',x.pd||'']}));
-    T.push({t:'sum',grp:gp,cells:['','합계','','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','',g.reduce((s,x)=>s+x.paid,0),'','','','']})});
+    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,String(x.br||'').replace(/지점$/,''),x.emp||'',x.code,x.name,x.amt,x.mon,x.due,x.grade||'',insYN(x),x.gamt,x.law,x.memoPrev||'',x.memo,x.paid,x.amt-x.paid,x.ym||'',x.wk||'',x.pd||'']}));
+    T.push({t:'sum',grp:gp,cells:['','합계','','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','','',g.reduce((s,x)=>s+x.paid,0),'','','','']})});
   return T}
-const RECV_H2=['구분','권역','지점','담당','코드','거래처','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','세부 진행내역','수금금액','잔여\n미수금','청구년월','금주수금','최종수금일'];
-const RECV_NC=19,RECV_MEMO=13,RECV_PAID=14;
+const RECV_H2=['구분','권역','지점','담당','코드','거래처','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','전주 세부내역','금주 세부내역','수금금액','잔여\n미수금','청구년월','금주수금','최종수금일'];
+const RECV_NC=20,RECV_PREV=13,RECV_MEMO=14,RECV_PAID=15;
 function recvRender(){const T=recvTable();const bg={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6'};const hbg=i=>i<=5?'#dce6f1':i===12?'#fce4d6':'#fff2cc';
   let h='<table class="xl" style="width:auto">';T.forEach((r,ri)=>{if(r.t==='title'){h+='<tr><td colspan="'+RECV_NC+'" style="border:0;font-weight:700;font-size:14px;color:var(--navy)">'+esc(r.cells[0])+'</td></tr>';return}
     if(r.t==='blank'){h+='<tr><td colspan="'+RECV_NC+'" style="border:0;height:10px"></td></tr>';return}
     const isH=r.t==='h'||r.t==='h2';h+='<tr>';const gcnt=r.t==='d'&&r.cells[0]?T.filter(x=>(x.t==='d'||x.t==='sum')&&x.grp===r.grp).length:0;
-    r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===RECV_MEMO||ci===RECV_PAID);const cs=r.t==='sum'&&ci===1?5:1;if(r.t==='sum'&&ci>=2&&ci<=5)return;if((r.t==='d'&&!r.cells[0]||r.t==='sum')&&ci===0)return;const rs=r.t==='d'&&ci===0&&gcnt>1?gcnt:1;
+    r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===RECV_MEMO||ci===RECV_PREV||ci===RECV_PAID);const cs=r.t==='sum'&&ci===1?5:1;if(r.t==='sum'&&ci>=2&&ci<=5)return;if((r.t==='d'&&!r.cells[0]||r.t==='sum')&&ci===0)return;const rs=r.t==='d'&&ci===0&&gcnt>1?gcnt:1;
       const firstD=r.t==='d'&&ci===0&&T.findIndex(x=>x.t==='d')===ri,firstS=r.t==='s'&&ci===1&&T.findIndex(x=>x.t==='s')===ri;
-      const st=(firstD||firstS?'box-shadow:inset 0 0 0 3px #d00;':'')+(isH?'background:'+(r.t==='h2'?hbg(ci):'#dce6f1')+';text-align:center;font-weight:700;':'')+(r.t==='s'||r.t==='sum'||r.t==='st'?'background:'+(bg[r.grp]||'#eee')+';font-weight:700;':'')+(r.t==='d'&&ci===0&&v?'background:'+(bg[r.grp]||'#fff')+';font-weight:700;':'')+(isNum?'text-align:right;':(r.t==='d'&&ci!==5&&ci!==RECV_MEMO?'text-align:center;':''))+(ed?'background:#fffbe6;':'')+(ci===RECV_MEMO&&r.t==='d'?'white-space:normal;min-width:420px;text-align:left;':'');
+      const st=(firstD||firstS?'box-shadow:inset 0 0 0 3px #d00;':'')+(isH?'background:'+(r.t==='h2'?hbg(ci):'#dce6f1')+';text-align:center;font-weight:700;':'')+(r.t==='s'||r.t==='sum'||r.t==='st'?'background:'+(bg[r.grp]||'#eee')+';font-weight:700;':'')+(r.t==='d'&&ci===0&&v?'background:'+(bg[r.grp]||'#fff')+';font-weight:700;':'')+(isNum?'text-align:right;':(r.t==='d'&&ci!==5&&ci!==RECV_MEMO&&ci!==RECV_PREV?'text-align:center;':''))+(ed?'background:#fffbe6;':'')+((ci===RECV_MEMO||ci===RECV_PREV)&&r.t==='d'?'white-space:normal;min-width:300px;text-align:left;':'');
       h+='<td'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+' style="'+st+'"'+(ed?' contenteditable="true" data-ri="'+ri+'" data-ci="'+ci+'"':'')+'>'+(isNum?(ci===7?v:fmtWon(v)):esc(String(v)).replace(/\n/g,'<br>'))+'</td>'});h+='</tr>'});
   h+='</table>';['recv-out','merge-out'].forEach(id=>{const box=document.getElementById(id);if(!box)return;box.innerHTML=h;
-  box.querySelectorAll('td[contenteditable]').forEach(td=>td.addEventListener('blur',()=>{const r=T[+td.dataset.ri];const ci=+td.dataset.ci;if(ci===RECV_MEMO){r.ref.memo=td.innerText.trim();const o=id==='recv-out'?'merge-out':'recv-out';const ob=document.getElementById(o);const t2=ob&&ob.querySelector('td[data-ri="'+td.dataset.ri+'"][data-ci="'+RECV_MEMO+'"]');if(t2)t2.innerHTML=td.innerHTML}else{r.ref.paid=num(td.innerText);recvRender()}}))})}
+  box.querySelectorAll('td[contenteditable]').forEach(td=>td.addEventListener('blur',()=>{const r=T[+td.dataset.ri];const ci=+td.dataset.ci;if(ci===RECV_MEMO||ci===RECV_PREV){if(ci===RECV_MEMO)r.ref.memo=td.innerText.trim();else r.ref.memoPrev=td.innerText.trim();const o=id==='recv-out'?'merge-out':'recv-out';const ob=document.getElementById(o);const t2=ob&&ob.querySelector('td[data-ri="'+td.dataset.ri+'"][data-ci="'+ci+'"]');if(t2)t2.innerHTML=td.innerHTML}else{r.ref.paid=num(td.innerText);recvRender()}}))})}
 document.getElementById('recv-run').onclick=recvBuild;
 const recvLine=r=>r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t');
 document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
   const ok=await copy('',rows.map(recvLine).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 복사됨 → 엑셀 상세표 첫 데이터 행의 구분 셀(B열) 선택 후 붙여넣기':'복사 실패'};
 /* 서식 포함 HTML (엑셀 붙여넣기용) — 원본 시트와 같은 색상/병합/숫자형식 */
-const RF="font-family:'맑은 고딕',Malgun Gothic;font-size:9pt;border:.5pt solid #000;vertical-align:middle;";
+const RF="font-family:'맑은 고딕',Malgun Gothic;font-size:10pt;border:.5pt solid #000;vertical-align:middle;";
 const RACC="mso-number-format:'#\,##0\;\-#\,##0\;\-';text-align:right;";
 const rtd=(v,st,attr)=>'<td style="'+RF+(st||'')+'"'+(attr||'')+'>'+v+'</td>';
 const RBG={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6',합계:'#d9e1f2',hdr:'#fff2cc',memo:'#fff9db'};
 function recvHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
   const TH='border-left:1.5pt solid #000;';/* 그룹 경계 굵은 세로선: 미수채권·법조치현황·세부 진행내역·수금금액 앞 */
   const BLUE='color:#1f3fbf;';const hbg=i=>'background:'+(i<=5?'#dce6f1':i===12?'#fce4d6':'#fff2cc')+';';
-  const thick={6:1,12:1,13:1,14:1};const C=(ci,v,st,attr)=>rtd(v,(st||'')+(thick[ci]?TH:''),attr);
+  const thick={6:1,12:1,13:1,15:1};const C=(ci,v,st,attr)=>rtd(v,(st||'')+(thick[ci]?TH:''),attr);
   let h='<table style="border-collapse:collapse">';
-  if(withHdr)h+='<colgroup>'+[60,50,60,60,60,110,90,55,55,60,70,90,70,420,90,90,90,60,80].map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
+  if(withHdr)h+='<colgroup>'+[60,50,60,60,60,110,90,55,55,60,70,90,70,300,300,90,90,90,60,80].map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
   if(withHdr){h+='<tr style="height:30pt">';RECV_H2.forEach((t,i)=>h+=C(i,esc(t).replace(/\n/g,'<br>'),hbg(i)+'text-align:center;font-weight:700;white-space:normal;'));h+='</tr>'}
   const groups=[];rows.forEach(r=>{if(r.t==='d'&&(!groups.length||groups[groups.length-1].grp!==r.grp))groups.push({grp:r.grp,rows:[]});if(groups.length)groups[groups.length-1].rows.push(r)});
   groups.forEach(g=>{const bg='background:'+(RBG[g.grp]||'#eee')+';';g.rows.forEach((r,i)=>{const c=r.cells;
-    const memo=String(c[RECV_MEMO]||'');const lines=r.t==='d'?Math.max(1,...memo.split('\n').map(l=>Math.ceil(l.length/58))):1;const rh=r.t==='d'?Math.max(30,lines*15):20;
+    const memo=String(c[RECV_MEMO]||''),memoP=String(c[RECV_PREV]||'');const lines=r.t==='d'?Math.max(1,...(memo+'\n'+memoP).split('\n').map(l=>Math.ceil(l.length/42))):1;const rh=r.t==='d'?Math.max(30,lines*15):20;
     h+='<tr style="height:'+rh+'pt">';
     if(i===0)h+=rtd(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
-    if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="5"');h+=C(6,NUM(c[6]),bg+RACC+'font-weight:700;');for(let k=7;k<=13;k++)h+=C(k,'',bg);h+=C(14,NUM(c[14]),bg+RACC+'font-weight:700;');for(let k=15;k<=18;k++)h+=C(k,'',bg)}
+    if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="5"');h+=C(6,NUM(c[6]),bg+RACC+'font-weight:700;');for(let k=7;k<=14;k++)h+=C(k,'',bg);h+=C(15,NUM(c[15]),bg+RACC+'font-weight:700;');for(let k=16;k<=19;k++)h+=C(k,'',bg)}
     else{h+=C(1,esc(c[1]),'text-align:center;');h+=C(2,esc(c[2]),'text-align:center;');h+=C(3,esc(c[3]),'text-align:center;');h+=C(4,esc(c[4]),"text-align:center;mso-number-format:'0';");h+=C(5,esc(c[5]),'text-align:left;white-space:normal;');
       h+=C(6,NUM(c[6]),RACC);h+=C(7,esc(c[7]),'text-align:center;'+BLUE);h+=C(8,esc(c[8]),'text-align:center;'+BLUE);h+=C(9,esc(c[9]),'text-align:center;');h+=C(10,esc(c[10]),'text-align:center;');h+=C(11,NUM(c[11]),RACC);h+=C(12,esc(c[12]),'text-align:center;');
-      h+=C(13,esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;');h+=C(14,NUM(c[14]),RACC);h+=C(15,NUM(c[15]),RACC);h+=C(16,esc(c[16]||''),'text-align:center;');h+=C(17,esc(c[17]||''),'text-align:center;');h+=C(18,esc(c[18]||''),'text-align:center;')}
+      h+=C(13,esc(memoP).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;');h+=C(14,esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;');h+=C(15,NUM(c[15]),RACC);h+=C(16,NUM(c[16]),RACC);h+=C(17,esc(c[17]||''),'text-align:center;');h+=C(18,esc(c[18]||''),'text-align:center;');h+=C(19,esc(c[19]||''),'text-align:center;')}
     h+='</tr>'})});
   return h+'</table>'}
-function recvSumHtml(){const T=recvTable();const rows=T.filter(r=>r.t==='s'||r.t==='st');const title=T[0].cells[0];
-  let h='<table style="border-collapse:collapse"><tr><td colspan="6" style="font-family:\'맑은 고딕\';font-size:11pt;font-weight:700;">'+esc(title)+'</td></tr><tr>';
+function recvSumHtml(filterFn){const T=recvTable(filterFn);const rows=T.filter(r=>r.t==='s'||r.t==='st');const title=T[0].cells[0];
+  let h='<table style="border-collapse:collapse"><tr><td colspan="6" style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;">'+esc(title)+'</td></tr><tr>';
   ['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금'].forEach(t=>h+=rtd(t,'background:'+RBG.hdr+';text-align:center;font-weight:700;'));h+='</tr>';
   rows.forEach(r=>{const bg='background:'+(RBG[r.cells[0]]||'#eee')+';';h+='<tr>'+rtd(esc(r.cells[0]),bg+'text-align:center;font-weight:700;')+r.cells.slice(1).map(v=>rtd(typeof v==='number'?v:'',bg+RACC+'font-weight:700;')).join('')+'</tr>'});
   return h+'</table>'}
@@ -792,9 +794,10 @@ document.getElementById('recv-copyfull').onclick=async()=>{if(!RECV){alert('먼�
 document.getElementById('recv-copyfmt').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
   const ok=await writeBoth(XLHTML(recvHtml(rows,false)),rows.map(recvLine).join('\r\n'));
   document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 서식 포함 복사됨 → 엑셀 첫 데이터 행의 구분 셀(B열) 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
-document.getElementById('recv-copyall').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=recvTable();const rows=T.filter(r=>r.t==='d'||r.t==='sum');
-  const html=XLHTML((RECV_CUR?recvCurHtml(false)+'<br>':'')+recvSumHtml()+'<br>'+recvHtml(rows,true));const text=(RECV_CUR?recvCurText()+'\r\n\r\n':'')+T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
-  const ok=await writeBoth(html,text);document.getElementById('recv-stat').textContent=ok?'제목·요약표·상세표 전체를 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
+async function recvCopyAll(filterFn,label){if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=recvTable(filterFn);const rows=T.filter(r=>r.t==='d'||r.t==='sum');
+  const html=XLHTML((RECV_CUR?recvCurHtml(false)+'<br>':'')+recvSumHtml(filterFn)+'<br>'+recvHtml(rows,true));const text=(RECV_CUR?recvCurText()+'\r\n\r\n':'')+T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
+  const ok=await writeBoth(html,text);document.getElementById('recv-stat').textContent=ok?(label||'제목·요약표·상세표 전체')+' 서식 포함 복사됨 ('+rows.filter(r=>r.t==='d').length+'업체) → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'}
+document.getElementById('recv-copyall').onclick=()=>recvCopyAll(null);
 document.getElementById('recv-copysum').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='s'||r.t==='st');
   const ok=await copy('',rows.map(r=>r.cells.slice(1).map(v=>v||'').join('\t')).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'요약표 숫자 4행×5열 복사됨 → 엑셀 요약표의 법조치 행 전체업체 셀 선택 후 붙여넣기':'복사 실패'};
 /* ===== 미수금 취합 탭: AMS 합계/상세 + 전주 시트 → 미수금 시트 형식 ===== */
@@ -815,11 +818,15 @@ function mgParseMon(raw){const out={};if(!raw.trim())return out;const isDate=v=>
     if(!out[code])out[code]={code,name,br,emp,cond,grade,rows:[]};out[code].rows.push({ym:c[yi],amt,pay})});return out}
 /* 수금 데이터(형식 미정): 6자리 코드 + 숫자 금액이 있는 행이면 코드별 합산 */
 function mgParsePay(raw){const out={};if(!raw.trim())return out;parseTSV(raw).forEach(r=>{const c=r.map(x=>String(x||'').trim());const ci=c.findIndex(isCode6);if(ci<0)return;const nums=c.filter((x,i)=>i>ci&&/^[\d,]+$/.test(x)&&num(x)>=1000);if(!nums.length)return;out[c[ci]]=(out[c[ci]]||0)+num(nums[nums.length-1])});return out}
+/* 전주 출력표: 코드 → 세부 진행내역 */
+function mgParseLast(raw){const out={};if(!raw.trim())return out;const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));const hi=rows.findIndex(r=>r.some(c=>/진행내역|세부내역/.test(c.replace(/\s+/g,''))));
+  const H=hi>=0?rows[hi].map(x=>x.replace(/\s+/g,'')):[];let mi=H.findIndex(h=>/진행내역|세부내역/.test(h));let ci=H.findIndex(h=>h==='코드');
+  rows.forEach((c,i)=>{if(i===hi)return;const code=ci>=0&&isCode6(c[ci])?c[ci]:c.find(isCode6);if(!code)return;let memo=mi>=0?(c[mi]||''):'';if(mi<0){const k=c.indexOf(code);memo=c.slice(k+1).filter(x=>/[가-힣]/.test(x)&&x.length>8).sort((a,b)=>b.length-a.length)[0]||''}if(memo)out[code]={memo}});return out}
 let MG=null;
 function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value),M=mgParseMon(document.getElementById('mg-mon').value);
   const codes=Object.keys(P);if(!codes.length){alert('1번 KPP 업체별 세부 시트를 붙여넣으세요');return}
   const from=(document.getElementById('mg-from').value||'').trim(),to=(document.getElementById('mg-to').value||'').trim();const inRange=d=>!!d&&(!from||d>=from)&&(!to||d<=to);
-  const PAY=mgParsePay(document.getElementById('mg-pay').value);
+  const PAY=mgParsePay(document.getElementById('mg-pay').value);const LAST=mgParseLast(document.getElementById('mg-last').value);
   const min=+document.getElementById('mg-min').value||0;const recs=[];let outYN=0,outMin=0,fromBase=0,added=0,paidN=0,fullN=0;
   codes.forEach(code=>{const prev=P[code]||{},m=M[code]||{};const br=prev.br||m.br||'';const emp=prev.emp||m.emp||'';
     if(!(YN_BR.has(br)||YN_EMP.has(emp))){outYN++;return}
@@ -830,18 +837,21 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
     const paid=full?amt:(PAY[code]||0);const pd=lastPay?lastPay.slice(2).replace(/-/g,'.'):'';
     const months=prev.months||Math.min(6,(m.rows||[]).length);if(P[code])fromBase++;else added++;
     const yms=(m.rows||[]).map(x=>x.ym).filter(Boolean).sort();const f2=y=>y.slice(2,4)+'.'+y.slice(4,6);const ym=yms.length?(yms[0]===yms[yms.length-1]?f2(yms[0]):f2(yms[0])+'~'+f2(yms[yms.length-1])):'';
-    recs.push({grp:prev.grp||'결제지연',br,emp,code,name:prev.name||m.name||'',amt,months,cond:prev.cond||m.cond||'',grade:prev.grade||m.grade||'',insYN:(prev.gamt||0)>0?'O':'X',gamt:prev.gamt||0,law:prev.law||'',ym,wk,pd,memo:'',paid:Math.min(paid,amt)})});
-  const hdr=['구분','관리부서명','관리담당자명','거래처↓','거래처명','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','청구년월','금주수금','최종수금일','수금금액'];
+    recs.push({grp:prev.grp||'결제지연',br,emp,code,name:prev.name||m.name||'',amt,months,cond:prev.cond||m.cond||'',grade:prev.grade||m.grade||'',insYN:(prev.gamt||0)>0?'O':'X',gamt:prev.gamt||0,law:prev.law||'',ym,wk,pd,memoPrev:(LAST[code]||{}).memo||'',memo:'',paid:Math.min(paid,amt)})});
+  const hdr=['구분','관리부서명','관리담당자명','거래처↓','거래처명','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','청구년월','금주수금','최종수금일','수금금액','전주 세부내역'];
   const order={법조치:0,회생채권:1,결제지연:2};recs.sort((x,y)=>(order[x.grp]-order[y.grp])||(y.amt-x.amt));
-  const tsv=[hdr,...recs.map(x=>[x.grp,x.br,x.emp,x.code,x.name,x.amt,x.months,x.cond,x.grade,x.insYN,x.gamt,x.law,x.ym,x.wk,x.pd,x.paid||''])].map(r=>r.map(tsvCell).join('\t')).join('\n');
-  MG={recs,tsv};document.getElementById('mg-prev-stat').textContent=Object.keys(P).length?'기준 시트 '+Object.keys(P).length+'업체 인식(영남 소속)':'';document.getElementById('mg-mon-stat').textContent=Object.keys(M).length?'월별 '+Object.keys(M).length+'업체 인식 · 완납(월별에 없음) '+fullN+'업체':'';document.getElementById('mg-pay-stat').textContent=Object.keys(PAY).length?'수금 '+Object.keys(PAY).length+'업체 인식':'';
+  const tsv=[hdr,...recs.map(x=>[x.grp,x.br,x.emp,x.code,x.name,x.amt,x.months,x.cond,x.grade,x.insYN,x.gamt,x.law,x.ym,x.wk,x.pd,x.paid||'',x.memoPrev||''])].map(r=>r.map(tsvCell).join('\t')).join('\n');
+  MG={recs,tsv};document.getElementById('mg-prev-stat').textContent=Object.keys(P).length?'기준 시트 '+Object.keys(P).length+'업체 인식(영남 소속)':'';document.getElementById('mg-mon-stat').textContent=Object.keys(M).length?'월별 '+Object.keys(M).length+'업체 인식 · 완납(월별에 없음) '+fullN+'업체':'';document.getElementById('mg-pay-stat').textContent=Object.keys(PAY).length?'수금 '+Object.keys(PAY).length+'업체 인식':'';document.getElementById('mg-last-stat').textContent=Object.keys(LAST).length?'전주 '+Object.keys(LAST).length+'업체 인식 · 세부내역 이어받음 '+recs.filter(x=>x.memoPrev).length+'건':'';
   const rs=document.getElementById('recv-src');rs.value=tsv;rs.dataset.fromData='1';document.getElementById('recv-min').value=min;recvBuild();
   if(RECV){const byCode={};recs.forEach(x=>byCode[x.code]=x);let ch=false;RECV.list.forEach(x=>{const r=byCode[x.code];if(r&&r.paid){x.paid=r.paid;ch=true}});if(ch)recvRender()}
   const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+') · 금주수금 O '+paidN+'업체(완납 '+fullN+') · 영남 외 '+outYN+'건, 기준금액 미만 '+outMin+'건 제외 · 미수금 탭에도 표시됨'}
 (function(){const d=new Date();const f=x=>x.toISOString().slice(0,10);const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;
-document.getElementById('mg-copyfmt').onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}document.getElementById('recv-copyfmt').click();setTimeout(()=>document.getElementById('mg-stat').textContent=document.getElementById('recv-stat').textContent,300)};
-['copyfmt2','copyfull'].forEach(k=>document.getElementById('mg-'+k).onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}document.getElementById('recv-'+k).click();setTimeout(()=>document.getElementById('mg-stat').textContent=document.getElementById('recv-stat').textContent,300)});
+document.getElementById('mg-copyfmt').onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}recvCopyAll(null);mgSync()};
+const mgSync=()=>setTimeout(()=>document.getElementById('mg-stat').textContent=document.getElementById('recv-stat').textContent,300);
+document.getElementById('mg-copyfmt2').onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}recvCopyAll(x=>!isFull(x),'제목·요약표·상세표(수금완납 제외)');mgSync()};
+document.getElementById('mg-copyfull').onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}document.getElementById('recv-copyfull').click();mgSync()};
+document.getElementById('mg-copyrows').onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}document.getElementById('recv-copyfmt').click();mgSync()};
 document.getElementById('mg-copy').onclick=()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}document.getElementById('recv-copy').click();setTimeout(()=>document.getElementById('mg-stat').textContent=document.getElementById('recv-stat').textContent,300)};
 document.getElementById('mg-copytsv').onclick=async()=>{if(!MG){alert('먼저 취합 작성을 실행하세요');return}const ok=await copy('',MG.tsv.replace(/\n/g,'\r\n'));document.getElementById('mg-stat').textContent=ok?'미수금 시트 형식(머리글 포함 '+(MG.recs.length+1)+'행) 복사됨 → 데이터 탭 미수금 칸 등에 붙여넣기':'복사 실패'};
 addClearButtons();
