@@ -336,7 +336,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.que
 /* ===== 타겟업체 / 경쟁사 : 금주 주요업체 리스트 ===== */
 const LISTW=18; // A~R
 const FIELDS={
-  target:[['region','부서(권역)',['팀/권역','권역']],['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항']],['date','시행일(선택)',['시행일']]],
+  target:[['biz','사업구분',['사업구분','사업']],['region','부서(권역)',['팀/권역','권역']],['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항']],['date','시행일(선택)',['시행일']]],
   comp:[['region','부서(권역)',['(팀/권역)','팀/권역','권역']],['branch','팀/지점',['(팀/지점)','팀/지점','지점']],['person','담당자',['(실적)담당자','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계(없으면 자동)',['진행단계']],['cCnt','(계약)건수',['(계약)건수']],['cAmt','(계약)효과금액',['(계약)효과금액']],['qAmt','(견적)효과금액',['(견적)효과금액']],['amt','효과금액(직접)',['효과금액(年)']],['memo','영업진행사항',['영업진행사항','진행사항','현황']],['date','최종방문일(선택)',['최종방문일','시행일']]]
 };
 const LISTS={};
@@ -381,6 +381,7 @@ function listDetect(id){
   // 데이터 기반 보정: 코드, 지점, 담당자, 권역
   const colMatch=f=>{let best=-1,bs=0;for(let i=0;i<width;i++){const n=L.data.filter(r=>f(r[i])).length;if(n>bs){bs=n;best=i}}return bs>=Math.max(1,L.data.length*0.5)?best:-1};
   const isName=v=>/^[가-힣]{2,4}$/.test(String(v||'').trim());
+  if(id==='target'){const b=colMatch(v=>/PPS|물류기기|산업자재|SCM|RRPP|지게차|글로벌/i.test(String(v||'')));if(b>=0&&(map.biz<0||!L.data.some(r=>/PPS|물류기기|산업자재|SCM|RRPP|지게차|글로벌/i.test(r[map.biz]||''))))map.biz=b}
   const kind=colMatch(v=>/^\d\d-/.test(String(v||'').trim())); // 코드구분(01-일반) 바로 뒤가 코드
   if(kind>=0){map.code=kind+1;map.name=[kind+2,kind+3,kind+4].find(i=>L.data.filter(r=>(r[i]||'').trim()&&!isCode(r[i])).length>=L.data.length*0.5)??map.name}
   else{const c=colMatch(isCode);if(c>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code]))))map.code=c}
@@ -417,14 +418,15 @@ function listCompute(id){
     let st=stage(g(r,'stage')),amt=num(g(r,'amt'));
     if(id==='comp'&&!st){const cc=num(g(r,'cCnt')),ca=num(g(r,'cAmt')),qa=num(g(r,'qAmt'));if(cc>0||ca>0){st='계약';amt=ca||amt}else if(qa>0){st='견적';amt=qa||amt}else st='방문'}
     if(id==='comp'&&st==='계약'&&!amt)amt=num(g(r,'cAmt'));if(id==='comp'&&st==='견적'&&!amt)amt=num(g(r,'qAmt'));
-    return {region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8)}
+    return {biz:g(r,'biz'),region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8)}
   }).filter(x=>x.code||x.name);
-  const total=recs.length;
+  const total=recs.length;let bizNote='';
+  if(id==='target'){if(m.biz>=0){const before=recs.length;recs=recs.filter(x=>/PPS|물류기기/i.test(x.biz||''));bizNote=', 사업구분 PPS/물류기기 '+recs.length+'행(제외 '+(before-recs.length)+')'}else bizNote=', 사업구분 열 없음(전체 대상)'}
   if(from||to)recs=recs.filter(x=>x.date&&(!from||x.date>=from)&&(!to||x.date<=to));
   const cap={계약:+$('capC').value||0,견적:+$('capQ').value||0,방문:+$('capV').value||0},minAmt=+$('minAmt').value||0;
   const major=[];['계약','견적','방문'].forEach(s=>major.push(...recs.filter(x=>x.stage===s&&x.amt>=minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s])));
   L.out={major,dept:'region'};
-  $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
+  $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+bizNote+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
   $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
   $('preview').innerHTML=gridToHtml(listGrid(id,false),true);
 }
