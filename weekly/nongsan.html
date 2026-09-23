@@ -909,7 +909,7 @@ function mgSheetRows(T,ST,link){/* link: 코드 → {sh,rw} (전체 시트에서
         else st={border:brd(i)};
         cells.push({v:(i===0&&!v)?'':v,s:S(st)})});
       const rn=r+1;const code=String(c[4]||'');const L=link&&link[code];const q=`'${L?L.sh:''}'!`;
-      if(L){const txt=col=>({f:`IF(${q}${col}${L.rw}="","",${q}${col}${L.rw})`,t:1,s:cells[15].s});cells[15]=txt('P');cells[19]=txt('T');cells[20]=txt('U');cells[16]={f:`${q}Q${L.rw}`,s:cells[16].s}}
+      if(L){const txt=col=>({f:`IF(${q}${col}${L.rw}="","",${q}${col}${L.rw})`,t:1,s:cells[15].s});cells[15]=txt('P');cells[16]={f:`${q}Q${L.rw}`,s:cells[16].s}}/* 전체 시트: 금주 세부내역(P)·수금금액(Q)만 권역 시트에서 가져옴 */
       cells[17]={f:`H${rn}-Q${rn}`,s:cells[17].s};/* 잔여 미수금 = 미수채권 - 수금금액 */
       if(c[0]||!gStart)gStart=rn;map[code]={rw:rn};
       push(cells,{ht:Math.max(30,lines*15)});return}
@@ -929,7 +929,7 @@ function mgXlsx(){if(!MGR){alert('먼저 취합 작성을 실행하세요');retu
   try{regs.slice(1).forEach(rg=>{MG_REG=rg;const T=mgTable();if(!T.some(r=>r.t==='d'))return;const {rows,merges,map}=mgSheetRows(T,ST);Object.keys(map).forEach(code=>link[code]={sh:rg,rw:map[code].rw});sheets.push({name:rg,xml:xlSheet(rows,merges,widths,{cols:[10,11,12,13,14]})})});
     MG_REG='';const T=mgTable();const {rows,merges}=mgSheetRows(T,ST,link);sheets.unshift({name:'전체',xml:xlSheet(rows,merges,widths,{cols:[10,11,12,13,14]})})}finally{MG_REG=keep}
   const u8=xlWorkbook(sheets,ST.xml());const d=new Date();const nm='미수금취합_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);
-  document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' (시트: '+sheets.map(s=>s.name).join(', ')+') · J~N열 열 그룹 · 권역 시트의 금주 세부내역·수금금액·금주수금·최종수금일을 적으면 전체 시트와 요약표·합계·잔여 미수금에 수식으로 자동 반영'}
+  document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' (시트: '+sheets.map(s=>s.name).join(', ')+') · J~N열 열 그룹 · 권역 시트의 금주 세부내역·수금금액을 적으면 전체 시트와 요약표·합계·잔여 미수금에 수식으로 자동 반영'}
 /* 본부주간 보고용: 미수금 탭 형식 + 금주수금·청구년월·최종수금일 */
 function mgRptTable(L,lim){const T=[];const title='○ 본부 미수채권 업체 현황 ('+Math.round(lim/10000)+'만원 이상~)'+'';
   T.push({t:'title',cells:[title]});T.push({t:'h',cells:['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금']});
