@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>영남본부 자료 자동화</title>
+<title>영남자동 V1.0 (버전2)</title>
 <style>
 :root{--bg:#f4f6f9;--card:#fff;--ink:#1c2430;--mut:#66707d;--line:#d9dee5;--navy:#1f3a93;--accent:#2b6cb0;--warn:#b9770e}
 *{box-sizing:border-box}
@@ -88,9 +88,9 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </style>
 </head>
 <body>
-<header>영남본부 자료 자동화 <small>버전1 · 영남영업본부 주간회의 자료</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
+<header>영남자동 V1.0 <small>버전2 · 영남영업본부 주간회의 자료 (미수금 탭 제외)</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
 <main>
-<div class="tabs"><button data-tab="data">데이터</button><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><button data-tab="recv">미수금</button><button data-tab="merge">미수금 취합</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
+<div class="tabs"><button data-tab="data">데이터</button><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><button data-tab="merge">미수금 취합</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
 
 <div class="tabpane" id="pane-data">
 <div class="card">
@@ -151,7 +151,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <div class="tabpane" id="pane-comp"></div>
 <div class="tabpane" id="pane-price"></div>
 <div class="tabpane" id="pane-sum"></div>
-<div class="tabpane" id="pane-recv">
+<div class="tabpane" id="pane-recv" style="display:none!important">
 <div class="grid">
 <div class="card"><h2>1. 금주현황 붙여넣기 <span class="hint" style="margin:0">권역 소계 3행 + 본부계 (업체수·보증보험 미가입·1~6개월·소계·미수채권 총계·지난주·지난주 수금액)</span></h2>
   <textarea id="recv-cur" style="min-height:90px" placeholder="경북권역 소계	175	57	82,758,954 … 
@@ -687,7 +687,7 @@ DATA_MAP.forEach(([id,target])=>{const ta=document.getElementById(id);const st=d
     if(!raw.trim()){st.textContent='';if(tgt&&tgt.dataset.fromData==='1'){tgt.value='';delete tgt.dataset.fromData}if(id==='dRecv'){const rs=document.getElementById('recv-src');if(rs&&rs.dataset.fromData==='1'){rs.value='';delete rs.dataset.fromData;document.getElementById('recv-src-stat').textContent=''}}return}
     const f=filterYN(raw,id==='dRecv'?{group:true}:null);let msg='붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행'+(f.total-f.kept?' (제외 '+(f.total-f.kept)+')':'');
     if(tgt){if(tgt.value.trim()&&tgt.dataset.fromData!=='1')msg+=' · 대상 탭에 직접 붙인 자료가 있어 전달하지 않음';else{tgt.value=f.tsv;tgt.dataset.fromData='1';msg+=' · '+(target.startsWith('sum')?'금주요약':'단가인상')+' 탭에 전달됨';if(target==='pr-src'&&typeof prRun==='function'){try{prRun();msg+=' (단가인상 자동 작성)'}catch(e){}}}}
-    else msg+=id==='dProfit'?' · 단가인상 탭에서 자동 작성 시 사용':id==='dRecv'?' · 미수금 탭에서 사용':' · 금주요약 탭에서 작성 시 사용';st.textContent=msg;
+    else msg+=id==='dProfit'?' · 단가인상 탭에서 자동 작성 시 사용':id==='dRecv'?' · 미수금 취합 탭에서 사용':' · 금주요약 탭에서 작성 시 사용';st.textContent=msg;
     if(id==='dRecv'){const rs=document.getElementById('recv-src');if(rs&&(!rs.value.trim()||rs.dataset.fromData==='1')&&rs.value!==raw){rs.value=raw;rs.dataset.fromData='1';document.getElementById('recv-src-stat').textContent='데이터 탭에서 가져옴: '+f.total+'행 → 영남 소속 '+f.kept+'행'}}};
   ta.addEventListener('input',upd);ta.addEventListener('cleared',upd);if(id==='dPpsQ'||id==='dPpsC'){const rc=()=>{if(LISTS.comp&&LISTS.comp.out)listCompute('comp')};ta.addEventListener('input',rc);ta.addEventListener('cleared',rc)}});
 /* ===== 미수금 탭 ===== */
