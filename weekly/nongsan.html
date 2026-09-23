@@ -35,6 +35,7 @@ table.cfg input[type=text]{width:80px}
 .tabs{display:flex;gap:6px;margin-bottom:14px}
 .tabs button{background:#fff;color:var(--navy);border:1px solid var(--line);border-bottom:3px solid transparent;border-radius:6px 6px 0 0;font-weight:700}
 .tabs button.on{border-bottom-color:var(--navy);background:#e8edf8}
+button.mg-reg.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .tabpane{display:none}.tabpane.on{display:block}
 .map{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .map label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:2px}
@@ -192,12 +193,11 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <button id="mg-run">취합 작성</button>
     <button id="mg-copyfmt">전체 서식 복사 (제목~상세, A1부터)</button>
     <button id="mg-copyfmt2">전체 서식 복사 (수금완납 제외)</button>
-    <button class="sec" id="mg-copyfull">수금완납 업체만 서식 복사</button>
-    <button class="sec" id="mg-copyrows">상세 행만 서식 복사 (B열 구분 셀)</button>
     <button id="mg-report">본부주간 보고 (미수금 탭 형식)</button> <label class="hint" style="margin:0">기준 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상</label>
-    <button class="sec" id="mg-copy">상세 값 복사 (텍스트만)</button>
-    <button class="sec" id="mg-copytsv">미수금 시트 형식 복사</button>
     <span id="mg-stat" class="ok"></span></div>
+  <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
+    <button class="sec mg-reg on" data-reg="">전체</button><button class="sec mg-reg" data-reg="경북">경북</button><button class="sec mg-reg" data-reg="부산">부산</button><button class="sec mg-reg" data-reg="경남">경남</button>
+    <span class="hint" style="margin:0">선택한 권역만 표에 표시되고 복사 버튼도 그 권역만 복사합니다.</span></div>
   <div class="hint">1번 시트가 기준입니다. 구분은 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고, 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다. 최종입금전표일이 금주 기간 안이면 금주수금 O. 수금금액은 3번 수금 데이터에서 넣고, 잔여 미수금 = 미수채권 − 수금금액. 4번 지난주 출력표의 세부 진행내역은 '전주 세부내역'에 들어가고 금주 세부내역은 표에서 직접 입력합니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다. 미수금 탭은 별개로 동작합니다.</div>
   <div id="merge-out" class="prev" style="margin-top:8px"></div>
 </div>
@@ -785,7 +785,8 @@ document.getElementById('recv-copyall').onclick=async()=>{if(!RECV){alert('먼�
 document.getElementById('recv-copysum').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='s'||r.t==='st');
   const ok=await copy('',rows.map(r=>r.cells.slice(1).map(v=>v||'').join('\t')).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'요약표 숫자 4행×5열 복사됨 → 엑셀 요약표의 법조치 행 전체업체 셀 선택 후 붙여넣기':'복사 실패'};
 let MGR=null;const mgLine=r=>r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t');const isFull=x=>x.paid>0&&x.amt-x.paid<=0;
-function mgTable(filterFn){const L=filterFn?MGR.list.filter(filterFn):MGR.list;const T=[];const title='○ 본부 미수채권 업체 현황 ('+Math.round(MGR.min/10000)+'만원 이상~)'+(MGR.month?', '+MGR.month+'월 청구까지':'');
+let MG_REG='';
+function mgTable(filterFn){const L=(filterFn?MGR.list.filter(filterFn):MGR.list).filter(x=>!MG_REG||x.reg===MG_REG);const T=[];const title='○ 본부 미수채권 업체 현황 ('+Math.round(MGR.min/10000)+'만원 이상~)'+(MGR.month?', '+MGR.month+'월 청구까지':'');
   T.push({t:'title',cells:[title]});T.push({t:'h',cells:['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금']});
   const tot={n:0,a:0,pn:0,p:0};RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp);const n=g.length,a=g.reduce((s,x)=>s+x.amt,0),pn=g.filter(x=>x.paid>0).length,p=g.reduce((s,x)=>s+x.paid,0);tot.n+=n;tot.a+=a;tot.pn+=pn;tot.p+=p;T.push({t:'s',grp:gp,cells:[gp,n,a,pn,p,a-p]})});
   T.push({t:'st',cells:['합계',tot.n,tot.a,tot.pn,tot.p,tot.a-tot.p]});T.push({t:'blank',cells:[]});
@@ -831,9 +832,9 @@ function mgSumHtml(filterFn){const T=mgTable(filterFn);const rows=T.filter(r=>r.
   ['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금'].forEach(t=>h+=rtd(t,'background:'+RBG.hdr+';text-align:center;font-weight:700;'));h+='</tr>';
   rows.forEach(r=>{const bg='background:'+(RBG[r.cells[0]]||'#eee')+';';h+='<tr>'+rtd(esc(r.cells[0]),bg+'text-align:center;font-weight:700;')+r.cells.slice(1).map(v=>rtd(typeof v==='number'?v:'',bg+RACC+'font-weight:700;')).join('')+'</tr>'});
   return h+'</table>'}
-async function mgCopyAll(filterFn,label){if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=mgTable(filterFn);const rows=T.filter(r=>r.t==='d'||r.t==='sum');
-  const html=XLHTML(+mgSumHtml(filterFn)+'<br>'+mgHtml(rows,true));const text=T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
-  const ok=await writeBoth(html,text);document.getElementById('mg-stat').textContent=ok?(label||'제목·요약표·상세표 전체')+' 서식 포함 복사됨 ('+rows.filter(r=>r.t==='d').length+'업체) → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'}
+async function mgCopyAll(filterFn,label){if(!MGR){alert('먼저 취합 작성을 실행하세요');return}const T=mgTable(filterFn);const rows=T.filter(r=>r.t==='d'||r.t==='sum');
+  const html=XLHTML(mgSumHtml(filterFn)+'<br>'+mgHtml(rows,true));const text=T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
+  const ok=await writeBoth(html,text);document.getElementById('mg-stat').textContent=ok?(MG_REG?MG_REG+' ':'')+(label||'제목·요약표·상세표 전체')+' 서식 포함 복사됨 ('+rows.filter(r=>r.t==='d').length+'업체) → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'}
 /* ===== 미수금 취합 탭: AMS 합계/상세 + 전주 시트 → 미수금 시트 형식 ===== */
 const isCode6=v=>/^\d{6}$/.test(String(v||'').trim());const isYM=v=>/^20\d{2}(0[1-9]|1[0-2])$/.test(String(v||'').trim());
 function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const H=(rows[0]||[]).map(x=>String(x||'').replace(/\s+/g,''));
@@ -881,21 +882,16 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+') · 금주수금 O '+paidN+'업체(완납 '+fullN+') · 영남 외 '+outYN+'건, 기준금액 미만 '+outMin+'건 제외'}
 (function(){const d=new Date();const f=x=>x.toISOString().slice(0,10);const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;
+document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
 const mgNeed=()=>{if(!MGR){alert('먼저 취합 작성을 실행하세요');return false}return true};
 document.getElementById('mg-copyfmt').onclick=()=>{if(mgNeed())mgCopyAll(null)};
 document.getElementById('mg-copyfmt2').onclick=()=>{if(mgNeed())mgCopyAll(x=>!isFull(x),'제목·요약표·상세표(수금완납 제외)')};
-document.getElementById('mg-copyfull').onclick=async()=>{if(!mgNeed())return;const rows=mgTable(isFull).filter(r=>r.t==='d'||r.t==='sum');if(!rows.length){alert('수금완납(잔여 미수금 0) 업체가 없습니다');return}
-  const ok=await writeBoth(XLHTML(mgHtml(rows,true)),rows.map(mgLine).join('\r\n'));document.getElementById('mg-stat').textContent=ok?'수금완납 업체 '+rows.filter(r=>r.t==='d').length+'행 서식 포함(머리글) 복사됨':'복사 실패'};
-document.getElementById('mg-copyrows').onclick=async()=>{if(!mgNeed())return;const rows=mgTable().filter(r=>r.t==='d'||r.t==='sum');
-  const ok=await writeBoth(XLHTML(mgHtml(rows,false)),rows.map(mgLine).join('\r\n'));document.getElementById('mg-stat').textContent=ok?'상세 '+rows.filter(r=>r.t==='d').length+'행 서식 포함 복사됨 → 첫 데이터 행 구분 셀(B열) 선택 후 일반 붙여넣기':'복사 실패'};
-document.getElementById('mg-copy').onclick=async()=>{if(!mgNeed())return;const rows=mgTable().filter(r=>r.t==='d'||r.t==='sum');const ok=await copy('',rows.map(mgLine).join('\r\n'));document.getElementById('mg-stat').textContent=ok?'상세 '+rows.length+'행 값 복사됨(텍스트만)':'복사 실패'};
-document.getElementById('mg-copytsv').onclick=async()=>{if(!mgNeed())return;const ok=await copy('',MG.tsv.replace(/\n/g,'\r\n'));document.getElementById('mg-stat').textContent=ok?'미수금 시트 형식(머리글 포함 '+(MG.recs.length+1)+'행) 복사됨 → 데이터 탭 미수금 칸 등에 붙여넣기':'복사 실패'};
 /* 본부주간 보고: 300만원 이상 업체를 미수금 탭 형식(구분·권역·코드·업체명·미수채권·연체개월·결제기일·보증금액·법조치현황·세부 진행내역·수금금액·잔여)으로 복사 */
 document.getElementById('mg-report').onclick=async()=>{if(!mgNeed())return;const lim=+document.getElementById('mg-rmin').value||3000000;
-  const list=MGR.list.filter(x=>x.amt>=lim).map(x=>({...x,memo:(x.memo||x.memoPrev||'')}));if(!list.length){alert(fmtWon(lim)+'원 이상 업체가 없습니다');return}
+  const list=MGR.list.filter(x=>x.amt>=lim&&(!MG_REG||x.reg===MG_REG)).map(x=>({...x,memo:(x.memo||x.memoPrev||'')}));if(!list.length){alert(fmtWon(lim)+'원 이상 업체가 없습니다');return}
   const keep=RECV;RECV={list,month:MGR.month,min:lim};try{const T=recvTable();const rows=T.filter(r=>r.t==='d'||r.t==='sum');
     const html=XLHTML(recvSumHtml()+'<br>'+recvHtml(rows,true));const text=T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
-    const ok=await writeBoth(html,text);document.getElementById('mg-stat').textContent=ok?'본부주간 보고 ('+fmtWon(lim)+'원 이상 '+list.length+'업체) 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'}finally{RECV=keep}};
+    const ok=await writeBoth(html,text);document.getElementById('mg-stat').textContent=ok?'본부주간 보고 ('+(MG_REG?MG_REG+' ':'')+fmtWon(lim)+'원 이상 '+list.length+'업체) 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'}finally{RECV=keep}};
 addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
