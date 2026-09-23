@@ -757,7 +757,7 @@ const recvLine=r=>r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\
 document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
   const ok=await copy('',rows.map(recvLine).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 복사됨 → 엑셀 상세표 첫 데이터 행의 구분 셀(B열) 선택 후 붙여넣기':'복사 실패'};
 /* 서식 포함 HTML (엑셀 붙여넣기용) — 원본 시트와 같은 색상/병합/숫자형식 */
-const RF="font-family:'맑은 고딕',Malgun Gothic;font-size:10pt;border:.5pt solid #000;vertical-align:middle;";
+const RF="font-family:'맑은 고딕',Malgun Gothic;font-size:10pt;border:.5pt solid #000;vertical-align:middle;mso-data-placement:same-cell;";/* same-cell: 줄바꿈(<br>)이 있어도 셀이 여러 행으로 나뉘지 않고 한 셀 안에서 자동 줄바꿈 */
 const RACC="mso-number-format:'#\,##0\;\-#\,##0\;\-';text-align:right;";
 const rtd=(v,st,attr)=>'<td style="'+RF+(st||'')+'"'+(attr||'')+'>'+v+'</td>';
 const RBG={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6',합계:'#d9e1f2',hdr:'#fff2cc',memo:'#fff9db'};
