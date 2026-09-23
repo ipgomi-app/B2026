@@ -759,7 +759,12 @@ function sumRun(){
   const $=k=>document.getElementById('sum-'+k);
   {/* 금주요약 칸이 비어 있으면 데이터 탭 자료를 가져올지 확인 */
     const cand=[];SUMIN.forEach(([k,l])=>{const box=$('src-'+k);const d=document.getElementById(SUM_FROM_DATA[k]);if(box&&d&&!box.value.trim()&&d.value.trim()){const f=filterYN(d.value);cand.push({k,l,f})}});
-    if(cand.length){if(!confirm('금주요약 탭에 붙인 자료가 없는 칸이 있습니다.\n데이터 탭 자료를 가져와 작성할까요?\n'+cand.map(c=>' · '+c.l+' '+c.f.kept+'행').join('\n')))return;cand.forEach(c=>{const box=$('src-'+c.k);box.value=c.f.tsv;box.dataset.fromData='1'})}}
+    /* 단가인상: 단가인상 탭이 비어 있으면 데이터 탭 손익개선 자료로 */
+    const prSrc=document.getElementById('pr-src'),dP=document.getElementById('dProfit');let prCand=null;
+    if(prSrc&&dP&&!prSrc.value.trim()&&dP.value.trim()){prCand=filterYN(dP.value);cand.push({k:'__pr',l:'손익개선(단가인상)',f:prCand})}
+    if(cand.length){if(!confirm('금주요약 탭에 붙인 자료가 없는 칸이 있습니다.\n데이터 탭 자료를 가져와 작성할까요?\n'+cand.map(c=>' · '+c.l+' '+c.f.kept+'행').join('\n')))return;
+      cand.forEach(c=>{if(c.k==='__pr'){prSrc.value=c.f.tsv;prSrc.dataset.fromData='1';try{prRun()}catch(e){console.error(e)}}else{const box=$('src-'+c.k);box.value=c.f.tsv;box.dataset.fromData='1'}})}
+    else if(prSrc&&prSrc.value.trim()&&!PR.out){try{prRun()}catch(e){console.error(e)}}}
   EDITS['sum-prev1']={};EDITS['sum-prev2']={};const only=$('only').value==='1';
   const all={};SUMIN.forEach(([k])=>{const p=sumParse(k);all[k]=p.recs;$('info-'+k).textContent=p.info});
   // 주차: 입력 없으면 PPS 견적 최빈값
