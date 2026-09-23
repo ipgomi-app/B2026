@@ -194,7 +194,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <button id="mg-copyfmt">전체 서식 복사 (제목~상세, A1부터)</button>
     <button id="mg-copyfmt2">전체 서식 복사 (수금완납 제외)</button>
     <button id="mg-report">본부주간 보고 (미수금 탭 형식)</button>
-    <button class="sec" id="mg-xlsx">엑셀 파일 저장 (전체·권역별 시트, 구분별 그룹)</button> <label class="hint" style="margin:0">기준 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상</label>
+    <button class="sec" id="mg-xlsx">엑셀 파일 저장 (전체·권역별 시트, J~N열 그룹)</button> <label class="hint" style="margin:0">기준 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상</label>
     <span id="mg-stat" class="ok"></span></div>
   <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
     <button class="sec mg-reg on" data-reg="">전체</button><button class="sec mg-reg" data-reg="경북">경북</button><button class="sec mg-reg" data-reg="부산">부산</button><button class="sec mg-reg" data-reg="경남">경남</button>
@@ -863,8 +863,9 @@ function xlStyles(){const fonts=[],fills=['<fill><patternFill patternType="none"
   get({});return {get,xml}}
 /* 시트 작성: rows=[{cells:[{v,s}], ht, ol(outline level)}], merges=['B5:B9'], widths=[..] */
 function xlSheet(rows,merges,widths,hasOutline){let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
-  if(hasOutline)x+='<sheetPr><outlinePr summaryBelow="1"/></sheetPr>';
-  x+='<sheetFormatPr defaultRowHeight="15" outlineLevelRow="1"/><cols>'+widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>';
+  if(hasOutline)x+='<sheetPr><outlinePr summaryBelow="1" summaryRight="1"/></sheetPr>';
+  const gc=hasOutline&&hasOutline.cols||[];/* 열 그룹(개요): 1-based 열 번호 목록 */
+  x+='<sheetFormatPr defaultRowHeight="15"'+(gc.length?' outlineLevelCol="1"':'')+'/><cols>'+widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"'+(gc.includes(i+1)?' outlineLevel="1"':'')+'/>').join('')+'</cols><sheetData>';
   rows.forEach((r,ri)=>{x+='<row r="'+(ri+1)+'"'+(r.ht?' ht="'+r.ht+'" customHeight="1"':'')+(r.ol?' outlineLevel="'+r.ol+'"':'')+'>';
     r.cells.forEach((c,ci)=>{if(!c)return;const ref=colL(ci)+(ri+1);if(typeof c.v==='number')x+='<c r="'+ref+'" s="'+c.s+'"><v>'+c.v+'</v></c>';else if(c.v==null||c.v==='')x+='<c r="'+ref+'" s="'+c.s+'"/>';else x+='<c r="'+ref+'" s="'+c.s+'" t="inlineStr"><is><t xml:space="preserve">'+xesc(c.v)+'</t></is></c>'});x+='</row>'});
   x+='</sheetData>'+(merges.length?'<mergeCells count="'+merges.length+'">'+merges.map(m=>'<mergeCell ref="'+m+'"/>').join('')+'</mergeCells>':'')+'</worksheet>';return x}
@@ -875,7 +876,7 @@ function xlWorkbook(sheets,stylesXml){/* sheets:[{name,xml}] */const f=[];
   f.push({name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'});
   f.push({name:'xl/styles.xml',data:stylesXml});sheets.forEach((s,i)=>f.push({name:'xl/worksheets/sheet'+(i+1)+'.xml',data:s.xml}));return zipStore(f)}
 function dlBlob(u8,name){const b=new Blob([u8],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
-/* 취합 표 → 시트 행 (A열 비움, B열부터). 구분별 데이터 행은 그룹(개요 1단계), 합계 행이 요약행 */
+/* 취합 표 → 시트 행 (A열 비움, B열부터) */
 function mgSheetRows(T,ST){const rows=[],merges=[];const GBG={법조치:'E2EFDA',회생채권:'FFF2CC',결제지연:'FCE4D6',합계:'D9E1F2'};const hbg=i=>i<=5?'DCE6F1':i===12?'FCE4D6':'FFF2CC';
   const S=o=>ST.get(o);const NUM='#';const numCols=new Set([6,11,15,16]);const thick=new Set([6,12,13,15]);const brd=i=>thick.has(i)?'thinL':'thin';
   let r=0;const push=(cells,opt)=>{rows.push({cells,...(opt||{})});return r++};
@@ -895,7 +896,7 @@ function mgSheetRows(T,ST){const rows=[],merges=[];const GBG={법조치:'E2EFDA'
         else if(i===7||i===8)st={color:'1F3FBF',border:brd(i)};
         else st={border:brd(i)};
         cells.push({v:(i===0&&!v)?'':v,s:S(st)})});
-      if(c[0])row._start=r;push(cells,{ht:Math.max(30,lines*15),ol:1});return}
+      push(cells,{ht:Math.max(30,lines*15)});return}
     if(row.t==='sum'){const bg=GBG[row.grp];const cells=[null,{v:'',s:S({b:1,fill:bg,border:'thin'})},{v:'합계',s:S({b:1,fill:bg,border:'thin'})}];for(let i=2;i<=19;i++){const v=c[i];cells.push({v:(i===6||i===15)?v:'',s:S({b:1,fill:bg,border:brd(i),h:'right',num:(i===6||i===15)})})}
       push(cells,{ht:20});merges.push('C'+r+':G'+r);return}});
   /* 구분 세로 병합: 각 그룹 첫 데이터 행 ~ 합계 행 */
@@ -904,9 +905,9 @@ function mgSheetRows(T,ST){const rows=[],merges=[];const GBG={법조치:'E2EFDA'
 function rowIndexOf(T,ti){/* T 인덱스 → 시트 행 인덱스 (T 항목 1개 = 행 1개) */return ti}
 function mgXlsx(){if(!MGR){alert('먼저 취합 작성을 실행하세요');return}const ST=xlStyles();const widths=[2,8,7,8,8,9,26,13,8,8,9,11,12,10,44,44,13,13,12,9,11];
   const regs=['','경북','부산','경남'];const keep=MG_REG;const sheets=[];
-  try{regs.forEach(rg=>{MG_REG=rg;const T=mgTable();if(rg&&!T.some(r=>r.t==='d'))return;const {rows,merges}=mgSheetRows(T,ST);sheets.push({name:rg||'전체',xml:xlSheet(rows,merges,widths,true)})})}finally{MG_REG=keep}
+  try{regs.forEach(rg=>{MG_REG=rg;const T=mgTable();if(rg&&!T.some(r=>r.t==='d'))return;const {rows,merges}=mgSheetRows(T,ST);sheets.push({name:rg||'전체',xml:xlSheet(rows,merges,widths,{cols:[10,11,12,13,14]})})})}finally{MG_REG=keep}
   const u8=xlWorkbook(sheets,ST.xml());const d=new Date();const nm='미수금취합_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);
-  document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' (시트: '+sheets.map(s=>s.name).join(', ')+') · 구분별 그룹은 시트 왼쪽 +/− 로 접고 펼침'}
+  document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' (시트: '+sheets.map(s=>s.name).join(', ')+') · J~N열(결제기일~법조치 현황) 열 그룹은 시트 위쪽 +/− 로 접고 펼침'}
 /* 본부주간 보고용: 미수금 탭 형식 + 금주수금·청구년월·최종수금일 */
 function mgRptTable(L,lim){const T=[];const title='○ 본부 미수채권 업체 현황 ('+Math.round(lim/10000)+'만원 이상~)'+'';
   T.push({t:'title',cells:[title]});T.push({t:'h',cells:['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금']});
