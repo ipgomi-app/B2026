@@ -506,7 +506,7 @@ function newGrid(W,widths){const G=[];G.W=W;G.widths=widths;const occ={};let r;
   const add=(v,cls,cs=1,rs=1)=>{const col=next();r.cells.push({v,cls,cs,rs,col});if(rs>1)for(let i=0;i<cs;i++)occ[col+i]=r.idx+rs-1;r.pos=col+cs};
   const blank=(n=1)=>{for(let i=0;i<n;i++)add('','')};const fill=()=>{while(next()<W)add('','')};
   return {G,R,add,blank,fill}}
-const PFIELDS=[['region','부서(권역)',['부서'],0],['person','담당자',['담당자'],1],['code','코드',['코드'],3],['name','계약처명',['계약처명'],4],['amt','효과금액(천원)',['효과금액(천원)','효과금액'],7],['kind','추가청구세부',['추가청구세부'],9],['week','회의반영주차',['회의반영주차'],11],['memo1','재고차이사유 및 계약내용',['재고차이사유'],44],['memo2','계약특이사항',['계약특이사항'],65]];
+const PFIELDS=[['region','부서(권역)',['부서'],0],['person','담당자',['담당자'],1],['code','코드',['코드'],3],['name','계약처명',['계약처명'],4],['amt','효과금액(천원)',['효과금액(천원)','효과금액','년예상효과'],7],['kind','추가청구세부',['추가청구세부','단가인상구분'],9],['week','회의반영주차',['회의반영주차','적용월'],11],['memo1','재고차이사유 및 계약내용',['재고차이사유','비고(내용)','비고'],44],['memo2','계약특이사항',['계약특이사항'],65]];
 const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null,out2:[],hash2:''};
 (function(){
   const el=document.getElementById('pane-price');
@@ -551,7 +551,7 @@ function prRun(){
   if(!raw.trim()){const d=document.getElementById('dProfit');const draw=d?d.value:'';
     if(draw.trim()){const f=filterYN(draw);if(!confirm('단가인상 탭에 붙인 자료가 없습니다.\n데이터 탭의 손익개선 자료(영남 소속 '+f.kept+'행)를 가져와 작성할까요?'))return;$('src').value=f.tsv;$('src').dataset.fromData='1';raw=$('src').value}
     else if(!$('src2').value.trim()){alert('데이터를 붙여넣으세요 (단가인상 탭 또는 데이터 탭의 손익개선 칸)');return}}
-  {const raw2=$('src2').value;if(raw2.trim()){const p2=prParse(raw2);PR.out2=p2.recs;PR.hash2=raw2;$('detect2').textContent='인식: 헤더 '+p2.hdr+'줄, 데이터 '+p2.n+'행 → 진행중 '+p2.recs.length+'건'}else{PR.out2=[];$('detect2').textContent=''}}
+  {const raw2=$('src2').value;if(raw2.trim()){const f2=filterYN(raw2);const p2=prParse(f2.tsv);PR.out2=p2.recs;PR.hash2=raw2;$('detect2').textContent='인식: 헤더 '+p2.hdr+'줄, 데이터 '+f2.total+'행(영남 소속 '+f2.kept+') → 진행중 '+p2.recs.length+'건'}else{PR.out2=[];$('detect2').textContent=''}}
   if(!raw.trim()){PR.rows=[];PR.hdr=[];PR.data=[];PR.map={};PR.hash='';PR.out=[];$('detect').textContent='';$('map').innerHTML='';prRender();return}
   PR.rows=parseTSV(raw);EDITS['pr-prev1']={};EDITS['pr-prev2']={};
   if(raw!==PR.hash){PR.hash=raw;
