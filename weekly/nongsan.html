@@ -393,8 +393,9 @@ function listDetect(id){
   const rg=colMatch(v=>/권역$/.test(String(v||'').trim()));if(rg>=0&&(map.region<0||!L.data.some(r=>/권역$/.test((r[map.region]||'').trim()))))map.region=rg;
   if(map.branch>=0&&(map.person<0||!L.data.some(r=>isName(r[map.person])))){const cand=[map.branch+1,map.branch+2,map.branch+3].find(i=>L.data.filter(r=>isName(r[i])).length>=L.data.length*0.5);if(cand!=null)map.person=cand}
   if(map.code>=0&&(map.name<0||!L.data.some(r=>(r[map.name]||'').trim())))map.name=[map.code+1,map.code+2].find(i=>L.data.filter(r=>(r[i]||'').trim()).length>=L.data.length*0.5)??-1;
-  if(map.memo<0||!L.data.some(r=>/[가-힣]{2,}/.test(r[map.memo]||''))){ // 가장 긴 텍스트 열
-    let best=-1,bl=0;for(let i=0;i<width;i++){if(i===map.name||i===map.branch||i===map.region)continue;const vals=L.data.map(r=>(r[i]||'').trim());if(L.data.length>1&&new Set(vals).size<=1)continue;const l=vals.reduce((a,v)=>a+((v.match(/[가-힣]/g)||[]).length),0);if(l>bl&&vals.some(v=>v.length>6)){bl=l;best=i}}map.memo=best}
+  /* 영업진행사항 열은 헤더 키워드로 못 찾으면 공란 (헤더 없는 붙여넣기에서만 가장 긴 텍스트 열로 추정) */
+  if(L.hdr.length&&map.memo<0)map.memo=-1;else if(map.memo<0||!L.data.some(r=>/[가-힣]{2,}/.test(r[map.memo]||''))){ // 가장 긴 텍스트 열
+    let best=-1,bl=0;for(let i=0;i<width;i++){if(i===map.name||i===map.branch||i===map.region)continue;const vals=L.data.map(r=>(r[i]||'').trim());if(L.data.length>1&&new Set(vals).size<=1)continue;if(vals.filter(v=>/\(주\)|주식회사|법인|산업|식품|㈜/.test(v)).length>=vals.length*0.5)continue;const l=vals.reduce((a,v)=>a+((v.match(/[가-힣]/g)||[]).length),0);if(l>bl&&vals.some(v=>v.length>6)){bl=l;best=i}}map.memo=best}
   L.map=map;L.width=width;
 }
 function listMapUI(id){
