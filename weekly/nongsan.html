@@ -726,17 +726,22 @@ document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 �
 const RF="font-family:'맑은 고딕',Malgun Gothic;font-size:9pt;border:.5pt solid #000;vertical-align:middle;";
 const RACC="mso-number-format:'#\,##0\;\-#\,##0\;\-';text-align:right;";
 const rtd=(v,st,attr)=>'<td style="'+RF+(st||'')+'"'+(attr||'')+'>'+v+'</td>';
-const RBG={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6',합계:'#d9e1f2',hdr:'#dce6f1',memo:'#fff9db'};
+const RBG={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6',합계:'#d9e1f2',hdr:'#fff2cc',memo:'#fff9db'};
 function recvHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
+  const TH='border-left:1.5pt solid #000;';/* 그룹 경계 굵은 세로선: 미수채권·결제기일·세부 진행내역·수금금액 앞 */
+  const BLUE='color:#1f3fbf;';const hdrBg='background:'+RBG.hdr+';';
   let h='<table style="border-collapse:collapse">';
-  if(withHdr){h+='<tr>';const H=['구분','권역','코드','업체명','미수채권','연체개월','결제기일','보증금액<br>(보증금+보증보험)','법조치현황','세부 진행내역','수금금액','잔여<br>미수금'];const cs={3:2,9:6};
-    H.forEach((t,i)=>h+=rtd(t,'background:'+RBG.hdr+';text-align:center;font-weight:700;white-space:normal;',cs[i]?' colspan="'+cs[i]+'"':''));h+='</tr>'}
+  if(withHdr)h+='<colgroup>'+[60,50,60,90,90,90,60,60,100,70,60,60,60,60,60,60,90,90].map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
+  if(withHdr){h+='<tr style="height:30pt">';const H=['구분','권역','코드','업체명','미수채권','연체개월','결제기일','보증금액<br>(보증금+보증보험)','법조치현황','세부 진행내역','수금금액','잔여<br>미수금'];const cs={3:2,9:6};const thick={4:1,6:1,9:1,10:1};
+    H.forEach((t,i)=>h+=rtd(t,hdrBg+'text-align:'+(i===9?'left':'center')+';font-weight:700;white-space:normal;'+(thick[i]?TH:''),cs[i]?' colspan="'+cs[i]+'"':''));h+='</tr>'}
   const groups=[];rows.forEach(r=>{if(r.t==='d'&&(!groups.length||groups[groups.length-1].grp!==r.grp))groups.push({grp:r.grp,rows:[]});if(groups.length)groups[groups.length-1].rows.push(r)});
-  groups.forEach(g=>{const bg='background:'+(RBG[g.grp]||'#eee')+';';g.rows.forEach((r,i)=>{h+='<tr>';const c=r.cells;
+  groups.forEach(g=>{const bg='background:'+(RBG[g.grp]||'#eee')+';';g.rows.forEach((r,i)=>{const c=r.cells;
+    const memo=String(c[10]||'');const lines=r.t==='d'?Math.max(1,...memo.split('\n').map(l=>Math.ceil(l.length/58))):1;const rh=r.t==='d'?Math.max(30,lines*15):20;
+    h+='<tr style="height:'+rh+'pt">';
     if(i===0)h+=rtd(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
-    if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=rtd(NUM(c[5]),bg+RACC+'font-weight:700;');for(let k=0;k<4;k++)h+=rtd('',bg);h+=rtd('',bg,' colspan="6"');h+=rtd(NUM(c[16]),bg+RACC+'font-weight:700;');h+=rtd('',bg)}
-    else{h+=rtd(esc(c[1]),'text-align:center;');h+=rtd(esc(c[2]),"text-align:center;mso-number-format:'0';");h+=rtd(esc(c[3]),'text-align:left;',' colspan="2"');h+=rtd(NUM(c[5]),RACC);h+=rtd(esc(c[6]),'text-align:center;');h+=rtd(esc(c[7]),'text-align:center;');h+=rtd(NUM(c[8]),RACC);h+=rtd(esc(c[9]),'text-align:center;');
-      h+=rtd(esc(String(c[10]||'')).replace(/\n/g,'<br>'),'background:'+RBG.memo+';text-align:left;white-space:normal;',' colspan="6"');h+=rtd(NUM(c[16]),'background:'+RBG.memo+';'+RACC);h+=rtd(NUM(c[17]),RACC)}
+    if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=rtd(NUM(c[5]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg+TH,' colspan="6"');h+=rtd(NUM(c[16]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg)}
+    else{h+=rtd(esc(c[1]),'text-align:center;');h+=rtd(esc(c[2]),"text-align:center;mso-number-format:'0';");h+=rtd(esc(c[3]),'text-align:left;white-space:normal;',' colspan="2"');h+=rtd(NUM(c[5]),RACC+TH);h+=rtd(esc(c[6]),'text-align:center;'+BLUE);h+=rtd(esc(c[7]),'text-align:center;'+BLUE+TH);h+=rtd(NUM(c[8]),RACC);h+=rtd(esc(c[9]),'text-align:center;');
+      h+=rtd(esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;'+TH,' colspan="6"');h+=rtd(NUM(c[16]),RACC+TH);h+=rtd(NUM(c[17]),RACC)}
     h+='</tr>'})});
   return h+'</table>'}
 function recvSumHtml(){const T=recvTable();const rows=T.filter(r=>r.t==='s'||r.t==='st');const title=T[0].cells[0];
