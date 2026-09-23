@@ -713,10 +713,13 @@ function recvBuild(){const rs=document.getElementById('recv-src');let raw=rs.val
   if(!raw.trim()){if(RECV_CUR){document.getElementById('recv-out').innerHTML='';document.getElementById('recv-stat').textContent='금주현황만 작성됨 (미수금 데이터 없음)';return}alert('2. 미수금 데이터 칸(또는 데이터 탭의 미수금 칸)에 자료를 먼저 붙여넣으세요');return}
   const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const hdr=rows[0]||[];const H=hdr.map(x=>String(x||'').replace(/\s+/g,''));
   const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};
-  const C={g:0,br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),code:col(['거래처↓','거래처코드','코드'],3),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입'],9),gamt:col(['보증금액'],10),law:col(['법조치현황','법조치'],11)};
+  const hasG=H.findIndex(h=>h==='구분')>=0;
+  const C={g:hasG?H.findIndex(h=>h==='구분'):-1,br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),code:col(['거래처↓','거래처코드','코드','거래처'],3),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금','합계'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입','가입여부'],9),gamt:col(['보증금액'],-1),law:col(['법조치현황','법조치'],11)};
+  if(C.gamt<0)C.gamt=(C.ins>=0&&/금액/.test(H[C.ins+1]||''))?C.ins+1:10;
   const min=+document.getElementById('recv-min').value||0;const g=(r,i)=>String(r[i]||'').trim();
-  const list=rows.slice(1).map(r=>{let grp=g(r,C.g).replace(/지연결제/,'결제지연');const br=g(r,C.br);const key=Object.keys(BR2REG).find(b=>br.startsWith(b));
-    return {grp:RECV_GROUPS.includes(grp)?grp:(grp||'결제지연'),reg:key?REG_SHORT(BR2REG[key]):'',br,emp:g(r,C.emp),code:g(r,C.code),name:g(r,C.name),amt:num(g(r,C.amt)),mon:g(r,C.mon).replace(/\s/g,''),due:g(r,C.due),gamt:num(g(r,C.gamt)),law:g(r,C.law).replace(/\s+/g,' ').trim(),memo:'',paid:0}}).filter(x=>x.code&&x.amt>=min);
+  const grpOf=(gv,law)=>{gv=gv.replace(/지연결제/,'결제지연');if(RECV_GROUPS.includes(gv))return gv;if(/회생/.test(law))return '회생채권';if(law)return '법조치';return '결제지연'};
+  const list=rows.slice(1).map(r=>{const law0=g(r,C.law).replace(/\s+/g,' ').trim();let grp=grpOf(C.g>=0?g(r,C.g):'',law0);const br=g(r,C.br);const key=Object.keys(BR2REG).find(b=>br.startsWith(b));
+    return {grp,reg:key?REG_SHORT(BR2REG[key]):'',br,emp:g(r,C.emp),code:g(r,C.code),name:g(r,C.name),amt:num(g(r,C.amt)),mon:g(r,C.mon).replace(/\s/g,''),due:g(r,C.due),gamt:num(g(r,C.gamt)),law:g(r,C.law).replace(/\s+/g,' ').trim(),memo:'',paid:0}}).filter(x=>x.code&&x.amt>=min);
   RECV={list,month:document.getElementById('recv-month').value.trim(),min};recvRender();
   document.getElementById('recv-stat').textContent='작성 완료: '+list.length+'건 (영남 소속 '+f.kept+'행 중 '+fmtWon(min)+'원 이상)'}
 const fmtWon=v=>v?Math.round(v).toLocaleString('en-US'):'-';
@@ -794,8 +797,9 @@ function mgParseDet(raw){const out={};if(!raw.trim())return out;let cur=null;par
   const y=c.slice(3).find(isYM);if(y){cur.months++;if(!cur.ymFrom||y<cur.ymFrom)cur.ymFrom=y;if(!cur.ymTo||y>cur.ymTo)cur.ymTo=y}})
   return out}
 function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const H=(rows[0]||[]).map(x=>String(x||'').replace(/\s+/g,''));
-  const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};const cc=col(['거래처↓','거래처코드','코드'],3),cl=col(['법조치현황','법조치'],11);
-  rows.slice(1).forEach(r=>{const code=String(r[cc]||'').trim();if(!isCode6(code))return;let g=String(r[0]||'').trim().replace(/지연결제/,'결제지연');out[code]={grp:RECV_GROUPS.includes(g)?g:'',law:String(r[cl]||'').replace(/\s+/g,' ').trim()}});return out}
+  const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};const cc=col(['거래처↓','거래처코드','코드','거래처'],3),cl=col(['법조치현황','법조치'],11),cg=H.findIndex(h=>h==='구분');
+  rows.slice(1).forEach(r=>{const code=String(r[cc]||'').trim();if(!isCode6(code))return;let g=cg>=0?String(r[cg]||'').trim().replace(/지연결제/,'결제지연'):'';const law=String(r[cl]||'').replace(/\s+/g,' ').trim();
+    if(!RECV_GROUPS.includes(g))g=/회생/.test(law)?'회생채권':(law?'법조치':'');out[code]={grp:g,law}});return out}
 function mgParseLaw(raw){const out={};if(!raw.trim())return out;const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));const hi=rows.findIndex(r=>r.some(c=>/조치\s*구분|조치상태/.test(c)));const H=hi>=0?rows[hi].map(x=>x.replace(/\s+/g,'')):[];
   const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h===k||h.includes(k));if(i>=0)return i}return def};
   const C={br:col(['팀'],0),emp:col(['담당자'],1),code:col(['코드'],2),name:col(['거래처명'],3),amt:col(['금액'],4),kind:col(['조치구분'],5),recv:col(['회수금액'],7),bal:col(['잔액'],9),st:col(['조치상태'],10),memo:col(['비고'],12)};
