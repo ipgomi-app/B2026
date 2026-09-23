@@ -871,7 +871,7 @@ function sumGrid2(dataOnly){
   let skip=0;const add=(v,cls,cs,rs)=>{if(skip>0){skip--;return}add0(v,cls,cs,rs)};const blank=n=>{for(let i=0;i<(n||1);i++)add('','')};
   const startRow=()=>{skip=dataOnly?2:0};
   const secs=[['PPS',o.f.ppsC,o.f.ppsQ,false],['SCM',o.f.scmC,o.f.scmQ,false],['MHE',o.f.mheC,o.f.mheQ,true],['산업자재유통',o.f.indC,o.f.indQ,false]];
-  const cnt=(rs,isM)=>{if(!rs.length)return '금주없음';const a=rs.reduce((s,x)=>s+x.amt,0);const n=isM?rs.reduce((s,x)=>s+x.units,0)+' 대':rs.length+' 건';return n+' / '+(a/100000).toFixed(1)+' 억'};
+  const cnt=(rs,isM)=>{if(!rs.length)return '금주없음';const a=rs.reduce((s,x)=>s+x.amt,0);const n=isM?rs.reduce((s,x)=>s+x.units,0)+' 대':rs.length+' 건';const e=a/100000;return n+' / '+(e>=10?e.toFixed(1):e.toFixed(2))+' 억'};
   if(!dataOnly){R();blank();add('[금주 상세내역]','st');fill();}
   secs.forEach(([name,C,Q,isM])=>{
     [['계약',C,'▶'],['견적',Q,'▷']].forEach(([lab,rs,mk],si)=>{
