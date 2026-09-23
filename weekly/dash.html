@@ -299,10 +299,14 @@ function classify(d){const typ=d.dtl.map(x=>x.typ).join(' ');const all=d.dtl.map
   const c=dtlCats(d);/* ① LPS 상세구분 코드(DTL_TYP) 기준 */
   const hasSales=[...c].some(k=>SALES_CATS.includes(k));
   /* ② 코드로 못 정한 일지(업무일지·기타 등)만 본문 키워드로 보조 판정 */
-  if(!c.size){if(/프로젝트\s*구분\s*:\s*엔지니어링/.test(all)||(ENG_RE.test(all)&&!/PPS|파렛트/.test(all)))c.add('엔지니어링');
+  if(!c.size){const BIZ2CAT={'PPS':'PPS영업','산업자재유통':'산업자재유통','SCM':'SCM','지게차':'지게차/MHE','글로벌비즈':'글로벌비즈'};
+    if(/프로젝트\s*구분\s*:\s*엔지니어링/.test(all)||(ENG_RE.test(all)&&!/PPS|파렛트/.test(all)))c.add('엔지니어링');
     if(/경쟁사\s*(전환|사용|업체|계약)|재전환/.test(all))c.add('경쟁사');
-    if(/견적서|견적\s*(진행|제출|발송|전달|완료|재진행)|견적중|신규\s*(계약|견적|개척)/.test(all)&&!NONSALES_RE.test(all))c.add('PPS영업');
-    if(/미수금|보증보험|지급명령/.test(all))c.add('미수금');if(/재고실사|재고조사|유휴재고/.test(all))c.add('재고실사');if(/입고미회수|DRS/.test(all))c.add('입고미회수');if(/공파렛트\s*(확인|회수)/.test(all))c.add('공파렛트확인')}
+    /* 품의(견적서·계약서)에서 자동 생성된 업무일지: "제목 : [태그]… 견적서/견적요청/계약서", "계약형태 : PALLET/산업자재유통/SCM…" → 계약형태로 사업 판정 */
+    if(/제목\s*:/.test(all)&&/계약형태\s*:/.test(all)&&/견적|계약서|품의/.test(all))bizOf(typ,all).forEach(bz=>c.add(BIZ2CAT[bz]||'PPS영업'));
+    else if(/견적서|견적\s*(진행|제출|발송|전달|완료|재진행|요청)|견적중|신규\s*(계약|견적|개척)/.test(all)&&!NONSALES_RE.test(all))bizOf(typ,all).forEach(bz=>c.add(BIZ2CAT[bz]||'PPS영업'));
+    if(/미수금|보증보험|지급명령/.test(all))c.add('미수금');if(/재고실사|재고조사|유휴재고/.test(all))c.add('재고실사');if(/입고미회수|DRS/.test(all))c.add('입고미회수');if(/공\s*파렛트\s*(확인|회수)/.test(all))c.add('공파렛트확인');
+    if(/클레임|Claim/i.test(all))c.add('클레임');if(/수불\s*(확인|방문|관리)|마감\s*(자료|수불|업무)/.test(all))c.add('수불관리');if(/법적\s*(대응|조치)|가처분|소송/.test(all))c.add('법적대응')}
   /* ③ 어느 분류에서든 덧붙는 태그 */
   if(PRICE_CAT_RE.test(cat)||(hasSales&&PALLET_RE.test(all)&&detectKind(all)!==''&&!/경쟁사\s*전환|재전환|신규\s*계약/.test(all)))c.add('단가인상');
   if(FARM_RE.test(d.name+' '+all)&&(hasSales||!c.size||[...c].some(k=>['PPS영업','경쟁사'].includes(k))))c.add('농산업종');
