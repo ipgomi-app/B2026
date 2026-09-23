@@ -47,6 +47,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}@media(max-width:1100px){.grid3{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -66,16 +67,20 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
   <textarea id="diary" placeholder="업무일지 조회 결과(VISIT_DAT 또는 PRG_GUBUN 헤더 + 상세 행)를 그대로 붙여넣으세요. 여러 지점 결과를 이어 붙여도 됩니다."></textarea>
   <div id="diarystat" class="hint"></div>
 </div>
-<div class="grid">
 <div class="card">
-  <h2>2. 계약 데이터 붙여넣기 <span class="tag">계약 조회 결과</span></h2>
-  <textarea id="contract" style="min-height:140px" placeholder="계약 조회 결과를 그대로 붙여넣으세요(등록일, 담당, 코드, 업체명, 계약형태, … 계약구분, 예상매출액, 내용 순의 머리글 없는 형식). 신규계약만 계약으로, 단가인상은 단가인상으로 집계하고 반려는 제외합니다."></textarea>
-  <div id="contractstat" class="hint"></div>
-</div>
-<div class="card">
-  <h2>3. 견적 데이터 붙여넣기 <span class="tag">견적 조회 결과</span></h2>
-  <textarea id="quote" style="min-height:140px" placeholder="견적 조회 결과를 그대로 붙여넣으세요(회사, 결재, 등록일, 결재상태, 코드, 업체명, 제목, 지점코드, 지점, 사번, 담당, 문서구분, 계약형태, … 예상매출액, 규격, … 내용 순의 머리글 없는 형식). 반려는 제외합니다."></textarea>
-  <div id="quotestat" class="hint"></div>
+  <h2>2. 데이터 붙여넣기 <span class="tag">영남자동 데이터 탭과 같은 자료</span></h2>
+  <div class="hint">전사 시트를 그대로 붙여도 내장 명단(경북·부산·경남 권역의 지점/담당자)에 속한 행만 골라 씁니다. 계약은 "○○ 계약", 견적은 "○○ 견적", 손익개선은 "단가인상"으로 집계됩니다.</div>
+  <div class="grid3">
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">PPS 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 천원</span></h3><textarea id="dPpsQ" style="min-height:110px" placeholder="PPS 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">PPS 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dPpsC" style="min-height:110px" placeholder="PPS 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">손익개선(단가인상) <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 천원</span></h3><textarea id="dProfit" style="min-height:110px" placeholder="손익개선(단가인상) 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dProfit-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">SCM 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dScmQ" style="min-height:110px" placeholder="SCM 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">SCM 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dScmC" style="min-height:110px" placeholder="SCM 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">산업자재유통 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dIndQ" style="min-height:110px" placeholder="산업자재유통 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">산업자재유통 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dIndC" style="min-height:110px" placeholder="산업자재유통 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">MHE 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheQ" style="min-height:110px" placeholder="MHE 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">MHE 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheC" style="min-height:110px" placeholder="MHE 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheC-stat" class="hint"></div></div>
+  </div>
 </div>
 </div>
 <div class="card">
@@ -302,8 +307,9 @@ function mergeByCode(list){const g={};list.forEach(d=>{const k=d.code+'|'+d.emp;
   return Object.values(g).map(arr=>{arr.sort((a,b)=>(a.date?a.date.key:'').localeCompare(b.date?b.date.key:''));const last=arr[arr.length-1];
     return {num:arr.map(x=>x.num).join(','),date:last.date,emp:last.emp,code:last.code,name:last.name,group:arr.map(x=>x.group).join(' '),addr:last.addr||arr[0].addr,dtl:arr.flatMap(x=>x.dtl),parts:arr,days:[...new Set(arr.map(x=>x.date?x.date.m+'/'+x.date.d:''))]}})}
 /* ===== 품의/견적 데이터 ===== */
-const QKEYS=[['emp',/담당자|담당|영업담당|사원/],['br',/지점|부서/],['reg',/권역/],['name',/업체명|거래처명|고객명|업체|거래처/],['code',/코드|CST/i],['biz',/계약형태|사업(구분|항목)|사업|형태/],['kind',/^구분$|계약\/견적|진행(구분|단계)|상태|유형/],['newc',/계약구분|신규\/경쟁|신규|경쟁/],['item',/품목|규격|제품/],['amt',/예상매출|매출액|금액/],['date',/일자|날짜|등록일|주차|년\/월/],['memo',/내용|비고|특이사항/]];
-function quoteHeader(row){const m={};const used=new Set();for(const [k,re] of QKEYS){for(let i=0;i<row.length;i++){const h=String(row[i]||'').trim();if(!h||used.has(i))continue;if(re.test(h)){m[k]=i;used.add(i);break}}}return m}
+const QKEYS=[['emp',/담당자|담당|영업담당|사원/],['br',/지점|부서/],['reg',/권역/],['name',/업체명|거래처명|계약처명|고객명|업체|거래처|계약처/],['code',/코드|CST/i],['biz',/계약형태|사업(구분|항목)|사업|형태/],['kind',/^구분$|계약\/견적|진행(구분|단계)|상태|유형/],['newc',/계약구분|신규\/경쟁|신규|경쟁/],['item',/품목|규격|제품/],['amt',/예상매출|매출액|금액/],['date',/일자|날짜|등록일|주차|년\/월/],['memo',/내용|비고|특이사항/]];
+function quoteHeader(row,pref){const m={};const used=new Set();if(pref)for(const k of Object.keys(pref)){for(let i=0;i<row.length;i++){const h=String(row[i]||'').trim().replace(/\s+/g,' ');if(h&&!used.has(i)&&pref[k].test(h)){m[k]=i;used.add(i);break}}}
+  for(const [k,re] of QKEYS){if(m[k]!==undefined)continue;for(let i=0;i<row.length;i++){const h=String(row[i]||'').trim();if(!h||used.has(i))continue;if(re.test(h)){m[k]=i;used.add(i);break}}}return m}
 /* 계약 조회(머리글 없는 고정 열) : 0 등록일, 1 담당, 2 코드, 3 업체명, 4 계약형태, 7 재전환, 8 경쟁사, 11 계약구분(신규계약만 계약, 단가인상은 단가인상, 나머지 제외), 12 단가인상종류, 13 예상매출액, 14 효과금액, 18 규격, 32 내용, 그 뒤 결재상태(결재완료/반려) */
 const CFORM_RE=/^\d{2}-(PALLET|물류기기|SCM|산업자재유통|기타|RRPP|지게차|폴드팩|글로벌비즈)/;
 const CFORM_BIZ={PALLET:'PPS',물류기기:'산업자재유통',SCM:'SCM',산업자재유통:'산업자재유통',기타:'산업자재유통',RRPP:'글로벌비즈',지게차:'지게차',폴드팩:'글로벌비즈',글로벌비즈:'글로벌비즈'};
@@ -341,9 +347,9 @@ function quoteFixedRow(r){const F=findCols(r);if(!F||F.date<0||F.name<0)return n
 function diagQuote(raw){const rows=parseTSV(raw);if(!rows.length)return '내용 없음';const r=rows[0];const c=r.map(x=>String(x||'').trim());
   const has=[['날짜',c.some(x=>isDate(x))],['계약형태(01-PALLET 등)',c.some(x=>CFORM_RE.test(x))],['코드(6자리)',c.some(x=>/^\d{6}$/.test(x))],['계약구분/견적서',c.some(x=>/^\d{2}-(신규계약|단가인상|단가인하|재계약|관리계약|계약조건변경|계약종료)|견적서/.test(x))]];
   return rows.length+'행, 첫 행 '+r.length+'열 · 첫 행에서 찾은 항목: '+(has.filter(h=>h[1]).map(h=>h[0]).join(', ')||'없음')+' / 못 찾은 항목: '+(has.filter(h=>!h[1]).map(h=>h[0]).join(', ')||'없음')+' (탭으로 구분된 원본 그대로 붙여야 합니다)'}
-function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,hdr=null;const matched=[];let fixedN=0,rejected=0;const skipped={};
+function parseQuote(raw,mode,opt){opt=opt||{};const rows=parseTSV(raw);const out=[];let hm=null,hdr=null;const matched=[];let fixedN=0,rejected=0;const skipped={};
   rows.forEach(r=>{if(!r.some(x=>String(x).trim()))return;
-    const cr=mode==='contract'?contractRow(r):quoteFixedRow(r);if(cr){if(cr.skip){skipped[cr.skip]=(skipped[cr.skip]||0)+1;return}if(/반려/.test(cr.status)){rejected++;return}const e=EMP2[cr.emp]||EMP2[cr.emp.replace(/\d+$/,'')]||{};cr.br=cr.br||e.br||'';cr.reg=e.reg||(CITY2BR.find(x=>x[1]===cr.br)||[])[2]||'';out.push(cr);fixedN++;return}const cand=quoteHeader(r);const score=Object.keys(cand).length;
+    const cr=mode==='contract'?contractRow(r):quoteFixedRow(r);if(cr){if(cr.skip){skipped[cr.skip]=(skipped[cr.skip]||0)+1;return}if(/반려/.test(cr.status)){rejected++;return}const e=EMP2[cr.emp]||EMP2[cr.emp.replace(/\d+$/,'')]||{};cr.br=cr.br||e.br||'';cr.reg=e.reg||(CITY2BR.find(x=>x[1]===cr.br)||[])[2]||'';out.push(cr);fixedN++;return}const cand=quoteHeader(r,opt.pref);const score=Object.keys(cand).length;
     if(score>=3&&(!hm||score>=Object.keys(hm).length-1)&&cand.name!==undefined){const ok=Object.keys(cand).filter(k=>['emp','name','biz','kind','amt'].includes(k)).length>=2;if(ok){hm=cand;hdr=r;matched.push(Object.entries(cand).map(([k,i])=>k+'='+String(r[i]).trim()).join(', '));return}}
     if(!hm)return;const g=k=>hm[k]===undefined?'':String(r[hm[k]]||'').trim();
     const name=g('name');if(!name)return;
@@ -355,14 +361,17 @@ function parseQuote(raw,mode){const rows=parseTSV(raw);const out=[];let hm=null,
     const br=g('br')?(g('br').match(/[가-힣]+지점/)||[g('br')])[0]:(e.br||'');const brN=br&&!/지점$/.test(br)?br+'지점':br;const reg=g('reg')||e.reg||(CITY2BR.find(c=>c[1]===brN)||[])[2]||'';
     out.push({date,emp,br:brN,reg,code:g('code'),name,biz,kind,item,amt,memo:g('memo')||line.replace(/\s+/g,' ').trim().slice(0,200),wkTxt:g('date')})});
   /* 금액 단위: 시트에 1,000,000 이상 값이 하나라도 있으면 원 단위로 보고 전체를 천원으로 환산 */
-  if(out.some(q=>Math.abs(q.amt)>=1000000))out.forEach(q=>q.amt=Math.round(q.amt/1000));
+  if(opt.unit){out.forEach(q=>{if(q.fixed)return;q.amt=opt.unit==='w'?Math.round(q.amt/1000):opt.unit==='m12'?Math.round(q.amt*12/1000):Math.round(q.amt)})}
+  else if(out.some(q=>Math.abs(q.amt)>=1000000))out.forEach(q=>q.amt=Math.round(q.amt/1000));
+  if(opt.biz)out.forEach(q=>{if(opt.forceBiz||q.biz==='PPS')q.biz=opt.biz});if(opt.kind)out.forEach(q=>q.kind=opt.kind);
   if(fixedN)matched.unshift('조회 형식 '+fixedN+'건'+(rejected?' (반려 '+rejected+'건 제외)':'')+(Object.keys(skipped).length?' (제외: '+Object.entries(skipped).map(([k,v])=>k+' '+v).join(', ')+')':''));
   return {list:out,matched}}
 /* 계약·견적 요약 표준화: 소재지, 업종, 제안 문구, 단가, 물동량, 예상매출 */
 /* 계약·견적 요약: 원문을 그대로 쓰되 띄어쓰기·쉼표 정리, 물동량 천 단위 쉼표, 예상매출 표기 규칙(1,000천원 미만은 천원, 이상은 억) 적용 */
 /* 요약용 업체명: 괄호·대괄호 내용 제거, (주)·(유) 등 법인 표기는 유지 */
 function shortName(n){return String(n||'').replace(/\((주|유|합|재)\)/g,'\u0002$1\u0003').replace(/\[[^\]]*\]|\([^)]*\)/g,'').replace(/\u0002/g,'(').replace(/\u0003/g,')').replace(/\s+/g,' ').trim()||String(n||'')}
-function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kind==='단가인상')return shortName(q.name)+' : '+m;
+function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();
+  {const pm=m.match(/^([^:]{1,30}?)\s*:\s*/);if(pm){const a=pm[1].replace(/\s|\(.*?\)|\[.*?\]/g,''),b=shortName(q.name).replace(/\s|\(.*?\)/g,'');if(a&&b&&(a.includes(b)||b.includes(a)))m=m.slice(pm[0].length)}}/* 내용이 '업체명 : '로 시작하면 중복 제거 */if(q.kind==='단가인상')return shortName(q.name)+' : '+m;
   m=m.replace(/(\d),(\d)/g,'$1\u0001$2').replace(/\s*,\s*/g,', ').replace(/\s*,\s*,/g,',').replace(/\u0001/g,',').replace(/\s+([.)])/g,'$1').replace(/,\s*$/,'');
   m=m.replace(/물동량\s*:?\s*([\d,\.]+)\s*(매|박스|개|대|롤|톤|EA)?\s*(\/\s*(년|월))?/g,(_,n,u,sl,per)=>'물동량 '+Number(n.replace(/,/g,'')).toLocaleString('en-US')+(u||'매')+'/'+(per||'년'));
   const sales=q.amt?'예상매출 '+(q.amt<1000?q.amt.toLocaleString('en-US')+'천원/년':(q.amt/100000).toFixed(2).replace(/\.?0+$/,'')+'억/년'):'';
@@ -371,6 +380,11 @@ function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();if(q.kin
   return shortName(q.name)+' : '+m.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim()}
 function quoteRow(q){const cat=q.kind==='단가인상'?'단가인상':q.biz+' '+q.kind;const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};const sum=stdMemo(q);
   return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[cat],items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum,n:0}}
+/* 데이터 붙여넣기 칸: id, 표시명, contract/quote, 파싱 옵션(unit k=천원 w=원 m12=월임대료×12, biz 기본 사업, kind 강제) */
+const MHE_PREF=k=>({amt:k==='q'?/견적\s*금액/:/확정\s*금액|계약\s*금액/,date:k==='q'?/견적일자|견적\s*주차/:/확정일자|계약\s*주차/,emp:/영업담당/,name:/계약업체|업체명/});
+const DBOX=[{id:'dPpsQ',label:'PPS 견적',mode:'quote',opt:{unit:'k',biz:'PPS',forceBiz:1}},{id:'dPpsC',label:'PPS 계약',mode:'contract',opt:{unit:'w',biz:'PPS',forceBiz:1}},{id:'dProfit',label:'손익개선(단가인상)',mode:'contract',opt:{unit:'k',biz:'PPS',kind:'단가인상'}},
+  {id:'dScmQ',label:'SCM 견적',mode:'quote',opt:{unit:'w',biz:'SCM'}},{id:'dScmC',label:'SCM 계약',mode:'contract',opt:{unit:'w',biz:'SCM'}},{id:'dIndQ',label:'산업자재유통 견적',mode:'quote',opt:{unit:'w',biz:'산업자재유통'}},{id:'dIndC',label:'산업자재유통 계약',mode:'contract',opt:{unit:'w',biz:'산업자재유통'}},
+  {id:'dMheQ',label:'MHE 견적',mode:'quote',opt:{unit:'m12',biz:'지게차',forceBiz:1,pref:MHE_PREF('q')}},{id:'dMheC',label:'MHE 계약',mode:'contract',opt:{unit:'m12',biz:'지게차',forceBiz:1,pref:MHE_PREF('c')}}];
 /* ===== 실행 ===== */
 let ALL=[],OUT=null;
 function build(){const wk=curWeek();
@@ -381,10 +395,9 @@ function build(){const wk=curWeek();
     return {d,br:e.br||'미지정',reg:e.reg||'기타',cats,items,camt,stage:stageOfDiary(d,cats),amt,sum:summary(d,cats),n:d.parts.length}});
   const inWkQ=q=>!EXCLUDE_EMP.includes(q.emp.replace(/\d+$/,''))&&($('allweeks').checked||!q.date||!wk||(q.date.key>=wk.from&&q.date.key<=wk.to));
   const statTxt=(lbl,Q,n,raw)=>Q.list.length?lbl+' 인식: '+Q.list.length+'건'+(n!==Q.list.length?' 중 기간 내 '+n+'건':'')+' · '+Q.matched.join(' / '):(raw.trim()?lbl+' 형식을 인식하지 못했습니다 · '+diagQuote(raw):'');
-  const QC=parseQuote($('contract').value,'contract'),QQ=parseQuote($('quote').value,'quote');
-  const cIn=QC.list.filter(inWkQ),qIn=QQ.list.filter(inWkQ);
-  [...cIn,...qIn].forEach(q=>rows.push(quoteRow(q)));
-  $('contractstat').textContent=statTxt('계약',QC,cIn.length,$('contract').value);$('quotestat').textContent=statTxt('견적',QQ,qIn.length,$('quote').value);
+  const YN=q=>{const e=EMP2[q.emp]||EMP2[String(q.emp||'').replace(/\d+$/,'')];return !!e||/^(경북|경남|부산)권역$/.test(q.reg||'')||CITY2BR.some(x=>x[1]===q.br)};/* 영남 소속만 */
+  DBOX.forEach(b=>{const raw=$(b.id).value;const Q=parseQuote(raw,b.mode,b.opt);const all=Q.list.length;Q.list=Q.list.filter(YN);const inn=Q.list.filter(inWkQ);inn.forEach(q=>rows.push(quoteRow(q)));
+    $(b.id+'-stat').textContent=raw.trim()?(all?b.label+' 인식: '+all+'건 → 영남 소속 '+Q.list.length+'건'+(inn.length!==Q.list.length?' 중 기간 내 '+inn.length+'건':'')+' · '+Q.matched.join(' / '):b.label+' 형식을 인식하지 못했습니다 · '+diagQuote(raw)):''});
   OUT=rows;$('diarystat').textContent='업무일지 인식: '+ALL.length+'건'+(wk&&!$('allweeks').checked?' 중 '+wk.text+' 기간 '+inWk.length+'건':'')+' → 업체 '+rows.filter(r=>!r.q).length+'개, 담당자 '+new Set(rows.filter(r=>!r.q).map(r=>r.d.emp)).size+'명';
   const sel=$('catf');const cur=sel.value;sel.innerHTML='<option value="">전체</option>'+CATS.map(c=>'<option'+(c===cur?' selected':'')+'>'+c+'</option>').join('');
   render();$('stat').textContent='생성 완료: '+rows.length+'건'}
@@ -452,8 +465,7 @@ $('copySum2').onclick=async()=>{if(!OUT)return;const ok=await copyText(OUT.sumTa
 $('copyList').onclick=async()=>{if(!OUT)return;const rows=visible().sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp}));
   const t=[['날짜','권역','지점','담당자','코드','업체명','분류','품목','단계','금액(천원)','요약'],...rows.map(r=>[dateStr(r.d),r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.cats.join('/'),r.cats.map(c=>r.items[c]).filter(Boolean).join('/'),r.stage||'',r.amt||'',r.sum])];
   const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'상세 목록 '+rows.length+'건 복사됨':'복사 실패'};
-$('quote').addEventListener('cleared',()=>{$('quotestat').textContent=''});
-$('contract').addEventListener('cleared',()=>{$('contractstat').textContent=''});
+DBOX.forEach(b=>$(b.id).addEventListener('cleared',()=>{$(b.id+'-stat').textContent=''}));
 $('diary').addEventListener('cleared',()=>{ALL=[];OUT=null;$('sum').innerHTML='';$('detail').innerHTML='';$('cards').innerHTML='';$('diarystat').textContent='';$('stat').textContent=''});
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
