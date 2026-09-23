@@ -169,11 +169,11 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <button id="recv-copycur" style="display:none">금주현황 복사 (서식 포함)</button>
     <button class="sec" id="recv-copysum">요약표 값 복사 (숫자만)</button>
     <button id="recv-copyall">전체 서식 복사 (제목~상세, A1부터)</button>
-    <button id="recv-copyfmt">상세 서식 복사 (법조치 행부터, A열)</button>
+    <button id="recv-copyfmt">상세 서식 복사 (법조치 행부터, B열 구분 셀)</button>
     <button class="sec" id="recv-copy">상세 값 복사 (텍스트만)</button>
     <span id="recv-stat" class="ok"></span>
   </div>
-  <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다. 서식 복사: 엑셀 상세표의 기존 데이터 행을 지운 뒤 첫 데이터 행의 A열을 선택하고 일반 붙여넣기(Ctrl+V)하면 구분 병합·배경색·테두리·숫자 형식이 함께 들어갑니다.</div>
+  <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다. 서식 복사: 엑셀 상세표의 기존 데이터 행을 지운 뒤 첫 데이터 행의 구분 셀(B열)을 선택하고 일반 붙여넣기(Ctrl+V)하면 구분 병합·배경색·테두리·숫자 형식이 함께 들어갑니다.</div>
   <div id="recv-cur-out" class="prev" style="margin-top:8px"></div>
   <div id="recv-out" class="prev" style="margin-top:8px"></div>
 </div>
@@ -712,15 +712,16 @@ function recvTable(){const L=RECV.list;const T=[];const title='○ 본부 미수
 function recvRender(){const T=recvTable();const numCols=new Set([5,8,16,17]);const bg={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6'};
   let h='<table class="xl" style="width:auto">';T.forEach((r,ri)=>{if(r.t==='title'){h+='<tr><td colspan="18" style="border:0;font-weight:700;font-size:14px;color:var(--navy)">'+esc(r.cells[0])+'</td></tr>';return}
     if(r.t==='blank'){h+='<tr><td colspan="18" style="border:0;height:10px"></td></tr>';return}
-    const isH=r.t==='h'||r.t==='h2';h+='<tr>';r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===10||ci===16);const cs=r.t==='h2'&&ci===10?6:1;if(r.t==='h2'&&ci>10&&ci<16)return;
+    const isH=r.t==='h'||r.t==='h2';h+='<tr>';const wide=r.t==='h2'||r.t==='d'||r.t==='sum';const gcnt=r.t==='d'&&r.cells[0]?T.filter(x=>(x.t==='d'||x.t==='sum')&&x.grp===r.grp).length:0;
+    r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===10||ci===16);const cs=wide&&ci===10?6:r.t==='sum'&&ci===1?4:wide&&ci===3?2:1;if(wide&&((ci>10&&ci<16)||ci===4))return;if(r.t==='sum'&&(ci===2||ci===3))return;if((r.t==='d'&&!r.cells[0]||r.t==='sum')&&ci===0)return;const rs=r.t==='d'&&ci===0&&gcnt>1?gcnt:1;
       const firstD=r.t==='d'&&ci===0&&T.findIndex(x=>x.t==='d')===ri,firstS=r.t==='s'&&ci===1&&T.findIndex(x=>x.t==='s')===ri;const st=(firstD||firstS?'box-shadow:inset 0 0 0 3px #d00;':'')+(isH?'background:#dce6f1;text-align:center;font-weight:700;':'')+(r.t==='s'||r.t==='sum'||r.t==='st'?'background:'+(bg[r.grp]||'#eee')+';font-weight:700;':'')+(r.t==='d'&&ci===0&&v?'background:'+(bg[r.grp]||'#fff')+';font-weight:700;':'')+(isNum?'text-align:right;':'')+(ed?'background:#fffbe6;':'')+(ci===10&&r.t==='d'?'white-space:normal;min-width:360px;':'');
-      h+='<td'+(cs>1?' colspan="'+cs+'"':'')+' style="'+st+'"'+(ed?' contenteditable="true" data-ri="'+ri+'" data-ci="'+ci+'"':'')+'>'+(isNum?(ci===6?v:fmtWon(v)):esc(String(v)).replace(/\n/g,'<br>'))+'</td>'});h+='</tr>'});
+      h+='<td'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+' style="'+st+'"'+(ed?' contenteditable="true" data-ri="'+ri+'" data-ci="'+ci+'"':'')+'>'+(isNum?(ci===6?v:fmtWon(v)):esc(String(v)).replace(/\n/g,'<br>'))+'</td>'});h+='</tr>'});
   h+='</table>';const box=document.getElementById('recv-out');box.innerHTML=h;
   box.querySelectorAll('td[contenteditable]').forEach(td=>td.addEventListener('blur',()=>{const r=T[+td.dataset.ri];const ci=+td.dataset.ci;if(ci===10)r.ref.memo=td.innerText.trim();else{r.ref.paid=num(td.innerText);recvRender()}}))}
 document.getElementById('recv-run').onclick=recvBuild;
 const recvLine=r=>r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t');
 document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
-  const ok=await copy('',rows.map(recvLine).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 복사됨 → 엑셀 상세표 첫 데이터 행의 A열(구분) 선택 후 붙여넣기':'복사 실패'};
+  const ok=await copy('',rows.map(recvLine).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 복사됨 → 엑셀 상세표 첫 데이터 행의 구분 셀(B열) 선택 후 붙여넣기':'복사 실패'};
 /* 서식 포함 HTML (엑셀 붙여넣기용) — 원본 시트와 같은 색상/병합/숫자형식 */
 const RF="font-family:'맑은 고딕',Malgun Gothic;font-size:9pt;border:.5pt solid #000;vertical-align:middle;";
 const RACC="mso-number-format:'#\,##0\;\-#\,##0\;\-';text-align:right;";
@@ -747,7 +748,7 @@ const XLHTML=body=>'<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head
 async function writeBoth(html,text){try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}catch(e){return copy('',text)}}
 document.getElementById('recv-copyfmt').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
   const ok=await writeBoth(XLHTML(recvHtml(rows,false)),rows.map(recvLine).join('\r\n'));
-  document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 서식 포함 복사됨 → 엑셀 첫 데이터 행 A열 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
+  document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 서식 포함 복사됨 → 엑셀 첫 데이터 행의 구분 셀(B열) 선택 후 일반 붙여넣기(Ctrl+V) · 업체명 2칸(E:F)·세부 진행내역 6칸(L:Q) 병합 포함':'복사 실패'};
 document.getElementById('recv-copyall').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=recvTable();const rows=T.filter(r=>r.t==='d'||r.t==='sum');
   const html=XLHTML((RECV_CUR?recvCurHtml(false)+'<br>':'')+recvSumHtml()+'<br>'+recvHtml(rows,true));const text=(RECV_CUR?recvCurText()+'\r\n\r\n':'')+T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
   const ok=await writeBoth(html,text);document.getElementById('recv-stat').textContent=ok?'제목·요약표·상세표 전체를 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
