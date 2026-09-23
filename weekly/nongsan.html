@@ -156,7 +156,8 @@ table.xl td.dtl{padding-left:6px}
     <label>청구월 <input type="text" id="recv-month" placeholder="7" style="width:60px"> 월</label>
     <label>기준금액(원) <input type="number" id="recv-min" value="1000000" style="width:110px"></label>
     <button id="recv-run">미수금 작성</button>
-    <button class="sec" id="recv-copy">값 복사 (A열부터)</button>
+    <button class="sec" id="recv-copysum">요약표 값 복사 (숫자만)</button>
+    <button class="sec" id="recv-copy">상세 값 복사 (법조치 행부터, A열)</button>
     <span id="recv-stat" class="ok"></span>
   </div>
   <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다.</div>
@@ -516,6 +517,7 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null};
   const $=k=>document.getElementById('pr-'+k);
   $('run').onclick=prRun;
   ['status','gubun','fillRP','hdr','max','start','scope','layout'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
+  $('src').addEventListener('cleared',()=>{PR.out=null;PR.hash='';PR.rows=[];PR.hdr=[];PR.data=[];PR.map={};EDITS['pr-prev1']={};EDITS['pr-prev2']={};delete $('src').dataset.fromData;['prev1','prev2','detect','stat1','stat2','map'].forEach(k=>{const e=$(k);if(e)e.innerHTML=''})});
   $('prev1').addEventListener('click',async e=>{const b=e.target.closest('button.rowcopy');if(!b||!PR.out)return;const G=prGrid1(true);const lines=gridToTsv(G).split('\r\n');const off=($('hdr').value==='1'&&$('layout').value==='short')?1:0;const line=lines[+b.dataset.i+off];if(line==null)return;
     const ok=await copy('',line);$('stat1').textContent=ok?(+b.dataset.i+1)+'번째 행 복사됨 (진행여부부터 5열) → 관리시트 해당 업체 행의 진행여부 셀에 붙여넣기':'복사 실패'});
   $('copy1').onclick=async()=>{if(!PR.out)return;const G=prGrid1(true);$('stat1').textContent=(await copy(fullHtml(G),gridToTsv(G)))?'복사됨 (진행여부부터 5열, 관리시트 진행여부 셀에 붙여넣기)':'복사 실패'};
@@ -642,9 +644,11 @@ function recvRender(){const T=recvTable();const numCols=new Set([5,8,16,17]);con
   h+='</table>';const box=document.getElementById('recv-out');box.innerHTML=h;
   box.querySelectorAll('td[contenteditable]').forEach(td=>td.addEventListener('blur',()=>{const r=T[+td.dataset.ri];const ci=+td.dataset.ci;if(ci===10)r.ref.memo=td.innerText.trim();else{r.ref.paid=num(td.innerText);recvRender()}}))}
 document.getElementById('recv-run').onclick=recvBuild;
-document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=recvTable();
-  const line=r=>{if(r.t==='title')return r.cells[0];if(r.t==='blank')return '';return r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')};
-  const ok=await copy('',T.map(line).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'미수금 표 복사됨 → 엑셀 A열 선택 후 붙여넣기':'복사 실패'};
+const recvLine=r=>r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t');
+document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
+  const ok=await copy('',rows.map(recvLine).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 복사됨 → 엑셀 상세표 첫 데이터 행의 A열(구분) 선택 후 붙여넣기':'복사 실패'};
+document.getElementById('recv-copysum').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='s'||r.t==='st');
+  const ok=await copy('',rows.map(r=>r.cells.slice(1).map(v=>v||'').join('\t')).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'요약표 숫자 4행×5열 복사됨 → 엑셀 요약표의 법조치 행 전체업체 셀 선택 후 붙여넣기':'복사 실패'};
 addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
