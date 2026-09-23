@@ -83,6 +83,7 @@ table.xl td.bl{border-left:.5pt solid #000}
 table.xl td.br{border-right:.5pt solid #000}
 table.xl td.dtl{padding-left:6px}
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
+td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </style>
 </head>
 <body>
@@ -318,7 +319,8 @@ function gridToHtml(G,edit){
   G.forEach((r,ri)=>{h+='<tr>';r.cells.forEach(c=>{if(skipA&&c.col===0)return;
     const isNum=/\bn\b/.test(c.cls),isP=/\bp\b/.test(c.cls);const nf=isNum?NF.n:isP?NF.p:NF.t;
     const ed=edit&&!/\bh\b|\bh2\b|\bhy\b/.test(c.cls)?' contenteditable="true" data-rc="'+ri+','+c.col+'"':'';
-    h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(c.cls?' class="'+c.cls+'"':'')+' style="'+nf+'"'+ed+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
+    const hl=G.hl&&ri===G.hl.r&&c.col===G.hl.c;const cls=(c.cls||'')+(hl?' cstart':'');
+    h+='<td'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+(cls.trim()?' class="'+cls.trim()+'"':'')+' style="'+nf+'"'+(hl?' title="복사 시작 셀: 엑셀에서 이 위치의 셀을 선택하고 붙여넣기"':'')+ed+'>'+cellVal(c,true)+'</td>'});h+='</tr>'});
   return h+'</table>';
 }
 function gridToTsv(G){
@@ -326,7 +328,7 @@ function gridToTsv(G){
   return G.map(r=>{const cells=new Array(G.W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
 }
 renderCum();
-function render(){if(!out)return;document.getElementById('preview').innerHTML=gridToHtml(buildGrid(),true)}
+function render(){if(!out)return;const F=buildGrid();F.hl={r:F.majStart,c:1};document.getElementById('preview').innerHTML=gridToHtml(F,true)}
 ['merge','capC','capQ','capV','minAmt'].forEach(k=>document.getElementById(k).onchange=()=>{readCfg();if(out&&document.getElementById('src').value.trim())run()});
 
 /* ===== 복사 ===== */
@@ -464,7 +466,7 @@ function listCompute(id){
   L.out={major,dept:'region'};
   $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+bizNote+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
   $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
-  $('preview').innerHTML=gridToHtml(listGrid(id,false),true);
+  {const G=listGrid(id,false);G.hl={r:2,c:1};$('preview').innerHTML=gridToHtml(G,true)}
 }
 function listGrid(id,dataOnly){
   const L=LISTS[id];const W=LISTW;const G=[];G.W=W;G.widths=[20,60,85,70,75,85,85,80,90,90,90,90,90,90,90,90,90,90];
@@ -551,10 +553,10 @@ function prCompute(){
 }
 function prRender(){
   const $=k=>document.getElementById('pr-'+k);
-  {const hdr=$('hdr').value==='1'&&$('layout').value==='short';let i=0;let html=gridToHtml(prGrid1(),true).replace(/style="width:(\d+)px"><colgroup>/,(m,w)=>'style="width:'+(+w+56)+'px"><colgroup><col width="56" style="width:56px">');const parts=html.split('</tr>');
+  {const hdr=$('hdr').value==='1'&&$('layout').value==='short';let i=0;const G1=prGrid1();G1.hl=$('layout').value==='short'?{r:0,c:2}:{r:0,c:0};let html=gridToHtml(G1,true).replace(/style="width:(\d+)px"><colgroup>/,(m,w)=>'style="width:'+(+w+56)+'px"><colgroup><col width="56" style="width:56px">');const parts=html.split('</tr>');
     $('prev1').innerHTML=parts.map((seg,n)=>{if(n===parts.length-1)return seg;const isH=hdr&&n===0;const cell=isH?'<td class="hg">행복사</td>':'<td style="border:0;padding:0 2px;text-align:center"><button class="sec xs rowcopy" data-i="'+(i++)+'" style="float:none;margin:0;padding:1px 7px">복사</button></td>';return seg.replace('<tr>','<tr>'+cell)+'</tr>'}).join('');
     $('stat1').textContent='('+PR.out.length+'행)'}
-  $('prev2').innerHTML=gridToHtml(prGrid2($('scope').value==='data'),true);$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
+  {const G2=prGrid2($('scope').value==='data');G2.hl={r:0,c:0};$('prev2').innerHTML=gridToHtml(G2,true)}$('stat2').textContent='('+Math.min(PR.out.length,+$('max').value||PR.out.length)+'건)';
 }
 function prGrid1(copyOnly){
   const $=k=>document.getElementById('pr-'+k);const M=cfg.merge==='1';
@@ -639,7 +641,7 @@ function recvRender(){const T=recvTable();const numCols=new Set([5,8,16,17]);con
   let h='<table class="xl" style="width:auto">';T.forEach((r,ri)=>{if(r.t==='title'){h+='<tr><td colspan="18" style="border:0;font-weight:700;font-size:14px;color:var(--navy)">'+esc(r.cells[0])+'</td></tr>';return}
     if(r.t==='blank'){h+='<tr><td colspan="18" style="border:0;height:10px"></td></tr>';return}
     const isH=r.t==='h'||r.t==='h2';h+='<tr>';r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===10||ci===16);const cs=r.t==='h2'&&ci===10?6:1;if(r.t==='h2'&&ci>10&&ci<16)return;
-      const st=(isH?'background:#dce6f1;text-align:center;font-weight:700;':'')+(r.t==='s'||r.t==='sum'||r.t==='st'?'background:'+(bg[r.grp]||'#eee')+';font-weight:700;':'')+(r.t==='d'&&ci===0&&v?'background:'+(bg[r.grp]||'#fff')+';font-weight:700;':'')+(isNum?'text-align:right;':'')+(ed?'background:#fffbe6;':'')+(ci===10&&r.t==='d'?'white-space:normal;min-width:360px;':'');
+      const firstD=r.t==='d'&&ci===0&&T.findIndex(x=>x.t==='d')===ri,firstS=r.t==='s'&&ci===1&&T.findIndex(x=>x.t==='s')===ri;const st=(firstD||firstS?'box-shadow:inset 0 0 0 3px #d00;':'')+(isH?'background:#dce6f1;text-align:center;font-weight:700;':'')+(r.t==='s'||r.t==='sum'||r.t==='st'?'background:'+(bg[r.grp]||'#eee')+';font-weight:700;':'')+(r.t==='d'&&ci===0&&v?'background:'+(bg[r.grp]||'#fff')+';font-weight:700;':'')+(isNum?'text-align:right;':'')+(ed?'background:#fffbe6;':'')+(ci===10&&r.t==='d'?'white-space:normal;min-width:360px;':'');
       h+='<td'+(cs>1?' colspan="'+cs+'"':'')+' style="'+st+'"'+(ed?' contenteditable="true" data-ri="'+ri+'" data-ci="'+ci+'"':'')+'>'+(isNum?(ci===6?v:fmtWon(v)):esc(String(v)).replace(/\n/g,'<br>'))+'</td>'});h+='</tr>'});
   h+='</table>';const box=document.getElementById('recv-out');box.innerHTML=h;
   box.querySelectorAll('td[contenteditable]').forEach(td=>td.addEventListener('blur',()=>{const r=T[+td.dataset.ri];const ci=+td.dataset.ci;if(ci===10)r.ref.memo=td.innerText.trim();else{r.ref.paid=num(td.innerText);recvRender()}}))}
@@ -778,7 +780,7 @@ function sumRun(){
   rows.forEach(r=>{r.cumN=r.cum[0]+r.c.n;r.cumA=r.cum[1]+r.c.amt});
   const mhe={q:agg(f.mheQ),c:agg(f.mheC),cum:cum.mhe};
   SUM.out={rows,mhe,f,range:$('range').value,top:+$('top').value||3,wk};
-  $('prev1').innerHTML=gridToHtml(sumGrid1(),true);$('prev2').innerHTML=gridToHtml(sumGrid2(),true);
+  sumPreview();
   $('detect').textContent='주차 '+(wk?(wk.m?wk.m+'월':'')+wk.w+'주':'전체')+' · 필터 후 건수: '+SUMIN.map(([k,l])=>l+' '+f[k].length).join(', ')+' · 단가인상 '+price.n+'건'+(PR.out?'':' (단가인상 탭 데이터 없음)');
   $('stat1').textContent='작성 완료';$('stat2').textContent='작성 완료';
 }
@@ -834,7 +836,8 @@ function sumGrid2(dataOnly){
     })});
   return G;
 }
-document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){document.getElementById('sum-prev1').innerHTML=gridToHtml(sumGrid1(),true);document.getElementById('sum-prev2').innerHTML=gridToHtml(sumGrid2(),true)}});
+function sumPreview(){const G1=sumGrid1();G1.hl={r:4,c:3};const G2=sumGrid2();G2.hl={r:1,c:3};document.getElementById('sum-prev1').innerHTML=gridToHtml(G1,true);document.getElementById('sum-prev2').innerHTML=gridToHtml(G2,true)}
+document.getElementById('merge').addEventListener('change',()=>{if(SUM.out){sumPreview()}});
 addClearButtons();
 
 /* ===== 화면 확대/축소 ===== */
