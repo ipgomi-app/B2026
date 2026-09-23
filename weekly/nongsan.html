@@ -672,18 +672,19 @@ function recvCurBuild(){const raw=document.getElementById('recv-cur').value;RECV
   document.getElementById('recv-cur-out').innerHTML='<div style="overflow:auto">'+recvCurHtml(true)+'</div>';document.getElementById('recv-copycur').style.display=''}
 function recvCurHtml(preview){const C={navy:'#1f4e79',grn:'#70ad47',org:'#c55a11',lg:'#e2efda',yel:'#ffe699',g2:'#92d050',y2:'#ffc000',gy:'#f2f2f2'};
   const td=(v,st,attr)=>'<td style="'+RF+(st||'')+'"'+(attr||'')+'>'+v+'</td>';const hd=(v,bg,attr,fg)=>td(v,'background:'+bg+';color:'+(fg||'#fff')+';text-align:center;font-weight:700;white-space:normal;',attr);
-  const gap=()=>'<td style="border:0;width:8px"></td>';const NUMC=(v,st)=>td(v?(preview?fmtWon(v):v):'-',(st||'')+RACC);
+  const gap=()=>'<td style="border:0;width:20px"></td>';const NUMC=(v,st)=>td(v?(preview?fmtWon(v):v):'-',(st||'')+RACC);
   let h='<table style="border-collapse:collapse">';
-  h+='<tr>'+hd('본부',C.navy,' rowspan="2"')+hd('팀/권역',C.navy,' rowspan="2"')+hd('지점',C.navy,' rowspan="2"')+hd('담당자',C.navy,' rowspan="2"')+hd('업체수',C.grn)+hd('보증보험(금)<br>미가입업체',C.navy,' rowspan="2"')+hd('금액',C.org,' colspan="7"')+gap()+hd('미수채권 총계',C.g2,' colspan="2"','#000')+hd('지난주',C.y2,' colspan="2"','#000')+hd('지난주 수금액',C.y2,' colspan="2"','#000')+'</tr>';
+  if(!preview)h+='<colgroup>'+[80,100,55,70,80,80,80,80,80,80,85,20,55,85,55,85,55,85].map(w=>'<col width="'+w+'" style="width:'+w+'px">').join('')+'</colgroup>';
+  h+='<tr>'+hd('본부',C.navy,' rowspan="2"')+hd('팀/권역',C.navy,' rowspan="2"')+hd('업체수',C.grn)+hd('보증보험(금)<br>미가입업체',C.navy,' rowspan="2"')+hd('금액',C.org,' colspan="7"')+gap()+hd('미수채권 총계',C.g2,' colspan="2"','#000')+hd('지난주',C.y2,' colspan="2"','#000')+hd('지난주 수금액',C.y2,' colspan="2"','#000')+'</tr>';
   h+='<tr>'+hd('소계',C.grn)+CUR_H1.slice(2).map(t=>hd(t,C.org)).join('')+gap()+CUR_H2.map((t,i)=>hd(t,i<2?C.g2:C.y2,'','#000')).join('')+'</tr>';
   RECV_CUR.forEach((x,i)=>{const bg='background:'+(x.tot?C.yel:C.lg)+';';const fw=x.tot?'font-weight:700;':'';h+='<tr>';
     if(i===0)h+=td('영남영업본부','background:'+C.yel+';text-align:center;font-weight:700;'+(preview?'box-shadow:inset 0 0 0 3px #d00;':''),' rowspan="'+RECV_CUR.length+'"');
-    h+=td(esc(x.label),bg+fw+'text-align:center;',' colspan="3"');
+    h+=td(esc(x.label),bg+fw+'text-align:center;');
     h+=NUMC(x.a[0],bg+'font-weight:700;')+NUMC(x.a[1],bg+'font-weight:700;color:#c00;')+x.a.slice(2).map(v=>NUMC(v,bg+fw)).join('')+gap()+x.b.map(v=>NUMC(v,bg+fw)).join('')+'</tr>'});
   return h+'</table>'}
-function recvCurText(){return RECV_CUR.map((x,i)=>[i?'':'영남영업본부',x.label,'','',...x.a,'','',...x.b].map(v=>typeof v==='number'?(v||''):v).join('\t')).join('\r\n')}
+function recvCurText(){return RECV_CUR.map((x,i)=>[i?'':'영남영업본부',x.label,...x.a,'',...x.b].map(v=>typeof v==='number'?(v||''):v).join('\t')).join('\r\n')}
 document.getElementById('recv-copycur').onclick=async()=>{if(!RECV_CUR){alert('먼저 금주현황을 붙여넣고 미수금 작성을 실행하세요');return}
-  const ok=await writeBoth(XLHTML(recvCurHtml(false)),recvCurText());document.getElementById('recv-stat').textContent=ok?'금주현황 '+RECV_CUR.length+'행 서식 포함 복사됨 → 엑셀 본부 셀(영남영업본부) 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
+  const ok=await writeBoth(XLHTML(recvCurHtml(false)),recvCurText());document.getElementById('recv-stat').textContent=ok?'금주현황 '+RECV_CUR.length+'행 서식 포함 복사됨 → 엑셀 본부 셀(B열 영남영업본부) 선택 후 일반 붙여넣기(Ctrl+V) · B 본부, C 팀/권역, D 업체수, E 보증보험, F~L 금액, N~S 총계·지난주':'복사 실패'};
 document.getElementById('recv-src').addEventListener('input',()=>{const rs=document.getElementById('recv-src');delete rs.dataset.fromData;const d=document.getElementById('dRecv');if(d&&d.value!==rs.value){d.value=rs.value;d.dispatchEvent(new Event('input'))}
   const f=rs.value.trim()?filterYN(rs.value,{group:true}):null;document.getElementById('recv-src-stat').textContent=f?'붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행':''});
 document.getElementById('recv-src').addEventListener('cleared',()=>{const rs=document.getElementById('recv-src');delete rs.dataset.fromData;document.getElementById('recv-src-stat').textContent=''});
