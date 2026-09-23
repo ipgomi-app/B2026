@@ -139,7 +139,7 @@ function volumeFrom(t){const U='(매|개|대|박스|롤|장|팩|EA|ea|set|SET)';
   let m=t.match(new RegExp('(?:예상)?물동량\\s*([\\d.,]+)\\s*(만|천)?\\s*'+U+'\\s*\\/?\\s*(년|월)?'));if(!m)m=t.match(new RegExp('([\\d.,]+)\\s*(만|천)?\\s*'+U+'\\s*\\/\\s*(년|월)'));
   if(m){let v=num(m[1]);if(m[2]==='만')v*=10000;else if(m[2]==='천')v*=1000;if(m[4]==='월')v*=12;const u=m[3]==='매'?'매':m[3];return v>0?'물동량 '+Math.round(v).toLocaleString('en-US')+u+'/년':''}
   const m3=t.match(/예상물동량\s*\(매\/월\)\s*:\s*([\d,]+)/);if(m3){const v=num(m3[1])*12;return v>0?'물동량 '+v.toLocaleString('en-US')+'매/년':''}return ''}
-function amtToEok(amt){if(!amt)return '';let e=amt/100000;let s=e.toFixed(2).replace(/\.?0+$/,'');if(s==='0')s=e.toFixed(3).replace(/\.?0+$/,'');return '예상매출 '+s+'억/년'}
+function amtToEok(amt){if(!amt)return '';if(amt<1000)return '예상매출 '+Math.round(amt).toLocaleString('en-US')+'천원/년';let e=amt/100000;let s=e.toFixed(2).replace(/\.?0+$/,'');if(s==='0')s=e.toFixed(3).replace(/\.?0+$/,'');return '예상매출 '+s+'억/년'}
 function cleanVisitText(t){return String(t||'')
   .replace(/(일자|업체코드|업체명|제목|계약형태|매출액구분|연간예상매출액|예상수익율|경쟁사 구분|방문업체 현황구분|경쟁사 예상물동량[^:]*|경쟁사 예상매출액[^:]*|사용단가[^:]*|PPS|산업자재\(판매\)|SCM|지게차|건설장비|OA)\s*:\s*[^:|]*?(?=(?:\s*\/?\s*[가-힣A-Za-z ()\/]{2,20}\s*:)|\s*\||$)/g,' | ')
   .replace(/\d\s*\.\s*(?=[가-힣])/g,' | ')
