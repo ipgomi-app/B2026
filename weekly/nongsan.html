@@ -414,7 +414,7 @@ function listPane(id,title,hint){
   ['capC','capQ','capV','minAmt'].forEach(k=>$(k).onchange=()=>{if(L.out)listCompute(id)});
 }
 listPane('target','타겟업체','타겟업체 시트에서 행을 복사해 붙여넣기 (기본NO, 사업구분, 팀/권역, 팀/지점, 담당프로, 코드, 업체명, 예상매출, 신규/점유율확대, 주간적용여부, 시행일, 진행단계, 효과금액, 25년 영업진행사항). 헤더 포함 권장.');
-listPane('comp','경쟁사','경쟁사 시트에서 헤더(3줄)와 행을 함께 복사해 붙여넣기. 진행단계 열이 없으면 (계약)건수/효과금액 → 계약, (견적)효과금액 → 견적, 그 외 → 방문으로 자동 판정.');
+listPane('comp','경쟁사','경쟁사 시트에서 헤더(3줄)와 행을 함께 복사해 붙여넣기. 데이터 탭의 PPS 견적/계약과 코드·업체명이 겹치면 그 단계·금액·내용을 가져오고, 겹치지 않으면 세부내용은 공란((계약)건수/효과금액 → 계약, (견적)효과금액 → 견적, 그 외 → 방문).');
 
 const isCode=v=>/^\d{5,7}$/.test(String(v||'').trim());
 function listDetect(id){
@@ -458,23 +458,29 @@ function listRun(id){
   if(raw!==L.hash){listDetect(id);listMapUI(id);L.hash=raw}
   listCompute(id);
 }
+const compNorm=v=>String(v||'').replace(/\([^)]*\)|㈜|주식회사|유한회사|농업회사법인|영농조합법인|[\s\-_.,·]/g,'').toLowerCase();
+function compSource(){const out={};[['ppsC','dPpsC'],['ppsQ','dPpsQ']].forEach(([k,id])=>{const ta=document.getElementById(id);if(!ta||!ta.value.trim()){out[k]=[];return}try{out[k]=sumParse(k,filterYN(ta.value).tsv).recs.filter(x=>x.code||x.name)}catch(e){console.error(e);out[k]=[]}});return out}
+function compMatch(src,x){const nm=compNorm(x.name);for(const [k,st] of [['ppsC','계약'],['ppsQ','견적']]){const hit=src[k].find(y=>(x.code&&y.code&&x.code===y.code)||(nm.length>=3&&compNorm(y.name).length>=3&&(nm===compNorm(y.name)||nm.includes(compNorm(y.name))||compNorm(y.name).includes(nm))));if(hit)return {stage:st,rec:hit}}return null}
 function listCompute(id){
   const L=LISTS[id];const $=k=>document.getElementById(id+'-'+k);const m=L.map;
+  const src=id==='comp'?compSource():null;const hasSrc=src&&(src.ppsC.length||src.ppsQ.length);let mc=0,mq=0;
   const g=(r,k)=>(m[k]>=0?(r[m[k]]||''):'').trim();
   const from=$('from').value.replace(/\D/g,''),to=$('to').value.replace(/\D/g,'');
   let recs=L.data.map(r=>{
     let st=stage(g(r,'stage')),amt=num(g(r,'amt'));
     if(id==='comp'&&!st){const cc=num(g(r,'cCnt')),ca=num(g(r,'cAmt')),qa=num(g(r,'qAmt'));if(cc>0||ca>0){st='계약';amt=ca||amt}else if(qa>0){st='견적';amt=qa||amt}else st='방문'}
     if(id==='comp'&&st==='계약'&&!amt)amt=num(g(r,'cAmt'));if(id==='comp'&&st==='견적'&&!amt)amt=num(g(r,'qAmt'));
-    return {biz:g(r,'biz'),region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8)}
+    const x={biz:g(r,'biz'),region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8),matched:false};
+    if(hasSrc){const h=compMatch(src,x);if(h){x.stage=h.stage;x.amt=Math.round(h.rec.amt)||x.amt;x.memo=h.rec.memo||'';x.matched=true;if(h.stage==='계약')mc++;else mq++}else x.memo=''}
+    return x;
   }).filter(x=>x.code||x.name);
   const total=recs.length;let bizNote='';
   if(id==='target'){if(m.biz>=0){const before=recs.length;recs=recs.filter(x=>/PPS|물류기기/i.test(x.biz||''));bizNote=', 사업구분 PPS/물류기기 '+recs.length+'행(제외 '+(before-recs.length)+')'}else bizNote=', 사업구분 열 없음(전체 대상)'}
   if(from||to)recs=recs.filter(x=>x.date&&(!from||x.date>=from)&&(!to||x.date<=to));
   const cap={계약:+$('capC').value||0,견적:+$('capQ').value||0,방문:+$('capV').value||0},minAmt=+$('minAmt').value||0;
-  const major=[];['계약','견적','방문'].forEach(s=>major.push(...recs.filter(x=>x.stage===s&&x.amt>=minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s])));
+  const major=[];['계약','견적','방문'].forEach(s=>major.push(...recs.filter(x=>x.stage===s&&x.amt>=minAmt).sort((a,b)=>(b.matched-a.matched)||(b.amt-a.amt)).slice(0,cap[s])));
   L.out={major,dept:'region'};
-  $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+bizNote+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+' · 열 매핑은 아래에서 수정 가능';
+  $('detect').textContent='인식: 헤더 '+L.hdr.length+'줄, 데이터 '+total+'행'+bizNote+((from||to)?', 기간 필터 후 '+recs.length+'행':'')+(id==='comp'?(hasSrc?', 데이터 탭 PPS 계약/견적 매칭: 계약 '+mc+'건, 견적 '+mq+'건 (매칭 안 된 행은 세부내용 공란)':', 데이터 탭 PPS 견적/계약 없음(경쟁사 시트만으로 판정)'):'')+' · 열 매핑은 아래에서 수정 가능';
   $('stat').textContent='작성 완료 (주요업체 '+major.length+'건)';
   {const G=listGrid(id,false);G.hl={r:2,c:1};$('preview').innerHTML=gridToHtml(G,true)}
 }
@@ -625,7 +631,7 @@ DATA_MAP.forEach(([id,target])=>{const ta=document.getElementById(id);const st=d
     const f=filterYN(raw,id==='dRecv'?{group:true}:null);let msg='붙여넣은 '+f.total+'행 → 영남 소속 '+f.kept+'행'+(f.total-f.kept?' (제외 '+(f.total-f.kept)+')':'');
     if(tgt){if(tgt.value.trim()&&tgt.dataset.fromData!=='1')msg+=' · 대상 탭에 직접 붙인 자료가 있어 전달하지 않음';else{tgt.value=f.tsv;tgt.dataset.fromData='1';msg+=' · '+(target.startsWith('sum')?'금주요약':'단가인상')+' 탭에 전달됨';if(target==='pr-src'&&typeof prRun==='function'){try{prRun();msg+=' (단가인상 자동 작성)'}catch(e){}}}}
     else msg+=id==='dProfit'?' · 단가인상 탭에서 자동 작성 시 사용':id==='dRecv'?' · 미수금 탭에서 사용':' · 금주요약 탭에서 작성 시 사용';st.textContent=msg};
-  ta.addEventListener('input',upd);ta.addEventListener('cleared',upd)});
+  ta.addEventListener('input',upd);ta.addEventListener('cleared',upd);if(id==='dPpsQ'||id==='dPpsC'){const rc=()=>{if(LISTS.comp&&LISTS.comp.out)listCompute('comp')};ta.addEventListener('input',rc);ta.addEventListener('cleared',rc)}});
 /* ===== 미수금 탭 ===== */
 const RECV_GROUPS=['법조치','회생채권','결제지연'];const REG_SHORT=r=>String(r||'').replace('권역','');
 let RECV=null;
@@ -767,8 +773,8 @@ const SUM={data:{},out:null};
 })();
 const norm=v=>String(v||'').replace(/\s+/g,'');
 const weekOf=v=>{v=String(v||'');const w=v.match(/(\d+)\s*주/),m=v.match(/(\d+)\s*월/);return w?{w:+w[1],m:m?+m[1]:null}:null};
-function sumParse(k){
-  const raw=document.getElementById('sum-src-'+k).value;if(!raw.trim())return {recs:[],info:'없음'};
+function sumParse(k,rawOverride){
+  const raw=rawOverride!=null?rawOverride:document.getElementById('sum-src-'+k).value;if(!raw.trim())return {recs:[],info:'없음'};
   const rows=parseTSV(raw);const spec=SUMSPEC[k];
   const isDataRow=r=>r.some(isCode)||r.some(c=>/^[가-힣]{2,3}(권역|지점)$/.test(String(c||'').trim()));
   let first=rows.findIndex(isDataRow);if(first<0)first=0;
@@ -791,7 +797,7 @@ function sumParse(k){
   let recs=data.map(r=>{const br=g(r,m.branch);let region=reg(g(r,m.region));if(!region&&br){const key=Object.keys(BR2REG).find(b=>br.startsWith(b));region=key?BR2REG[key]:(m.branch>=0?'기타':null)}
     const kindv=g(r,m.kind);let memo=g(r,m.memo);if(!spec.memo){let bl=((memo.match(/[가-힣]/g)||[]).length);r.forEach((c,i)=>{if(i===m.name)return;const l=((c||'').match(/[가-힣]/g)||[]).length;if(l>bl){bl=l;memo=(c||'').trim()}})}return {region,branch:br,code:g(r,m.code),name:g(r,m.name),amtRaw:num(g(r,m.amt)),units:num(g(r,m.units)),memo,week:weekOf(g(r,m.week)),kind:/재전환|점유율확대/.test(kindv)?'재전환':'신규',glb:r.some(c=>/글로벌비즈/.test(c||''))}}).filter(x=>x.name||x.code);
   // 금액 단위
-  let unit=document.getElementById('sum-unit-'+k).value;
+  let unit=rawOverride!=null?SUMSPEC[k].unit:document.getElementById('sum-unit-'+k).value;
   if(unit==='auto'){const vals=recs.map(x=>x.amtRaw).filter(v=>v>0);const won=vals.length&&vals.slice().sort((a,b)=>a-b)[Math.floor(vals.length/2)]>=100000;unit=won?'w':'k'}
   recs.forEach(x=>{x.amt=unit==='k'?x.amtRaw:unit==='w'?x.amtRaw/1000:x.amtRaw*12/1000});
   return {recs,info:'헤더 '+hdr.length+'줄, '+data.length+'행, 단위 '+({k:'천원',w:'원',m12:'월×12'}[unit])+' · 열: 금액 '+m.amt+', 업체명 '+m.name+', 내용 '+m.memo+', 주차 '+m.week+', 권역 '+m.region+', 지점 '+m.branch+(spec.units?', 대수 '+m.units:'')+(k.startsWith('pps')?', 구분 '+m.kind:'')};
