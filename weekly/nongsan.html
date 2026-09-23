@@ -88,24 +88,24 @@ table.xl td.dtl{padding-left:6px}
 <body>
 <header>영남본부 자료 자동화 <small>영남영업본부 · 주간회의 자료</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
 <main>
-<div class="tabs"><button data-tab="data">데이터</button><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
+<div class="tabs"><button data-tab="data">데이터</button><button class="on" data-tab="farm">농산업종</button><button data-tab="target">타겟업체</button><button data-tab="comp">경쟁사</button><button data-tab="price">단가인상</button><button data-tab="sum">금주요약</button><button data-tab="recv">미수금</button><span style="margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mut)">셀 병합 <select id="merge"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></span></div>
 
 <div class="tabpane" id="pane-data">
 <div class="card">
   <h2>데이터 붙여넣기 <span class="tag">자료를 먼저 붙이면 금주요약·단가인상 탭에 자동 전달</span></h2>
   <div class="hint">전사 시트를 그대로 붙여도 내장 명단(경북·부산·경남 권역의 지점/담당자)에 속한 행만 골라 씁니다. 각 탭의 처리 로직은 그대로입니다.</div>
   <div class="grid3">
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">1. PPS 견적</h3><textarea id="dPpsQ" style="min-height:110px" placeholder="PPS 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsQ-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">2. PPS 계약</h3><textarea id="dPpsC" style="min-height:110px" placeholder="PPS 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsC-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">3. 손익개선(단가인상)</h3><textarea id="dProfit" style="min-height:110px" placeholder="손익개선(단가인상) 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dProfit-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">4. SCM 견적</h3><textarea id="dScmQ" style="min-height:110px" placeholder="SCM 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmQ-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">5. SCM 계약</h3><textarea id="dScmC" style="min-height:110px" placeholder="SCM 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmC-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">6. 산업자재유통 견적</h3><textarea id="dIndQ" style="min-height:110px" placeholder="산업자재유통 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndQ-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">7. 산업자재유통 계약</h3><textarea id="dIndC" style="min-height:110px" placeholder="산업자재유통 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndC-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">8. MHE 견적</h3><textarea id="dMheQ" style="min-height:110px" placeholder="MHE 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheQ-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">9. MHE 계약</h3><textarea id="dMheC" style="min-height:110px" placeholder="MHE 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheC-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">10. 미수금</h3><textarea id="dRecv" style="min-height:110px" placeholder="미수금 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dRecv-stat" class="hint"></div></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">11. 주간영업실적</h3><textarea id="dWeek" style="min-height:110px" placeholder="주간영업실적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dWeek-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">PPS 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 천원</span></h3><textarea id="dPpsQ" style="min-height:110px" placeholder="PPS 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">PPS 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dPpsC" style="min-height:110px" placeholder="PPS 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">손익개선(단가인상) <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 천원</span></h3><textarea id="dProfit" style="min-height:110px" placeholder="손익개선(단가인상) 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dProfit-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">SCM 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dScmQ" style="min-height:110px" placeholder="SCM 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">SCM 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dScmC" style="min-height:110px" placeholder="SCM 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dScmC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">산업자재유통 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dIndQ" style="min-height:110px" placeholder="산업자재유통 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">산업자재유통 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dIndC" style="min-height:110px" placeholder="산업자재유통 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">MHE 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheQ" style="min-height:110px" placeholder="MHE 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheQ-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">MHE 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheC" style="min-height:110px" placeholder="MHE 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheC-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">미수금 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원</span></h3><textarea id="dRecv" style="min-height:110px" placeholder="미수금 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dRecv-stat" class="hint"></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">주간영업실적</h3><textarea id="dWeek" style="min-height:110px" placeholder="주간영업실적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dWeek-stat" class="hint"></div></div>
   </div>
 </div>
 </div>
@@ -150,6 +150,20 @@ table.xl td.dtl{padding-left:6px}
 <div class="tabpane" id="pane-comp"></div>
 <div class="tabpane" id="pane-price"></div>
 <div class="tabpane" id="pane-sum"></div>
+<div class="tabpane" id="pane-recv">
+<div class="card">
+  <h2>미수금 현황 <span class="tag">데이터 탭의 미수금 자료 사용 · 영남 소속 · 100만원 이상</span></h2>
+  <div class="row" style="margin-bottom:8px">
+    <label>청구월 <input type="text" id="recv-month" placeholder="7" style="width:60px"> 월</label>
+    <label>기준금액(원) <input type="number" id="recv-min" value="1000000" style="width:110px"></label>
+    <button id="recv-run">미수금 작성</button>
+    <button class="sec" id="recv-copy">값 복사 (A열부터)</button>
+    <span id="recv-stat" class="ok"></span>
+  </div>
+  <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다.</div>
+  <div id="recv-out" class="prev" style="margin-top:8px"></div>
+</div>
+</div>
 </main>
 
 <script>
@@ -595,6 +609,40 @@ DATA_MAP.forEach(([id,target])=>{const ta=document.getElementById(id);const st=d
     if(tgt){if(tgt.value.trim()&&tgt.dataset.fromData!=='1')msg+=' · 대상 탭에 직접 붙인 자료가 있어 전달하지 않음';else{tgt.value=f.tsv;tgt.dataset.fromData='1';msg+=' · '+(target.startsWith('sum')?'금주요약':'단가인상')+' 탭에 전달됨';if(target==='pr-src'&&typeof prRun==='function'){try{prRun();msg+=' (단가인상 자동 작성)'}catch(e){}}}}
     else msg+=' · 보관됨(연결 예정)';st.textContent=msg};
   ta.addEventListener('input',upd);ta.addEventListener('cleared',upd)});
+/* ===== 미수금 탭 ===== */
+const RECV_GROUPS=['법조치','회생채권','결제지연'];const REG_SHORT=r=>String(r||'').replace('권역','');
+let RECV=null;
+function recvBuild(){const raw=document.getElementById('dRecv').value;if(!raw.trim()){alert('데이터 탭의 미수금 칸에 자료를 먼저 붙여넣으세요');return}
+  const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const hdr=rows[0]||[];const H=hdr.map(x=>String(x||'').replace(/\s+/g,''));
+  const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};
+  const C={g:0,br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),code:col(['거래처↓','거래처코드','코드'],3),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입'],9),gamt:col(['보증금액'],10),law:col(['법조치현황','법조치'],11)};
+  const min=+document.getElementById('recv-min').value||0;const g=(r,i)=>String(r[i]||'').trim();
+  const list=rows.slice(1).map(r=>{let grp=g(r,C.g).replace(/지연결제/,'결제지연');const br=g(r,C.br);const key=Object.keys(BR2REG).find(b=>br.startsWith(b));
+    return {grp:RECV_GROUPS.includes(grp)?grp:(grp||'결제지연'),reg:key?REG_SHORT(BR2REG[key]):'',br,emp:g(r,C.emp),code:g(r,C.code),name:g(r,C.name),amt:num(g(r,C.amt)),mon:g(r,C.mon).replace(/\s/g,''),due:g(r,C.due),gamt:num(g(r,C.gamt)),law:g(r,C.law).replace(/\s+/g,' ').trim(),memo:'',paid:0}}).filter(x=>x.code&&x.amt>=min);
+  RECV={list,month:document.getElementById('recv-month').value.trim(),min};recvRender();
+  document.getElementById('recv-stat').textContent='작성 완료: '+list.length+'건 (영남 소속 '+f.kept+'행 중 '+fmtWon(min)+'원 이상)'}
+const fmtWon=v=>v?Math.round(v).toLocaleString('en-US'):'-';
+function recvTable(){const L=RECV.list;const T=[];const title='○ 본부 미수채권 업체 현황 ('+Math.round(RECV.min/10000)+'만원 이상~)'+(RECV.month?', '+RECV.month+'월 청구까지':'');
+  T.push({t:'title',cells:[title]});T.push({t:'h',cells:['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금']});
+  const tot={n:0,a:0,pn:0,p:0};RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp);const n=g.length,a=g.reduce((s,x)=>s+x.amt,0),pn=g.filter(x=>x.paid>0).length,p=g.reduce((s,x)=>s+x.paid,0);tot.n+=n;tot.a+=a;tot.pn+=pn;tot.p+=p;T.push({t:'s',grp:gp,cells:[gp,n,a,pn,p,a-p]})});
+  T.push({t:'st',cells:['합계',tot.n,tot.a,tot.pn,tot.p,tot.a-tot.p]});T.push({t:'blank',cells:[]});
+  T.push({t:'h2',cells:['구분','권역','코드','업체명','','미수채권','연체개월','결제기일','보증금액\n(보증금+보증보험)','법조치현황','세부 진행내역','','','','','','수금금액','잔여\n미수금']});
+  RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp).sort((a,b)=>b.amt-a.amt);if(!g.length)return;
+    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,x.code,x.name,'',x.amt,x.mon,x.due,x.gamt,x.law,x.memo,'','','','','',x.paid,x.amt-x.paid]}));
+    T.push({t:'sum',grp:gp,cells:['','합계','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','','','','',g.reduce((s,x)=>s+x.paid,0),'']})});
+  return T}
+function recvRender(){const T=recvTable();const numCols=new Set([5,8,16,17]);const bg={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6'};
+  let h='<table class="xl" style="width:auto">';T.forEach((r,ri)=>{if(r.t==='title'){h+='<tr><td colspan="18" style="border:0;font-weight:700;font-size:14px;color:var(--navy)">'+esc(r.cells[0])+'</td></tr>';return}
+    if(r.t==='blank'){h+='<tr><td colspan="18" style="border:0;height:10px"></td></tr>';return}
+    const isH=r.t==='h'||r.t==='h2';h+='<tr>';r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===10||ci===16);const cs=r.t==='h2'&&ci===10?6:1;if(r.t==='h2'&&ci>10&&ci<16)return;
+      const st=(isH?'background:#dce6f1;text-align:center;font-weight:700;':'')+(r.t==='s'||r.t==='sum'||r.t==='st'?'background:'+(bg[r.grp]||'#eee')+';font-weight:700;':'')+(r.t==='d'&&ci===0&&v?'background:'+(bg[r.grp]||'#fff')+';font-weight:700;':'')+(isNum?'text-align:right;':'')+(ed?'background:#fffbe6;':'')+(ci===10&&r.t==='d'?'white-space:normal;min-width:360px;':'');
+      h+='<td'+(cs>1?' colspan="'+cs+'"':'')+' style="'+st+'"'+(ed?' contenteditable="true" data-ri="'+ri+'" data-ci="'+ci+'"':'')+'>'+(isNum?(ci===6?v:fmtWon(v)):esc(String(v)).replace(/\n/g,'<br>'))+'</td>'});h+='</tr>'});
+  h+='</table>';const box=document.getElementById('recv-out');box.innerHTML=h;
+  box.querySelectorAll('td[contenteditable]').forEach(td=>td.addEventListener('blur',()=>{const r=T[+td.dataset.ri];const ci=+td.dataset.ci;if(ci===10)r.ref.memo=td.innerText.trim();else{r.ref.paid=num(td.innerText);recvRender()}}))}
+document.getElementById('recv-run').onclick=recvBuild;
+document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const T=recvTable();
+  const line=r=>{if(r.t==='title')return r.cells[0];if(r.t==='blank')return '';return r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')};
+  const ok=await copy('',T.map(line).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'미수금 표 복사됨 → 엑셀 A열 선택 후 붙여넣기':'복사 실패'};
 addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
