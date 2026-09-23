@@ -193,7 +193,8 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <button id="mg-run">취합 작성</button>
     <button id="mg-copyfmt">전체 서식 복사 (제목~상세, A1부터)</button>
     <button id="mg-copyfmt2">전체 서식 복사 (수금완납 제외)</button>
-    <button id="mg-report">본부주간 보고 (미수금 탭 형식)</button> <label class="hint" style="margin:0">기준 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상</label>
+    <button id="mg-report">본부주간 보고 (미수금 탭 형식)</button>
+    <button class="sec" id="mg-xlsx">엑셀 파일 저장 (전체·권역별 시트, 구분별 그룹)</button> <label class="hint" style="margin:0">기준 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상</label>
     <span id="mg-stat" class="ok"></span></div>
   <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
     <button class="sec mg-reg on" data-reg="">전체</button><button class="sec mg-reg" data-reg="경북">경북</button><button class="sec mg-reg" data-reg="부산">부산</button><button class="sec mg-reg" data-reg="경남">경남</button>
@@ -835,6 +836,77 @@ function mgSumHtml(filterFn){const T=mgTable(filterFn);const rows=T.filter(r=>r.
 async function mgCopyAll(filterFn,label){if(!MGR){alert('먼저 취합 작성을 실행하세요');return}const T=mgTable(filterFn);const rows=T.filter(r=>r.t==='d'||r.t==='sum');
   const html=XLHTML(mgSumHtml(filterFn)+'<br>'+mgHtml(rows,true));const text=T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
   const ok=await writeBoth(html,text);document.getElementById('mg-stat').textContent=ok?(MG_REG?MG_REG+' ':'')+(label||'제목·요약표·상세표 전체')+' 서식 포함 복사됨 ('+rows.filter(r=>r.t==='d').length+'업체) → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'}
+
+/* ===== 최소 xlsx 작성기 (외부 라이브러리 없음): ZIP(무압축) + OOXML ===== */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zipStore(files){/* files: [{name, data(string)}] */const enc=new TextEncoder();const parts=[];const cd=[];let off=0;
+  const u16=v=>[v&255,(v>>8)&255],u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  files.forEach(f=>{const name=enc.encode(f.name),data=enc.encode(f.data);const crc=crc32(data);
+    const lh=new Uint8Array([0x50,0x4b,3,4,20,0,0,8,0,0,0,0,0,0,...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),0,0]);
+    parts.push(lh,name,data);
+    cd.push(new Uint8Array([0x50,0x4b,1,2,20,0,20,0,0,8,0,0,0,0,0,0,...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(off)]),name);
+    off+=lh.length+name.length+data.length});
+  const cdStart=off;let cdLen=0;cd.forEach(x=>cdLen+=x.length);
+  const eocd=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(files.length),...u16(files.length),...u32(cdLen),...u32(cdStart),0,0]);
+  const all=[...parts,...cd,eocd];let n=0;all.forEach(x=>n+=x.length);const out=new Uint8Array(n);let q=0;all.forEach(x=>{out.set(x,q);q+=x.length});return out}
+const xesc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const colL=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
+/* 스타일 레지스트리: font/fill/border/align/numFmt 조합 → cellXfs 인덱스 */
+function xlStyles(){const fonts=[],fills=['<fill><patternFill patternType="none"/></fill>','<fill><patternFill patternType="gray125"/></fill>'],borders=[],xfs=[];const fk={},fl={},bk={},xk={};
+  const font=(sz,b,color)=>{const k=sz+'|'+(b?1:0)+'|'+(color||'');if(fk[k]!=null)return fk[k];fonts.push('<font>'+(b?'<b/>':'')+'<sz val="'+sz+'"/>'+(color?'<color rgb="FF'+color+'"/>':'')+'<name val="맑은 고딕"/><family val="2"/></font>');return fk[k]=fonts.length-1};
+  const fill=hex=>{if(!hex)return 0;const k=hex.toUpperCase();if(fl[k]!=null)return fl[k];fills.push('<fill><patternFill patternType="solid"><fgColor rgb="FF'+k+'"/><bgColor indexed="64"/></patternFill></fill>');return fl[k]=fills.length-1};
+  const border=(spec)=>{/* spec: '' | 'thin' | 'thinL' (좌측 굵게) */const k=spec;if(bk[k]!=null)return bk[k];let x;if(!spec)x='<border><left/><right/><top/><bottom/><diagonal/></border>';else x='<border><left style="'+(spec==='thinL'?'medium':'thin')+'"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>';borders.push(x);return bk[k]=borders.length-1};
+  const get=o=>{/* o:{sz,b,color,fill,border,h,wrap,num} */const k=JSON.stringify(o);if(xk[k]!=null)return xk[k];const fi=font(o.sz||10,o.b,o.color),li=fill(o.fill),bi=border(o.border||'');
+    xfs.push('<xf numFmtId="'+(o.num?164:0)+'" fontId="'+fi+'" fillId="'+li+'" borderId="'+bi+'" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"'+(o.num?' applyNumberFormat="1"':'')+'><alignment horizontal="'+(o.h||'center')+'" vertical="center"'+(o.wrap?' wrapText="1"':'')+'/></xf>');return xk[k]=xfs.length-1};
+  const xml=()=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0;\-#,##0;&quot;-&quot;"/></numFmts><fonts count="'+fonts.length+'">'+fonts.join('')+'</fonts><fills count="'+fills.length+'">'+fills.join('')+'</fills><borders count="'+borders.length+'">'+borders.join('')+'</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="'+xfs.length+'">'+xfs.join('')+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  get({});return {get,xml}}
+/* 시트 작성: rows=[{cells:[{v,s}], ht, ol(outline level)}], merges=['B5:B9'], widths=[..] */
+function xlSheet(rows,merges,widths,hasOutline){let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  if(hasOutline)x+='<sheetPr><outlinePr summaryBelow="1"/></sheetPr>';
+  x+='<sheetFormatPr defaultRowHeight="15" outlineLevelRow="1"/><cols>'+widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>';
+  rows.forEach((r,ri)=>{x+='<row r="'+(ri+1)+'"'+(r.ht?' ht="'+r.ht+'" customHeight="1"':'')+(r.ol?' outlineLevel="'+r.ol+'"':'')+'>';
+    r.cells.forEach((c,ci)=>{if(!c)return;const ref=colL(ci)+(ri+1);if(typeof c.v==='number')x+='<c r="'+ref+'" s="'+c.s+'"><v>'+c.v+'</v></c>';else if(c.v==null||c.v==='')x+='<c r="'+ref+'" s="'+c.s+'"/>';else x+='<c r="'+ref+'" s="'+c.s+'" t="inlineStr"><is><t xml:space="preserve">'+xesc(c.v)+'</t></is></c>'});x+='</row>'});
+  x+='</sheetData>'+(merges.length?'<mergeCells count="'+merges.length+'">'+merges.map(m=>'<mergeCell ref="'+m+'"/>').join('')+'</mergeCells>':'')+'</worksheet>';return x}
+function xlWorkbook(sheets,stylesXml){/* sheets:[{name,xml}] */const f=[];
+  f.push({name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((s,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>'});
+  f.push({name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'});
+  f.push({name:'xl/workbook.xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>'<sheet name="'+xesc(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>'});
+  f.push({name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'});
+  f.push({name:'xl/styles.xml',data:stylesXml});sheets.forEach((s,i)=>f.push({name:'xl/worksheets/sheet'+(i+1)+'.xml',data:s.xml}));return zipStore(f)}
+function dlBlob(u8,name){const b=new Blob([u8],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+/* 취합 표 → 시트 행 (A열 비움, B열부터). 구분별 데이터 행은 그룹(개요 1단계), 합계 행이 요약행 */
+function mgSheetRows(T,ST){const rows=[],merges=[];const GBG={법조치:'E2EFDA',회생채권:'FFF2CC',결제지연:'FCE4D6',합계:'D9E1F2'};const hbg=i=>i<=5?'DCE6F1':i===12?'FCE4D6':'FFF2CC';
+  const S=o=>ST.get(o);const NUM='#';const numCols=new Set([6,11,15,16]);const thick=new Set([6,12,13,15]);const brd=i=>thick.has(i)?'thinL':'thin';
+  let r=0;const push=(cells,opt)=>{rows.push({cells,...(opt||{})});return r++};
+  T.forEach(row=>{const c=row.cells;
+    if(row.t==='title'){push([null,{v:c[0],s:S({b:1,h:'left'})}]);return}
+    if(row.t==='blank'){push([]);return}
+    if(row.t==='h'){push([null,...c.map(v=>({v,s:S({b:1,fill:'DCE6F1',border:'thin'})}))],{ht:20});return}
+    if(row.t==='s'||row.t==='st'){const bg=GBG[row.grp||'합계'];push([null,...c.map((v,i)=>({v:typeof v==='number'?v:v,s:S({b:1,fill:bg,border:'thin',h:i?'right':'center',num:i>0})}))],{ht:20});return}
+    if(row.t==='h2'){push([null,...c.map((v,i)=>({v,s:S({b:1,fill:hbg(i),border:brd(i),wrap:1})}))],{ht:30});return}
+    if(row.t==='d'){const memo=String(c[14]||''),memoP=String(c[13]||'');const lines=Math.max(1,...(memo+'\n'+memoP).split('\n').map(l=>Math.ceil(l.length/42)));
+      const bg=GBG[row.grp];const cells=[null];c.forEach((v,i)=>{let st;
+        if(i===0)st={b:1,fill:bg,border:'thin'};
+        else if(i===5)st={h:'left',border:'thin',wrap:1};
+        else if(i===13)st={sz:9,h:'left',border:brd(i),wrap:1};
+        else if(i===14)st={h:'left',border:brd(i),wrap:1};
+        else if(numCols.has(i))st={h:'right',border:brd(i),num:1};
+        else if(i===7||i===8)st={color:'1F3FBF',border:brd(i)};
+        else st={border:brd(i)};
+        cells.push({v:(i===0&&!v)?'':v,s:S(st)})});
+      if(c[0])row._start=r;push(cells,{ht:Math.max(30,lines*15),ol:1});return}
+    if(row.t==='sum'){const bg=GBG[row.grp];const cells=[null,{v:'',s:S({b:1,fill:bg,border:'thin'})},{v:'합계',s:S({b:1,fill:bg,border:'thin'})}];for(let i=2;i<=19;i++){const v=c[i];cells.push({v:(i===6||i===15)?v:'',s:S({b:1,fill:bg,border:brd(i),h:'right',num:(i===6||i===15)})})}
+      push(cells,{ht:20});merges.push('C'+r+':G'+r);return}});
+  /* 구분 세로 병합: 각 그룹 첫 데이터 행 ~ 합계 행 */
+  let gs=null;T.forEach((row,i)=>{if(row.t==='d'&&row.cells[0])gs=i;if(row.t==='sum'&&gs!=null){const a=rowIndexOf(T,gs),b=rowIndexOf(T,i);merges.push('B'+(a+1)+':B'+(b+1));gs=null}});
+  return {rows,merges}}
+function rowIndexOf(T,ti){/* T 인덱스 → 시트 행 인덱스 (T 항목 1개 = 행 1개) */return ti}
+function mgXlsx(){if(!MGR){alert('먼저 취합 작성을 실행하세요');return}const ST=xlStyles();const widths=[2,8,7,8,8,9,26,13,8,8,9,11,12,10,44,44,13,13,12,9,11];
+  const regs=['','경북','부산','경남'];const keep=MG_REG;const sheets=[];
+  try{regs.forEach(rg=>{MG_REG=rg;const T=mgTable();if(rg&&!T.some(r=>r.t==='d'))return;const {rows,merges}=mgSheetRows(T,ST);sheets.push({name:rg||'전체',xml:xlSheet(rows,merges,widths,true)})})}finally{MG_REG=keep}
+  const u8=xlWorkbook(sheets,ST.xml());const d=new Date();const nm='미수금취합_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);
+  document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' (시트: '+sheets.map(s=>s.name).join(', ')+') · 구분별 그룹은 시트 왼쪽 +/− 로 접고 펼침'}
 /* ===== 미수금 취합 탭: AMS 합계/상세 + 전주 시트 → 미수금 시트 형식 ===== */
 const isCode6=v=>/^\d{6}$/.test(String(v||'').trim());const isYM=v=>/^20\d{2}(0[1-9]|1[0-2])$/.test(String(v||'').trim());
 function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const H=(rows[0]||[]).map(x=>String(x||'').replace(/\s+/g,''));
@@ -881,7 +953,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   MGR={list:recs,month:'',min};mgRender();
   const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+') · 금주수금 O '+paidN+'업체(완납 '+fullN+') · 영남 외 '+outYN+'건, 기준금액 미만 '+outMin+'건 제외'}
 (function(){const d=new Date();const f=x=>x.toISOString().slice(0,10);const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
-document.getElementById('mg-run').onclick=mgBuild;
+document.getElementById('mg-run').onclick=mgBuild;document.getElementById('mg-xlsx').onclick=mgXlsx;
 document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
 const mgNeed=()=>{if(!MGR){alert('먼저 취합 작성을 실행하세요');return false}return true};
 document.getElementById('mg-copyfmt').onclick=()=>{if(mgNeed())mgCopyAll(null)};
