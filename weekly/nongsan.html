@@ -158,10 +158,11 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <label>기준금액(원) <input type="number" id="recv-min" value="1000000" style="width:110px"></label>
     <button id="recv-run">미수금 작성</button>
     <button class="sec" id="recv-copysum">요약표 값 복사 (숫자만)</button>
-    <button class="sec" id="recv-copy">상세 값 복사 (법조치 행부터, A열)</button>
+    <button id="recv-copyfmt">상세 서식 복사 (법조치 행부터, A열)</button>
+    <button class="sec" id="recv-copy">상세 값 복사 (텍스트만)</button>
     <span id="recv-stat" class="ok"></span>
   </div>
-  <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다.</div>
+  <div class="hint">세부 진행내역·수금금액 칸은 클릭해서 직접 입력할 수 있고, 수금금액을 넣으면 잔여 미수금과 위 요약표가 다시 계산됩니다. 서식 복사: 엑셀 상세표의 기존 데이터 행을 지운 뒤 첫 데이터 행의 A열을 선택하고 일반 붙여넣기(Ctrl+V)하면 구분 병합·배경색·테두리·숫자 형식이 함께 들어갑니다.</div>
   <div id="recv-out" class="prev" style="margin-top:8px"></div>
 </div>
 </div>
@@ -658,6 +659,22 @@ document.getElementById('recv-run').onclick=recvBuild;
 const recvLine=r=>r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t');
 document.getElementById('recv-copy').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
   const ok=await copy('',rows.map(recvLine).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 복사됨 → 엑셀 상세표 첫 데이터 행의 A열(구분) 선택 후 붙여넣기':'복사 실패'};
+/* 상세표 서식 포함 HTML (엑셀 붙여넣기용) */
+function recvHtml(rows){const BG={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6'};const F='font-family:\"맑은 고딕\",Malgun Gothic;font-size:9pt;border:1px solid #000;vertical-align:middle;';
+  const td=(v,st,attr)=>'<td style="'+F+st+'"'+(attr||'')+'>'+v+'</td>';const NUM='text-align:right;mso-number-format:\"#,##0\";';
+  const n=v=>typeof v==='number'&&v?v:'';const groups=[];rows.forEach(r=>{if(r.t==='d'&&(!groups.length||groups[groups.length-1].grp!==r.grp))groups.push({grp:r.grp,rows:[]});if(groups.length)groups[groups.length-1].rows.push(r)});
+  let h='<table style="border-collapse:collapse">';
+  groups.forEach(g=>{const bg='background:'+(BG[g.grp]||'#eee')+';';g.rows.forEach((r,i)=>{h+='<tr>';const c=r.cells;
+    if(i===0)h+=td(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
+    if(r.t==='sum'){h+=td('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=td(n(c[5]),bg+NUM+'font-weight:700;');for(let k=0;k<4;k++)h+=td('',bg);h+=td('',bg,' colspan="6"');h+=td(n(c[16]),bg+NUM+'font-weight:700;');h+=td('',bg)}
+    else{h+=td(esc(c[1]),'text-align:center;');h+=td(esc(c[2]),'text-align:center;mso-number-format:\"0\";');h+=td(esc(c[3]),'text-align:left;',' colspan="2"');h+=td(n(c[5]),NUM);h+=td(esc(c[6]),'text-align:center;');h+=td(esc(c[7]),'text-align:center;');h+=td(n(c[8]),NUM);h+=td(esc(c[9]),'text-align:center;');
+      h+=td(esc(String(c[10]||'')).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;',' colspan="6"');h+=td(n(c[16]),NUM);h+=td(n(c[17]),NUM)}
+    h+='</tr>'})});
+  return h+'</table>'}
+document.getElementById('recv-copyfmt').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
+  const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><meta name="ProgId" content="Excel.Sheet"></head><body>'+recvHtml(rows)+'</body></html>';const text=rows.map(recvLine).join('\r\n');let ok=false;
+  try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);ok=true}catch(e){ok=await copy('',text)}
+  document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 서식 포함 복사됨 → 엑셀 첫 데이터 행 A열 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
 document.getElementById('recv-copysum').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='s'||r.t==='st');
   const ok=await copy('',rows.map(r=>r.cells.slice(1).map(v=>v||'').join('\t')).join('\r\n'));document.getElementById('recv-stat').textContent=ok?'요약표 숫자 4행×5열 복사됨 → 엑셀 요약표의 법조치 행 전체업체 셀 선택 후 붙여넣기':'복사 실패'};
 addClearButtons();
