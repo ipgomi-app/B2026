@@ -670,10 +670,10 @@ function render(){if(!OUT)return;const rows=visible();
   const CQ=rows.filter(r=>r.q&&r.qd&&(!selCat||r.cats.includes(selCat))).sort((a,b)=>gNo(a)-gNo(b)||sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp})||(a.d.date?a.d.date.key:'').localeCompare(b.d.date?b.d.date.key:''));
   if(secQ||(selCat&&CQ.length)){h+='<h3 class="det-h">계약·견적 상세 <span class="hint" style="margin:0">'+CQ.length+'건</span></h3>';
     if(!CQ.length)h+='<div class="hint">표시할 자료가 없습니다</div>';
-    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태','예상매출','날짜','지점','담당자','코드','업체','내용'];
+    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태','예상매출(천원)','날짜','지점','담당자','코드','업체','내용'];
       h+='<div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
-        CQ.map(r=>{const q=r.qd,amt=/^(계약|견적)$/.test(q.kind)&&q.amt?eokOf(q.amt*1000):'';
-          return '<tr><td class="txt">'+esc(gOf(r))+'</td><td class="txt">'+esc(formOf(r))+'</td><td class="n">'+esc(amt)+'</td><td class="c">'+esc(ymdOf(q.date)||q.wkTxt||'')+'</td><td class="c">'+esc(r.br)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td><td class="txt">'+esc(String(q.raw||q.memo||'').replace(/\s+/g,' ').trim())+'</td></tr>'}).join('')+'</table></div>'}}
+        CQ.map(r=>{const q=r.qd,amt=/^(계약|견적)$/.test(q.kind)&&q.amt?Math.round(q.amt).toLocaleString('en-US'):'';
+          return '<tr><td class="txt">'+esc(gOf(r))+'</td><td class="txt">'+esc(formOf(r))+'</td><td class="n" style="font-weight:700">'+esc(amt)+'</td><td class="c">'+esc(ymdOf(q.date)||q.wkTxt||'')+'</td><td class="c">'+esc(r.br)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td><td class="txt">'+esc(String(q.raw||q.memo||'').replace(/\s+/g,' ').trim())+'</td></tr>'}).join('')+'</table></div>'}}
   if(secSales&&!secQ)h+=detTable('영업관리 상세',selCat?[selCat]:SALES_CATS,false,true);
   if(secOps)h+=detTable('운영관리 상세',selCat?[selCat]:OPS_CATS,false,false);
   $('detail').innerHTML=h}
