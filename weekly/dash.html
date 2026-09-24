@@ -112,8 +112,8 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
   <details id="review" class="hint" style="display:none;margin:0 0 12px"></details>
   <details class="hint" style="margin:0 0 12px"><summary style="cursor:pointer">분류·집계 기준 보기</summary>
     <div>주간영업현황의 계약·견적은 사업별 데이터 입력 자료만 집계합니다. 신규영업은 업무일지의 신규 활동만 사업별로 표시합니다.</div>
-    <div>업무일지 카드 숫자는 원본 일지 건수가 아니라 같은 담당자·업체·주차를 합친 분류 건수입니다. 입력 원본에서 담당자 제외, 기타/견적 전용 제외, 동일 업체 병합, 분류 보류를 거친 숫자를 위에 따로 보여줍니다.</div>
-    <div>한 업체에 서로 다른 활동이 있으면 해당 항목마다 표시하고, 업체수는 같은 업체 코드를 한 번만 셉니다. 업무일지의 기타 항목과 견적만 기록한 일지는 제외합니다. 견적 자료를 입력하면 주간영업현황의 해당 사업 견적에 자동 반영됩니다.</div>
+    <div>업무일지 카드 숫자는 원본 일지 건수가 아니라 같은 담당자·업체·주차를 합친 분류 건수입니다. 입력 원본에서 담당자(이민승) 제외, 휴가·상세 없는 일지·업무일지기타(40)만 있는 일지 제외, 동일 업체 병합, 분류 보류를 거친 숫자를 위에 따로 보여줍니다.</div>
+    <div>한 업체에 서로 다른 활동이 있으면 해당 항목마다 표시하고, 업체수는 같은 업체 코드를 한 번만 셉니다. 견적만 기록한 일지(품의 자동생성 포함)는 계약형태·상세구분으로 영업관리 사업별 항목(경쟁사 전환은 경쟁사)에, TF 구분이 "기타"인 일지는 운영관리 기타에 넣습니다. 산업자재유통·SCM·물류장비·RRPP 상세구분은 신규영업의 해당 사업 항목입니다. 견적 자료를 입력하면 주간영업현황의 해당 사업 견적에 자동 반영됩니다.</div>
     <div>같은 주·같은 업체에 신규업체와 수불관리가 모두 해당하면 신규업체로 분류합니다. 다른 주의 수불관리 기록은 따로 표시합니다. 손익개선에는 단가협의·단가인상, 수불관리에는 공파렛트확인·수불·실착지오류·무적/사장업체를 포함합니다.</div>
   </details>
   <div class="row" style="margin-bottom:8px">
@@ -358,10 +358,21 @@ function bizOf(typ,all){const forms=(all.match(/(계약형태|제목)\s*:\s*\[?[
 const NEW_ACTIVITY_RE=/신규\s*(영업|개척|발굴|상담|방문|제안|업체\s*(영업|방문|상담))/;
 const NEW_BIZ_CODE={'24':'산업자재유통','68':'산업자재유통','72':'산업자재유통','25':'SCM','66':'SCM','71':'SCM',
   '26':'지게차','67':'지게차','74':'지게차','76':'지게차','48':'글로벌비즈','49':'글로벌비즈','50':'글로벌비즈','53':'글로벌비즈','55':'글로벌비즈','56':'글로벌비즈','57':'글로벌비즈','58':'글로벌비즈','73':'글로벌비즈','65':'PPS'};
+/* 견적만 기록한 일지(품의 자동생성 포함) → 사업별 영업관리 항목 */
+function salesCatOf(p){const codes=p.dtl.map(x=>x.code);const t=p.dtl.map(x=>x.typ+' '+x.text).join(' ');
+  if(codes.some(c=>c==='69'||c==='70'))return '경쟁사';if(codes.includes('13'))return '손익개선';if(codes.includes('77'))return '엔지니어링';
+  const byCode=codes.map(c=>NEW_BIZ_CODE[c]||'').find(Boolean);const biz=byCode||bizOf(p.dtl.map(x=>x.typ).join(' '),t)[0]||'PPS';
+  if(biz==='PPS')return /경쟁사|재전환|AJ/.test(t)?'경쟁사':'신규영업 신규';return '신규영업 '+biz}
 function classify(d){
+  const parts=d.parts&&d.parts.length?d.parts:[d];const c=new Set();
+  parts.forEach(p=>{if(p._q)c.add(salesCatOf(p));else if(p._other)c.add('기타')});
+  const normal=parts.filter(p=>!p._q&&!p._other);
+  if(normal.length){const nd={...d,dtl:normal.flatMap(p=>p.dtl),parts:normal,group:normal.map(p=>p.group).join(' ')};classifyNormal(nd,c)}
+  return CATS.filter(k=>c.has(k))}
+function classifyNormal(d,c){
   const typ=d.dtl.map(x=>x.typ).join(' '),all=d.dtl.map(x=>x.text).join(' ')+' '+typ;
-  const raw=dtlCats(d),c=new Set();
-  raw.forEach(k=>{if(SALES_CATS.includes(k)||OPS_CATS.includes(k))c.add(k)});
+  const raw=dtlCats(d);
+  raw.forEach(k=>{if(SALES_CATS.includes(k)||OPS_CATS.includes(k))c.add(k);else if(BIZ.includes(k))c.add('신규영업 '+(k==='PPS'?'신규':k))});/* 산업자재유통·SCM·물류장비·RRPP 상세구분 → 영업관리 사업별 항목 */
   /* 상세 활동별로 사업을 확인해 서로 다른 사업의 신규 활동도 보존한다. 01-신규업체는 운영관리 전용이다. */
   d.dtl.forEach(x=>{if(x.code==='01'||/^신규업체/.test(x.typ))return;
     const t=x.typ+' '+x.text,known=NEW_BIZ_CODE[x.code]||'';
@@ -383,7 +394,6 @@ function classify(d){
   if(/재출고\s*개선/.test(all))c.add('재출고개선');
   if(/단가\s*(인상|협의)/.test(diaryCategory(d)))c.add('손익개선');
   if(c.has('신규업체'))c.delete('수불관리');
-  return CATS.filter(k=>c.has(k));
 }
 /* 품목 판정: PPS는 신규/경쟁사, 나머지 사업은 품목명 */
 function itemOf(cat,d){const all=d.dtl.map(x=>x.text).join(' ');const biz=cat.replace(/ (계약|견적)$/,'');const m=re=>(all.match(re)||[])[0]||'';
@@ -486,7 +496,11 @@ let ALL=[],OUT=null;
 function build(){const wk=curWeek();
   ALL=parseDiary($('diary').value);
   const inWk=ALL.filter(d=>!EXCLUDE_EMP.includes(String(d.emp).replace(/\d+$/,''))).filter(d=>$('allweeks').checked||(d.date&&wk&&d.date.key>=wk.from&&d.date.key<=wk.to));
-  const diaryRows=inWk.filter(includedDiary).map(d=>({...d,dtl:d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()))}));
+  /* 포함 규칙: 휴가만 적힌 일지·상세 없는 일지(DRS일괄작성)·상세가 모두 업무일지기타(40)인 일지는 제외.
+     견적만 기록한 일지 → 영업관리 사업별 항목, TF 구분이 "기타"인 일지 → 기타 항목 */
+  const isLeave=d=>d.dtl.length>0&&d.dtl.every(x=>/^\s*휴가|반차|연차/.test(x.text)&&x.text.length<20);
+  const diaryRows=inWk.filter(d=>d.dtl.length&&!isLeave(d)).map(d=>{const q=isQuoteOnlyDiary(d),o=OTHER_DIARY_RE.test(String(d.group||'').trim());
+    if(q||o)return {...d,_q:q,_other:o&&!q};const dtl=d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()));return dtl.length?{...d,dtl}:null}).filter(Boolean);
   const mergedDiary=mergeByCode(diaryRows),unclassified=mergedDiary.filter(d=>!classify(d).length);
   const rows=mergedDiary.filter(d=>classify(d).length).map(d=>{const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);const cats=classify(d);const amt=d.parts.map(x=>diaryInfo(x).amt).find(a=>a)||null;
     const items={},camt={};cats.forEach(c=>{items[c]=itemOf(c,d);camt[c]=Math.max(0,...d.parts.filter(pt=>classify({...pt,parts:[pt]}).includes(c)).map(pt=>diaryInfo(pt).amt||0))||null});
@@ -497,7 +511,7 @@ function build(){const wk=curWeek();
   DBOX.forEach(b=>{const raw=$(b.id).value;const Q=parseQuote(raw,b.mode,b.opt);const all=Q.list.length;Q.list=Q.list.filter(YN);const inn=Q.list.filter(inWkQ);inn.forEach(q=>rows.push(quoteRow(q)));
     $(b.id+'-stat').textContent=raw.trim()?(all?b.label+' 인식: '+all+'건 → 영남 소속 '+Q.list.length+'건'+(inn.length!==Q.list.length?' 중 기간 내 '+inn.length+'건':'')+' · '+Q.matched.join(' / '):b.label+' 형식을 인식하지 못했습니다 · '+diagQuote(raw)):''});
   const diaryClassified=rows.filter(r=>!r.q),cardTotal=diaryClassified.reduce((s,r)=>s+r.cats.length,0);
-  OUT=rows;$('diarystat').textContent='업무일지 원본 '+ALL.length+'건 → '+(wk&&!$('allweeks').checked?wk.text+' 기간 ':'')+'대상 '+inWk.length+'건 → 기타/견적 전용/상세 없는 일지 제외 '+(inWk.length-diaryRows.length)+'건 → 남은 일지 '+diaryRows.length+'건 → 담당자·업체·주차별 '+mergedDiary.length+'묶음 → 분류 보류 '+unclassified.length+'묶음 → 분류 '+diaryClassified.length+'묶음 (카드 숫자 합계 '+cardTotal+'건)';
+  OUT=rows;$('diarystat').textContent='업무일지 원본 '+ALL.length+'건 → '+(wk&&!$('allweeks').checked?wk.text+' 기간 ':'')+'대상 '+inWk.length+'건 → 휴가·상세 없음·업무일지기타(40)만 있는 일지 제외 '+(inWk.length-diaryRows.length)+'건 → 남은 일지 '+diaryRows.length+'건 → 담당자·업체·주차별 '+mergedDiary.length+'묶음 → 분류 보류 '+unclassified.length+'묶음 → 분류 '+diaryClassified.length+'묶음 (카드 숫자 합계 '+cardTotal+'건)';
   const review=$('review');review.style.display=unclassified.length?'':'none';review.innerHTML=unclassified.length?'<summary style="cursor:pointer">분류 보류 '+unclassified.length+'업체 · 원문 확인</summary><div class="prev"><table class="xl"><tr><td class="hg">담당자</td><td class="hg">업체</td><td class="hg">원문 분류</td><td class="hg">내용</td></tr>'+unclassified.map(d=>'<tr><td>'+esc(d.emp)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.dtl.map(x=>x.code+' '+x.typ).join(' / '))+'</td><td class="txt">'+esc(d.dtl.map(x=>x.text).join(' / '))+'</td></tr>').join('')+'</table></div>':'';
   const sel=$('catf');const cur=sel.value;
   const opts=cs=>cs.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
