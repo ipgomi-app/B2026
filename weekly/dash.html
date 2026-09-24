@@ -142,7 +142,7 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
 <div class="card">
   <h2 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">리스트 붙여넣기 <span class="tag">농산업종·단가인상·타겟업체·경쟁사·건설현장 (머리글 포함)</span>
     <button type="button" id="mt-make" style="margin-left:12px">주간회의 작성시트</button><button type="button" id="mt-xlsx" class="sec">엑셀시트 생성</button></h2>
-  <div class="hint">리스트마다 아래 <b>생성</b>을 누르면 붙여넣은 리스트 중 이번 주 업무일지·계약·견적이 있는 행만 같은 형태로 나옵니다. 맞춤 기준: <b>코드 우선</b>, 코드가 맞지 않으면 <b>업체명 앞 4글자</b>가 같은 업체((주)·주식회사·괄호 안 글자·띄어쓰기 제외). 업무일지와 위 3번 LPS 계약·견적 데이터를 각각 맞춰 보고, 오른쪽에 매칭·업무일지(활동일)·담당자·분류·업무일지 요약·계약·견적 열이 붙습니다. 위 "주차 선택"과 "기간 무시" 설정을 따릅니다.</div>
+  <div class="hint">리스트마다 아래 <b>생성</b>을 누르면 붙여넣은 리스트 중 이번 주 업무일지·계약·견적이 있는 행만 같은 형태로 나옵니다. 맞춤 기준: 리스트에 <b>코드가 있으면 코드로만</b>, <b>코드가 비어 있는 행만 업체명 앞 4글자</b>가 같은 업체((주)·주식회사·괄호 안 글자·띄어쓰기 제외). 코드는 다른데 업체명이 같은 업체는 "확인 필요"로 물어봅니다. 업무일지와 위 3번 LPS 계약·견적 데이터를 각각 맞춰 보고, 오른쪽에 매칭·업무일지(활동일)·담당자·분류·업무일지 요약·계약·견적 열이 붙습니다. 위 "주차 선택"과 "기간 무시" 설정을 따릅니다.</div>
   <div class="grid5">
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">농산업종</h3><textarea id="lst-nong" style="min-height:110px" placeholder="농산업종 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-nong">생성</button><span class="hint" style="margin:0" id="lst-nong-stat"></span></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">단가인상</h3><textarea id="lst-price" style="min-height:110px" placeholder="단가인상 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-price">생성</button><span class="hint" style="margin:0" id="lst-price-stat"></span></div></div>
@@ -767,33 +767,48 @@ function lstCheck(raw){const rows=parseTSV(raw).filter(r=>r.some(x=>String(x).tr
   OUT.forEach(r=>{if(!r.q&&String(r.d.code).trim()==='600000')return;const k=!r.q?'D':r.qd&&r.qd.kind==='견적'?'Q':'C';
     const c=lcv(r.d.code);if(c)(IX[k].c[c]=IX[k].c[c]||[]).push(r);
     if(!r.q)new Set((r.d.parts||[r.d]).flatMap(p=>p.seq||[]).map(lcv).filter(x=>x&&x!==c)).forEach(x=>(IX[k].s[x]=IX[k].s[x]||[]).push(r));const n=normName(r.d.name);if(n)(IX[k].n[n4(n)]=IX[k].n[n4(n)]||[]).push(r)});
+  /* 리스트에 코드가 있으면 코드(·연결코드)로만 맞춘다. 코드가 없는 행만 업체명 앞 4글자로 맞춘다.
+     코드가 있는데 코드는 다르고 업체명만 같은 경우(예: 유한물산 310765 ↔ 유한미네랄솔트 265960)는 "확인 필요"로 물어보고, 체크한 것만 포함 */
+  const byName=(ix,nm)=>(ix.n[n4(nm)]||[]).filter(x=>{const n=normName(x.d.name);return nm.length>=4&&n.length>=4?true:n===nm});
+  const same=lstSameLoad();const pend=[];
   const find=(ix,code,nm)=>{let m=code&&ix.c[code]||[];if(m.length)return {m,how:'코드'};m=code&&ix.s[code]||[];if(m.length)return {m,how:'연결코드'};if(!nm)return {m:[]};
-    m=(ix.n[n4(nm)]||[]).filter(x=>{const n=normName(x.d.name);return nm.length>=4&&n.length>=4?true:n===nm});return {m,how:'업체명'}};
+    if(!code)return {m:byName(ix,nm),how:'업체명'};
+    const cand=byName(ix,nm).filter(x=>lcv(x.d.code)!==code);cand.forEach(x=>pend.push({key:code+'|'+lcv(x.d.code),x}));return {m:cand.filter(x=>same[code+'|'+lcv(x.d.code)]),how:'확인'}};
   const md=dt=>dt?dt.m+'/'+dt.d:'';const won=v=>v?' '+Math.round(v).toLocaleString('en-US')+'천원':'';
   const qTxt=x=>{const q=x.qd;return [md(q.date),q.kind==='계약'?'신규계약':q.kind==='견적'?'':q.kind,q.biz==='글로벌비즈'?'RRPP':q.biz].filter(Boolean).join(' ')+won(q.amt)};
   const out=[];let total=0,nD=0,nC=0,nQ=0;
   rows.slice(1).forEach(r=>{total++;const code=ci>=0?lcv(r[ci]):'';const nm=ni>=0?normName(r[ni]):'';
     const D=find(IX.D,code,nm),C=find(IX.C,code,nm),Q=find(IX.Q,code,nm);if(!D.m.length&&!C.m.length&&!Q.m.length)return;
     if(D.m.length)nD++;if(C.m.length)nC++;if(Q.m.length)nQ++;
-    const all=[...D.m,...C.m,...Q.m],hows=[D,C,Q].filter(x=>x.m.length);const hw=hows.find(x=>x.how==='업체명')||hows.find(x=>x.how==='연결코드')||hows[0];
+    const all=[...D.m,...C.m,...Q.m],hows=[D,C,Q].filter(x=>x.m.length);const hw=hows.find(x=>x.how==='업체명')||hows.find(x=>x.how==='확인')||hows.find(x=>x.how==='연결코드')||hows[0];
     const how=hw.how==='코드'?'코드':hw.how+'('+[...new Set(all.map(x=>x.d.name))].join(',')+')';
     const days=[...new Set(D.m.flatMap(x=>x.d.days))].join(',');const emps=[...new Set(all.map(x=>x.d.emp))].join(',');const cats=[...new Set(D.m.flatMap(x=>x.cats))].join('/');
     const sum=D.m.map(x=>x.sum).filter(Boolean).join(' | ');
-    out.push({r,add:[how,days,emps,cats,sum,C.m.map(qTxt).join(' / '),Q.m.map(qTxt).join(' / ')],m:all})});
+    out.push({r,add:[how==='코드'?'코드':how.replace(/^확인/,'업체명 확인'),days,emps,cats,sum,C.m.map(qTxt).join(' / '),Q.m.map(qTxt).join(' / ')],m:all})});
+  /* 확인 필요 목록: 리스트 행(코드·업체명) ↔ 일지·계약·견적 업체(코드·업체명) 쌍 */
+  const ask={};rows.slice(1).forEach(r=>{const code=ci>=0?lcv(r[ci]):'';const nm=ni>=0?normName(r[ni]):'';if(!code||!nm)return;
+    pend.filter(p=>p.key.startsWith(code+'|')).forEach(p=>{if(ask[p.key])return;const x=p.x;ask[p.key]={key:p.key,lname:String(r[ni]||'').trim(),lcode:code,dname:x.d.name,dcode:x.d.code,
+      src:(x.q?(x.qd.kind==='견적'?'견적 ':'계약 '):'업무일지 ')+[...new Set([x.d.emp])].join(',')+' '+(x.d.days||[]).join(','),on:!!same[p.key]}})});
   const wk=curWeek(),dcodes=Object.keys(IX.D.c),lcodes=ci>=0?rows.slice(1).map(r=>lcv(r[ci])).filter(Boolean):[];
   const diag={firms:dcodes.length,nc:Object.keys(IX.C.c).length,nq:Object.keys(IX.Q.c).length,range:$('allweeks').checked?'기간 무시':wk?wk.text:'',lsample:lcodes.slice(0,5),dsample:dcodes.slice(0,5)};
-  return {hdr:rows[0].map(x=>String(x||'')),out,W,total,hit:out.length,nD,nC,nQ,cn:ci>=0?rows[0][ci]||('열 '+(ci+1)):'없음',nn:ni>=0?rows[0][ni]||('열 '+(ni+1)):'없음',diag}}
+  return {hdr:rows[0].map(x=>String(x||'')),out,W,total,hit:out.length,nD,nC,nQ,ask:Object.values(ask),cn:ci>=0?rows[0][ci]||('열 '+(ci+1)):'없음',nn:ni>=0?rows[0][ni]||('열 '+(ni+1)):'없음',diag}}
+const lstSameLoad=()=>{try{return JSON.parse(localStorage.getItem('lst_same')||'{}')}catch(e){return {}}};const lstSameSave=v=>{try{localStorage.setItem('lst_same',JSON.stringify(v))}catch(e){}};
 const lstSum=x=>x.total+'행 중 '+x.hit+'행 (업무일지 '+x.nD+' · 계약 '+x.nC+' · 견적 '+x.nQ+')';
 function lstGen(id,quiet){const l=LISTS.find(x=>x.id===id);const raw=$(id).value;if(!raw.trim()){if(!quiet)alert(l.label+' 리스트를 붙여넣으세요');return}if(!ensureOut())return;
   const x={...l,...lstCheck(raw)};LST[id]=x;$(id+'-stat').textContent=x.err?x.err:lstSum(x);lstRender()}
 function lstRender(){let h='';
   LISTS.filter(l=>LST[l.id]).forEach(l=>{const x=LST[l.id];h+='<h3 class="det-h">'+esc(x.label)+(x.err?' <span class="bad">'+esc(x.err)+'</span></h3>':' <span class="hint" style="margin:0">'+lstSum(x)+' (코드 열: '+esc(x.cn)+', 업체명 열: '+esc(x.nn)+')</span> <button class="sec xs" style="float:none" data-cp="add" data-k="'+l.id+'">추가 열만 복사</button> <button class="sec xs" style="float:none" data-cp="all" data-k="'+l.id+'">표 전체 복사</button></h3>');
-    if(x.err)return;const g=x.diag;h+='<div class="hint" style="margin:0 0 4px">비교 기간: '+esc(g.range)+' · 업무일지 업체 '+g.firms+'곳 · 계약 '+g.nc+'곳 · 견적 '+g.nq+'곳</div>';
+    if(x.err)return;
+    if(x.ask&&x.ask.length){h+='<div style="border:1px solid #f0c36d;background:#fff8e1;border-radius:6px;padding:8px 10px;margin:4px 0 8px"><b>확인 필요 '+x.ask.length+'건</b> <span class="hint" style="margin:0">리스트 코드와 다르지만 업체명 앞 4글자가 같은 업체입니다. 같은 업체면 체크하고 [반영]을 누르세요(선택은 이 브라우저에 기억됩니다).</span>'+
+      x.ask.map(a=>'<label style="display:block;font-size:12px;margin:3px 0"><input type="checkbox" class="lst-ask" data-key="'+esc(a.key)+'"'+(a.on?' checked':'')+'> 리스트 <b>'+esc(a.lname)+'</b>('+esc(a.lcode)+') ↔ <b>'+esc(a.dname)+'</b>('+esc(a.dcode)+') <span class="hint" style="margin:0">'+esc(a.src)+'</span></label>').join('')+
+      '<button type="button" class="sec xs" style="float:none" data-ask="'+l.id+'">반영</button></div>'}
+    const g=x.diag;h+='<div class="hint" style="margin:0 0 4px">비교 기간: '+esc(g.range)+' · 업무일지 업체 '+g.firms+'곳 · 계약 '+g.nc+'곳 · 견적 '+g.nq+'곳</div>';
     if(!x.out.length){h+=g.firms+g.nc+g.nq?'<div class="hint">업무일지·계약·견적이 있는 행이 없습니다. 리스트 코드 예: '+esc(g.lsample.join(', ')||'없음')+' / 업무일지 코드 예: '+esc(g.dsample.join(', '))+'</div>':'<div class="bad">선택한 주차('+esc(g.range)+')에 업무일지가 없습니다. 위 "주차 선택" 날짜가 붙여넣은 업무일지 주간과 맞는지 확인하세요.</div>';return}
     h+='<div class="prev"><table class="xl"><tr>'+x.hdr.map(v=>'<td class="hg">'+esc(v)+'</td>').join('')+LST_H.map(v=>'<td class="hg" style="background:#fff2cc">'+esc(v)+'</td>').join('')+'</tr>';
     x.out.forEach(o=>{h+='<tr>'+Array.from({length:x.W},(_,i)=>'<td class="txt">'+esc(o.r[i]||'')+'</td>').join('')+o.add.map((v,i)=>'<td class="'+(i===1||i===2||i===3?'c':'txt')+'" style="background:#fffbe6;'+(i===4?'white-space:normal;min-width:300px':i>=5?'white-space:normal;min-width:140px':'')+'">'+esc(typeof v==='number'?v.toLocaleString('en-US'):v)+'</td>').join('')+'</tr>'});
     h+='</table></div>'});
   $('lst-out').innerHTML=h;
+  $('lst-out').querySelectorAll('button[data-ask]').forEach(b=>b.onclick=()=>{const v=lstSameLoad();b.parentElement.querySelectorAll('.lst-ask').forEach(c=>{if(c.checked)v[c.dataset.key]=true;else delete v[c.dataset.key]});lstSameSave(v);lstGen(b.dataset.ask)});
   $('lst-out').querySelectorAll('button[data-cp]').forEach(b=>b.onclick=async()=>{const x=LST[b.dataset.k],R=x.out;
     const t=b.dataset.cp==='add'?[LST_H,...R.map(o=>o.add)]:[[...x.hdr,...LST_H],...R.map(o=>[...Array.from({length:x.W},(_,i)=>o.r[i]||''),...o.add])];
     const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('lst-stat').textContent=ok?x.label+(b.dataset.cp==='add'?' 추가 열 '+R.length+'행 복사됨':' 표 전체 '+R.length+'행 복사됨'):'복사 실패'})}
@@ -814,7 +829,9 @@ const mtCut=(t,n)=>t.length>n?t.slice(0,n-1)+'…':t;
 /* 도시명이 없는 요약 일지용 동네 이름 → 지점 */
 const MT_CITY=[[/반여|엄궁|해운대|사하|사상|동래|금정|연제|수영|영도|녹산|명지|감천|장림/,'부산지점','부산권역'],[/기장|정관|물금|웅상/,'양산지점','부산권역'],[/온산|웅촌|언양|온양|삼남/,'울산지점','부산권역']];
 function mtBrOf(firm,text,emp){const e=EMP2[emp]||EMP2[String(emp||'').replace(/\d+$/,'')];if(e)return e;
-  const n=normName(firm);if(n){const r=OUT&&OUT.find(x=>!x.q&&normName(x.d.name).slice(0,4)===n.slice(0,4));if(r&&r.br!=='미지정')return {br:r.br,reg:r.reg}}
+  /* 작성자가 지점 소속이 아니면(권역장 요약 등) 같은 업체 업무일지를 쓴 지점 담당자 기준 → 없으면 글 속 지역명 */
+  const n=normName(firm);if(n){const cnt={};ALL.forEach(d=>{const e=EMP2[d.emp]||EMP2[String(d.emp||'').replace(/\d+$/,'')];if(e&&normName(d.name).slice(0,4)===n.slice(0,4))cnt[e.br]=(cnt[e.br]||0)+1});
+    const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];if(top){const reg=Object.keys(ORG).find(r=>ORG[r][top[0]]);return {br:top[0],reg}}}
   let best=null;[...CITY2BR,...MT_CITY].forEach(([re,br,reg])=>{const m=String(text).match(re);if(m&&(!best||m.index<best.i))best={i:m.index,br,reg}});return best||{br:'',reg:''}}
 /* 후보 항목 모으기: 업무일지(권역장 일지 포함) · 계약/견적 데이터 */
 function mtItems(){const wk=curWeek(),all=$('allweeks').checked;const inWk=d=>all||(d.date&&wk&&d.date.key>=wk.from&&d.date.key<=wk.to);const out=[];
