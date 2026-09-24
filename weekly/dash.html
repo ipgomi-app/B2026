@@ -47,7 +47,8 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .legend{font-size:12px;color:var(--mut);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
-.zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
+header{display:flex;align-items:center;flex-wrap:wrap}
+.dzoom{position:sticky;top:0;z-index:5;display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--mut);background:var(--bg);padding:4px 0;margin-bottom:4px}.dzoom button{background:#fff;color:var(--navy);border:1px solid var(--line);border-radius:5px;padding:2px 10px;font-size:13px;line-height:1.2}.dzoom b{color:var(--navy);min-width:44px;text-align:center}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}@media(max-width:1100px){.grid3{grid-template-columns:1fr 1fr}}
 .card-groups{display:grid;gap:9px;margin-bottom:10px}
@@ -70,7 +71,7 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
 </style>
 </head>
 <body>
-<header>영남본부 주간 대시보드 <small>업무일지 → 지점/담당자별 주간 영업·운영 활동, 리스트 점검, 목표 진척도</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
+<header>영남본부 주간 대시보드 <small>업무일지 → 지점/담당자별 주간 영업·운영 활동, 리스트 점검, 목표 진척도</small></header>
 <main>
 <div class="card" style="padding:10px 16px">
   <div class="row">
@@ -129,8 +130,9 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
     <div>하단 상세는 날짜·담당자·분류·활동·예상매출(천원)·코드·업체·내용 표입니다(운영관리는 예상매출 제외). 내용은 업무일지 원문에서 지역·업종, 유형·단가, 물동량, 경쟁사, 원문 내용을 순서대로 모아 적습니다. 원문 양식은 번호형("1. 활동 2. 담당자 3. 내용-"), 하이픈형("*활동-담당자-내용"), 품의 견적서형(계약특이사항), 경쟁사 등록형(경쟁사 구분, 현황구분, 비고)을 해석합니다. 영업관리 예상매출은 천원 단위 숫자입니다. 영업관리 활동은 방문이 기본이고, 내용에 계약완료·계약진행·계약체결·계약서 작성 등이 있으면 계약, 견적서 양식이면 견적입니다. 견적 자동 연동 일지("일자 : … 업체코드 : … 제목 : [..] 견적서/견적요청" 양식)는 상세구분과 관계없이 영업·운영 활동에서 제외합니다(계약·견적 리스트로 집계). 같은 업체에 경쟁사 등 다른 일지가 있으면 그 일지 내용만 씁니다.</div>
     <div>같은 주·같은 업체에 신규업체와 수불관리가 모두 해당하면 신규업체로 분류합니다. 다른 주의 수불관리 기록은 따로 표시합니다. 손익개선에는 단가협의·단가인상, 수불관리에는 공파렛트확인·수불·실착지오류·무적/사장업체를 포함합니다.</div>
   </details>
-  <div id="sum" class="prev" style="margin-bottom:12px"></div>
-  <div id="detail"></div>
+  <div class="dzoom">표·상세 크기 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></div>
+  <div id="zoomArea"><div id="sum" class="prev" style="margin-bottom:12px"></div>
+  <div id="detail"></div></div>
 </div>
 </div>
 <div class="tabpane" id="pane-list">
@@ -776,10 +778,10 @@ $('goal-run').onclick=goalRun;
 $('goal-copy').onclick=async()=>{if(!GOAL){alert('먼저 진척도 계산을 실행하세요');return}const ok=await copyText(GOAL.table.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('goal-stat').textContent=ok?'표 복사됨 (달성률은 소수 → 엑셀에서 % 서식)':'복사 실패'};
 /* 대시보드를 다시 만들면 점검·진척도도 갱신 */
 const _build=build;build=function(){_build();if(LST&&$('lst-src').value.trim())lstRun();if(GOAL&&$('goal-src').value.trim())goalRun()};
-/* ===== 화면 확대/축소 ===== */
-(function(){const main=document.querySelector('main');let z=1;try{z=parseFloat(localStorage.getItem('ui_zoom'))||1}catch(e){}
-  const apply=()=>{z=Math.min(1.5,Math.max(0.5,Math.round(z*10)/10));if('zoom' in main.style){main.style.zoom=z}else{main.style.transform='scale('+z+')';main.style.transformOrigin='top left';main.style.width=(100/z)+'%'}
-    document.getElementById('zoomVal').textContent=Math.round(z*100)+'%';try{localStorage.setItem('ui_zoom',String(z))}catch(e){}};
+/* ===== 아래 집계표·상세 확대/축소 ===== */
+(function(){const area=document.getElementById('zoomArea');let z=1;try{z=parseFloat(localStorage.getItem('det_zoom'))||1}catch(e){}
+  const apply=()=>{z=Math.min(2,Math.max(0.5,Math.round(z*10)/10));if('zoom' in area.style){area.style.zoom=z}else{area.style.transform='scale('+z+')';area.style.transformOrigin='top left';area.style.width=(100/z)+'%'}
+    document.getElementById('zoomVal').textContent=Math.round(z*100)+'%';try{localStorage.setItem('det_zoom',String(z))}catch(e){}};
   document.getElementById('zoomIn').onclick=()=>{z+=0.1;apply()};document.getElementById('zoomOut').onclick=()=>{z-=0.1;apply()};document.getElementById('zoomReset').onclick=()=>{z=1;apply()};apply()})();
 
 </script>
