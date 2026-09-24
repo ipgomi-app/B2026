@@ -49,20 +49,21 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}@media(max-width:1100px){.grid3{grid-template-columns:1fr 1fr}}
-.card-groups{display:grid;gap:12px;margin-bottom:12px}
-.card-group{border:1px solid var(--line);border-radius:8px;background:#f8fafd;padding:12px}
-.card-group h3{margin:0 0 10px;font-size:14px;color:var(--navy)}
+.card-groups{display:grid;gap:9px;margin-bottom:10px}
+.card-group{border:1px solid var(--line);border-radius:8px;background:#f8fafd;padding:8px 10px}
+.card-group h3{margin:0 0 6px;font-size:13px;color:var(--navy)}
 .card-group h3 small{font-size:12px;font-weight:400;color:var(--mut)}
-.biz-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.biz-group{background:#fff;border:1px solid var(--line);border-radius:7px;padding:10px}
-.biz-group h4{margin:0 0 8px;font-size:13px;color:var(--navy)}
-.metric-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.metric-card{border:2px solid var(--line);border-radius:7px;background:#fff;padding:8px 5px;text-align:center;cursor:pointer;min-width:0}
+.biz-groups{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.biz-group{background:#fff;border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+.biz-group h4{margin:0 0 5px;font-size:12px;line-height:16px;height:16px;color:var(--navy)}
+.metric-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.metric-card{border:2px solid var(--line);border-radius:7px;background:#fff;padding:4px 4px;text-align:center;cursor:pointer;min-width:0;line-height:1.2}
 .metric-card.active{border-color:var(--navy);background:#eef3fb}
 .metric-card span{display:block;font-size:11px;color:var(--mut)}
-.metric-card strong{display:block;font-size:20px;color:var(--navy)}
-.activity-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px}
-@media(max-width:1100px){.biz-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.metric-card strong{display:block;font-size:17px;color:var(--navy)}
+.activity-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+.sales-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}.sales-row .activity-cards{grid-template-columns:repeat(5,minmax(0,1fr))}.sales-row>.activity-cards{margin-bottom:7px}
+@media(max-width:1100px){.biz-groups{grid-template-columns:repeat(3,minmax(0,1fr))}.sales-row{grid-template-columns:1fr}}
 @media(max-width:620px){.biz-groups{grid-template-columns:1fr}}
 .det-h{margin:14px 0 6px;font-size:15px;color:var(--navy)}
 .det-br{margin-bottom:8px}.det-br>summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:14px;margin-bottom:4px}
@@ -482,6 +483,10 @@ function actOf(text,typ){const t=String(text||'');const a=ACT_WORDS.find(([re])=
 /* 내용 요약: 지역·업종, 유형·단가, 물동량, 경쟁사, 원문 내용 순 (원문에 있는 것만) */
 /* 견적·계약 자료에서 자동 연동된 일지 양식: 업체코드 : … 제목 : [구분]업체명 견적서/견적요청 … 또는 계약형태 : 칸이 있는 품의 양식 */
 const AUTO_QUOTE_RE=/업체코드\s*:[\s\S]*제목\s*:\s*\[[^\]]+\](?:[^:\n]*?(견적요청|견적서|발주요청서|계약서)|[\s\S]*계약형태\s*:)/;
+/* 금액 칸 종류: 손익개선 → 효과금액, 미수금 → 미수금액(내용에 있을 때), 그 외 → 예상매출 */
+const EFF_RE=/효과\s*금액\s*:?\s*([\d][\d,.]*)\s*(억|천원|만원|원)?/,RECV_RE=/미수\s*(?:금|채권)?\s*(?:액|금액)?\s*:?\s*([\d][\d,.]*)\s*(억|천원|만원|원)?/;
+function amtKindOf(cats,sel){const c=sel||'';if(c==='손익개선'||!c&&cats.includes('손익개선'))return '효과금액';if(c==='미수금'||!c&&cats.includes('미수금'))return '미수금액';return '예상매출'}
+function lineAmtK(ln,kind){let won=0;if(kind==='예상매출')won=ln.P.won||0;else{const m=ln.text.match(kind==='효과금액'?EFF_RE:RECV_RE);if(m)won=wonOf(m[1]+(m[2]||''),'원')}return won?Math.round(won/1000).toLocaleString('en-US'):''}
 const CONTRACT_ACT_RE=/계약\s*(완료|진행|체결|성사)|계약서\s*(작성|체결|날인)/;
 function salesAct(ln){return CONTRACT_ACT_RE.test(ln.text)?'계약':ln.P.form==='품의'?'견적':'방문'}
 function lineSummary(P,lead){const a=[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan].map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
@@ -617,7 +622,7 @@ function render(){if(!OUT)return;const rows=visible();
   const weekly=['PPS','SCM','산업자재유통','글로벌비즈','지게차'];
   const bizGroup=b=>'<section class="biz-group"><h4>'+esc(b==='글로벌비즈'?'글로비즈':b)+'</h4><div class="metric-cards">'+metric(b+' 계약','계약')+metric(b+' 견적','견적')+'</div></section>';
   $('cards').innerHTML='<section class="card-group"><h3>주간영업현황</h3><div class="biz-groups">'+weekly.map(bizGroup).join('')+'</div></section>'+
-    '<section class="card-group"><h3>대분류 · 영업관리</h3><section class="biz-group" style="margin-bottom:10px"><h4>중분류 · 신규영업</h4><div class="activity-cards">'+NEW_SALES_SUBS.map(b=>metric('신규영업 '+b,b==='글로벌비즈'?'글로비즈':b)).join('')+'</div></section><div class="activity-cards">'+SALES_CATS.filter(c=>!c.startsWith('신규영업 ')).map(c=>metric(c,c)).join('')+'</div></section>'+
+    '<section class="card-group"><h3>대분류 · 영업관리</h3><div class="sales-row"><section class="biz-group"><h4>중분류 · 신규영업</h4><div class="activity-cards">'+NEW_SALES_SUBS.map(b=>metric('신규영업 '+b,b==='글로벌비즈'?'글로비즈':b)).join('')+'</div></section><div class="activity-cards">'+SALES_CATS.filter(c=>!c.startsWith('신규영업 ')).map(c=>metric(c,c)).join('')+'</div></div></section>'+
     '<section class="card-group"><h3>대분류 · 운영관리</h3><div class="activity-cards">'+OPS_CATS.map(c=>metric(c,c)).join('')+'</div></section>';
   $('cards').querySelectorAll('.metric-card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
   /* 집계표 */
@@ -666,12 +671,12 @@ function render(){if(!OUT)return;const rows=visible();
   const byEmpDate=(a,b)=>empIdx(a.d.emp)-empIdx(b.d.emp)||String(a.d.emp).localeCompare(String(b.d.emp))||(a.d.date?a.d.date.key:'').localeCompare(b.d.date?b.d.date.key:'');
   const detTable=(title,cats,useQ,withAmt)=>{const L=rows.filter(r=>useQ?r.q:!r.q&&r.cats.some(c=>cats.includes(c))).map(r=>({r,lines:detailLines(r,cats)})).filter(x=>x.lines.length);
     let o='<h3 class="det-h">'+title+' <span class="hint" style="margin:0">'+L.length+'개 업체</span></h3>';if(!L.length)return o+'<div class="hint">표시할 일지가 없습니다</div>';
-    const W=[76,60,104,110,...(withAmt?[96]:[]),64,180,0],HD=['날짜','담당자','분류','활동',...(withAmt?['예상매출(천원)']:[]),'코드','업체','내용'];
+    const W=[76,60,104,110,...(withAmt?[96]:[]),64,180,0],HD=['날짜','담당자','분류','활동',...(withAmt?[(selCat?amtKindOf([],selCat):'금액')+'(천원)']:[]),'코드','업체','내용'];
     brGroups(L).forEach(G=>{const items=G.list.sort((a,b)=>byEmpDate(a.r,b.r));const emps=new Set(items.map(x=>x.r.d.emp));
       o+='<details open class="det-br"><summary>'+esc(G.reg+' · '+G.br)+' <span class="hint" style="margin:0">'+items.length+'개 업체 · '+emps.size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>';
-      items.forEach(({r,lines})=>lines.forEach(ln=>{const P=ln.P,amt=P.won?Math.round(P.won/1000).toLocaleString('en-US'):'';
+      items.forEach(({r,lines})=>lines.forEach(ln=>{const P=ln.P,ak=amtKindOf(ln.cats,selCat),amt=lineAmtK(ln,ak);
         o+='<tr><td class="c">'+esc(ln.day)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+ln.cats.map(c=>'<span class="tag" style="margin:1px">'+esc(c.replace('신규영업 ','신규·').replace('글로벌비즈','글로비즈'))+'</span>').join('')+'</td>'+
-          '<td class="txt">'+esc(withAmt&&!r.q?salesAct(ln):P.act)+'</td>'+(withAmt?'<td class="n" style="font-weight:700">'+esc(amt)+'</td>':'')+'<td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td>'+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P,withAmt&&!r.q&&/번호형|하이픈형/.test(P.form)?P.act:''))+'</td></tr>'}));
+          '<td class="txt">'+esc(withAmt&&!r.q?salesAct(ln):P.act)+'</td>'+(withAmt?'<td class="n" style="font-weight:700" title="'+ak+'">'+esc(amt)+'</td>':'')+'<td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td>'+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P,withAmt&&!r.q&&/번호형|하이픈형/.test(P.form)?P.act:''))+'</td></tr>'}));
       o+='</table></div></details>'});return o};
   let h='';
   /* 계약·견적 상세: 계약구분/형태 · 계약형태 · 예상매출 · 날짜 · 지점 · 담당자 · 코드 · 업체 · 내용(원문) */
@@ -681,9 +686,9 @@ function render(){if(!OUT)return;const rows=visible();
   const CQ=rows.filter(r=>r.q&&r.qd&&(!selCat||r.cats.includes(selCat))).sort((a,b)=>gNo(a)-gNo(b)||sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp})||(a.d.date?a.d.date.key:'').localeCompare(b.d.date?b.d.date.key:''));
   if(secQ||(selCat&&CQ.length)){h+='<h3 class="det-h">계약·견적 상세 <span class="hint" style="margin:0">'+CQ.length+'건</span></h3>';
     if(!CQ.length)h+='<div class="hint">표시할 자료가 없습니다</div>';
-    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태','예상매출(천원)','날짜','지점','담당자','코드','업체','내용'];
+    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태',(selCat==='손익개선'?'효과금액':'예상매출')+'(천원)','날짜','지점','담당자','코드','업체','내용'];
       h+='<div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
-        CQ.map(r=>{const q=r.qd,amt=/^(계약|견적)$/.test(q.kind)&&q.amt?Math.round(q.amt).toLocaleString('en-US'):'';
+        CQ.map(r=>{const q=r.qd,amt=/^(계약|견적|단가인상)$/.test(q.kind)&&q.amt?Math.round(q.amt).toLocaleString('en-US'):'';
           return '<tr><td class="txt">'+esc(gOf(r))+'</td><td class="txt">'+esc(formOf(r))+'</td><td class="n" style="font-weight:700">'+esc(amt)+'</td><td class="c">'+esc(ymdOf(q.date)||q.wkTxt||'')+'</td><td class="c">'+esc(r.br)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td><td class="txt">'+esc(String(q.raw||q.memo||'').replace(/\s+/g,' ').trim())+'</td></tr>'}).join('')+'</table></div>'}}
   if(secSales&&!secQ)h+=detTable('영업관리 상세',selCat?[selCat]:SALES_CATS,false,true);
   if(secOps)h+=detTable('운영관리 상세',selCat?[selCat]:OPS_CATS,false,false);
