@@ -42,6 +42,7 @@ table.xl td.txt{text-align:left}
 table.xl td.upd{background:#fff2cc}
 table.xl td.new{background:#e2f0d9}
 table.xl td[contenteditable]:focus{outline:2px solid #2b6cb0;background:#eef4ff}
+table.xl.sumt td.hg{white-space:normal;word-break:keep-all;overflow:visible;text-overflow:clip;height:auto;line-height:1.25;font-size:9pt}
 table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .legend{font-size:12px;color:var(--mut);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
@@ -103,7 +104,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 <div class="card">
   <div class="row" style="margin-bottom:8px">
     <button id="run">대시보드 생성</button>
-    <input type="hidden" id="mode" value="emp">
+    <label>보기 <select id="mode"><option value="branch">지점별</option><option value="emp" selected>담당자별</option></select></label>
     <label>분류 필터 <select id="catf"><option value="">전체</option></select></label>
     <label><input type="checkbox" id="hideops" checked> 운영관리·기타만 있는 일지는 상세에서 접기</label>
     <span id="stat" class="ok"></span>
@@ -116,14 +117,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
     <div>한 업체에 서로 다른 활동이 있으면 해당 항목마다 표시하고, 업체수는 같은 업체 코드를 한 번만 셉니다. 견적만 기록한 일지(품의 자동생성 포함)는 계약형태·상세구분으로 영업관리 사업별 항목(경쟁사 전환은 경쟁사)에, TF 구분이 "기타"인 일지는 운영관리 기타에 넣습니다. 산업자재유통·SCM·물류장비·RRPP 상세구분은 신규영업의 해당 사업 항목입니다. 견적 자료를 입력하면 주간영업현황의 해당 사업 견적에 자동 반영됩니다.</div>
     <div>같은 주·같은 업체에 신규업체와 수불관리가 모두 해당하면 신규업체로 분류합니다. 다른 주의 수불관리 기록은 따로 표시합니다. 손익개선에는 단가협의·단가인상, 수불관리에는 공파렛트확인·수불·실착지오류·무적/사장업체를 포함합니다.</div>
   </details>
-  <div class="row" style="margin-bottom:8px">
-    <button class="sec" id="copySum">표① 값 복사</button>
-    <button class="sec" id="copySum2">표②③ 값 복사</button>
-    <button class="sec" id="copyList">상세 목록 값 복사</button>
-    <span class="hint" style="margin:0">표①: 사업별 계약·견적 건수·금액(3행 머리글). 표②: 영업관리·운영관리 항목별 건수. 상세 목록: 날짜, 권역, 지점, 담당자, 코드, 업체명, 분류, 단계, 금액(천원), 요약. 값만 복사되어 엑셀 선택 셀부터 붙습니다.</span>
-  </div>
   <div id="sum" class="prev" style="margin-bottom:12px"></div>
-  <div id="catlist" style="margin-bottom:12px;display:none"></div>
   <div id="detail"></div>
 </div>
 </div>
@@ -529,7 +523,6 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
     '<section class="card-group"><h3>대분류 · 영업관리</h3><section class="biz-group" style="margin-bottom:10px"><h4>중분류 · 신규영업</h4><div class="activity-cards">'+NEW_SALES_SUBS.map(b=>metric('신규영업 '+b,b==='글로벌비즈'?'글로비즈':b)).join('')+'</div></section><div class="activity-cards">'+SALES_CATS.filter(c=>!c.startsWith('신규영업 ')).map(c=>metric(c,c)).join('')+'</div></section>'+
     '<section class="card-group"><h3>대분류 · 운영관리</h3><div class="activity-cards">'+OPS_CATS.map(c=>metric(c,c)).join('')+'</div></section>';
   $('cards').querySelectorAll('.metric-card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
-  renderCatList(selCat);
   /* 집계표 */
   const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};
   /* 지점/담당자 행은 내장 명단 전체를 먼저 깔고, 데이터에만 있는 키를 뒤에 추가 (필터와 무관하게 전체 행 유지) */
@@ -555,9 +548,16 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
   const nk=keyH.length;const hg=(t,cs,rs)=>'<td class="hg" style="text-align:center"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+'>'+esc(t)+'</td>';
   const head1='<tr>'+keyH.map(h=>hg(h,1,3)).join('')+hg('방문건수',1,3)+hg('업체수',1,3)+[...BIZ.map(b=>BIZ_LBL[b]||b),'합계'].map(b=>hg(b,4,1)).join('')+'</tr>'+
     '<tr>'+[...BIZ,'합계'].map(()=>hg('계약',2,1)+hg('견적',2,1)).join('')+'</tr>'+'<tr>'+[...BIZ,'합계'].map(()=>[hg('건수'),hg('금액'),hg('건수'),hg('금액')].join('')).join('')+'</tr>';
-  $('sum').innerHTML='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)'+(selCat?' <span class="tag">필터: '+esc(selCat)+'</span>':'')+'</div><table class="xl">'+head1+body(S1.T,S1.flags)+'</table>'+
-    '<div style="font-weight:700;color:var(--navy);margin:12px 0 4px">② 영업관리 건수 <span class="hint" style="margin:0">(신규영업은 업무일지 기준, 동일 업체가 여러 활동을 하면 각 분류에 표시)</span></div><table class="xl"><tr>'+[...keyH,...CATS2].map(h=>hg(h)).join('')+'</tr>'+body(S2.T,S2.flags)+'</table>'+
-    '<div style="font-weight:700;color:var(--navy);margin:12px 0 4px">③ 운영관리 건수</div><table class="xl"><tr>'+[...keyH,...CATS3].map(h=>hg(h)).join('')+'</tr>'+body(S3.T,S3.flags)+'</table>';
+  /* 칸 너비 통일: 모든 칸 72px */
+  const tw=n=>' style="width:'+(keyH.length+n)*72+'px"';const cg=n=>'<colgroup>'+'<col style="width:72px">'.repeat(keyH.length+n)+'</colgroup>';
+  const NS=CATS2.filter(c=>c.startsWith('신규영업 ')),head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('신규영업',NS.length,1)+CATS2.filter(c=>!NS.includes(c)).map(c=>hg(c,1,2)).join('')+'</tr><tr>'+NS.map(c=>hg(c.replace('신규영업 ','').replace('글로벌비즈','글로비즈'))).join('')+'</tr>';
+  const ft=selCat?' <span class="tag">필터: '+esc(selCat)+'</span>':'';
+  /* 카드를 누르면 해당 표만: 계약·견적 → ①, 영업관리 → ②, 운영관리 → ③ */
+  const only=!selCat?0:SALES_CATS.includes(selCat)?2:OPS_CATS.includes(selCat)?3:1;
+  const sec1='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)'+ft+'</div><table class="xl sumt"'+tw(h1c.length-nk)+'>'+cg(h1c.length-nk)+head1+body(S1.T,S1.flags)+'</table>',
+    sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 영업관리 건수'+ft+' <span class="hint" style="margin:0">(신규영업은 업무일지 기준, 동일 업체가 여러 활동을 하면 각 분류에 표시)</span></div><table class="xl sumt"'+tw(CATS2.length)+'>'+cg(CATS2.length)+head2+body(S2.T,S2.flags)+'</table>',
+    sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 운영관리 건수'+ft+'</div><table class="xl sumt"'+tw(CATS3.length)+'>'+cg(CATS3.length)+'<tr>'+[...keyH,...CATS3].map(h=>hg(h)).join('')+'</tr>'+body(S3.T,S3.flags)+'</table>';
+  $('sum').innerHTML=(only?[sec1,sec2,sec3][only-1]:[sec1,sec2,sec3].join('<div style="height:12px"></div>'));
   /* 상세 */
   const byBr={};rows.filter(r=>!r.q).forEach(r=>{const k=r.reg+'|'+r.br;(byBr[k]=byBr[k]||[]).push(r)});
   let h='';Object.keys(byBr).sort((a,b)=>{const [ar,ab]=a.split('|'),[br_,bb]=b.split('|');return sortKey({reg:ar,br:ab},{reg:br_,br:bb})}).forEach(k=>{const [reg,br]=k.split('|');const list=byBr[k];
@@ -574,22 +574,8 @@ function render(){if(!OUT)return;const rows=visible();const hideops=$('hideops')
 const LIST_HDR=['날짜','분류','품목','단계','권역','지점','담당자','코드','업체명','금액(천원)','요약'];
 const dateStr=d=>d.date?d.date.y+'-'+String(d.date.m).padStart(2,'0')+'-'+String(d.date.d).padStart(2,'0'):'';
 function listRow(r,cat){return [dateStr(r.d),catLabel(cat,r.d),r.items[cat]||'',/ 계약$/.test(cat)?'계약':/ 견적$/.test(cat)?'견적':(r.stage||''),r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.camt[cat]||r.amt||'',r.sum]}
-function renderCatList(cat){const box=$('catlist');if(!cat||!OUT){box.style.display='none';box.innerHTML='';OUT&&(OUT.catTable=null);return}
-  const diaryCat=SALES_CATS.includes(cat)||OPS_CATS.includes(cat);
-  const rows=OUT.filter(r=>r.cats.includes(cat)).sort((a,b)=>diaryCat?(sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp})||((b.d.date?.key||'').localeCompare(a.d.date?.key||''))):(((b.camt[cat]||b.amt||0)-(a.camt[cat]||a.amt||0))||sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp})));
-  const T=[LIST_HDR,...rows.map(r=>listRow(r,cat))];OUT.catTable=T;
-  box.style.display='';box.innerHTML='<div class="row" style="align-items:center;gap:8px;margin-bottom:4px"><b style="color:var(--navy)">'+esc(cat)+' '+rows.length+'건</b><button class="sec" id="copyCat">목록 값 복사</button></div>'+
-    '<div class="prev"><table class="xl"><tr><td class="hg">복사</td>'+LIST_HDR.map(h=>'<td class="hg">'+esc(h)+'</td>').join('')+'</tr>'+T.slice(1).map((r,ri)=>'<tr><td class="c" style="padding:0 2px"><button class="sec rowcopy" data-i="'+ri+'" style="padding:1px 6px;font-size:11px">복사</button></td>'+r.map((v,i)=>'<td class="'+(i===9?'n':i===10?'txt':'c')+'"'+(i===10?' contenteditable="true" data-i="'+ri+'" title="클릭해서 직접 수정할 수 있습니다" style="white-space:normal;max-width:520px"':'')+'>'+(typeof v==='number'?v.toLocaleString('en-US'):esc(v))+'</td>').join('')+'</tr>').join('')+'</table></div>';
-  $('copyCat').onclick=async()=>{const ok=await copyText(T.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?cat+' 목록 '+rows.length+'건 복사됨':'복사 실패'};
-  box.querySelectorAll('td[contenteditable]').forEach(td=>td.oninput=()=>{const r=rows[+td.dataset.i];r.sum=td.textContent.trim();T[+td.dataset.i+1][10]=r.sum});
-  box.querySelectorAll('button.rowcopy').forEach(b=>b.onclick=async()=>{const r=rows[+b.dataset.i];const ok=await copyText(r.sum||'');$('stat').textContent=ok?r.d.name+' 요약 복사됨':'복사 실패'})}
 const cellTsv=v=>{let x=String(v??'').replace(/\t/g,' ').replace(/\r\n?/g,'\n');return x.includes('\n')||x.includes('"')?'"'+x.replace(/"/g,'""')+'"':x};
-$('run').onclick=()=>build();['catf','hideops'].forEach(id=>$(id).onchange=render);$('allweeks').onchange=()=>{if(OUT)build()};
-$('copySum').onclick=async()=>{if(!OUT)return;const ok=await copyText(OUT.sumTable.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'표① 복사됨':'복사 실패'};
-$('copySum2').onclick=async()=>{if(!OUT)return;const ok=await copyText(OUT.sumTable2.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'표②③ 복사됨':'복사 실패'};
-$('copyList').onclick=async()=>{if(!OUT)return;const rows=visible().sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp}));
-  const t=[['날짜','권역','지점','담당자','코드','업체명','분류','품목','단계','금액(천원)','요약'],...rows.map(r=>[dateStr(r.d),r.reg,r.br,r.d.emp,r.d.code,r.d.name,r.cats.join('/'),r.cats.map(c=>r.items[c]).filter(Boolean).join('/'),r.stage||'',r.amt||'',r.sum])];
-  const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('stat').textContent=ok?'상세 목록 '+rows.length+'건 복사됨':'복사 실패'};
+$('run').onclick=()=>build();['catf','hideops','mode'].forEach(id=>$(id).onchange=render);$('allweeks').onchange=()=>{if(OUT)build()};
 let dataUpdateTimer;DBOX.forEach(b=>{const el=$(b.id);el.addEventListener('input',()=>{clearTimeout(dataUpdateTimer);dataUpdateTimer=setTimeout(()=>build(),250)});el.addEventListener('cleared',()=>build())});
 $('diary').addEventListener('cleared',()=>build());
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
