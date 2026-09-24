@@ -628,11 +628,11 @@ function build(){const wk=curWeek();
   const review=$('review');review.style.display=unclassified.length?'':'none';review.innerHTML=unclassified.length?'<summary style="cursor:pointer">분류 보류 '+unclassified.length+'업체 · 원문 확인</summary><div class="prev"><table class="xl"><tr><td class="hg">담당자</td><td class="hg">업체</td><td class="hg">원문 분류</td><td class="hg">내용</td></tr>'+unclassified.map(d=>'<tr><td>'+esc(d.emp)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.dtl.map(x=>x.code+' '+x.typ).join(' / '))+'</td><td class="txt">'+esc(d.dtl.map(x=>x.text).join(' / '))+'</td></tr>').join('')+'</table></div>':'';
   const sel=$('catf');const cur=sel.value;
   const opts=cs=>cs.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
-  sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['전체 계약','전체 견적',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="영업관리">'+opts(['영업관리 전체',...SALES_CATS])+'</optgroup><optgroup label="운영관리">'+opts(['운영관리 전체',...OPS_CATS])+'</optgroup>';
+  sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['주간 전체',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="영업관리">'+opts(['영업관리 전체',...SALES_CATS])+'</optgroup><optgroup label="운영관리">'+opts(['운영관리 전체',...OPS_CATS])+'</optgroup>';
   render();$('stat').textContent='생성 완료: 업무일지 분류 '+diaryClassified.length+'묶음 · 계약/견적 자료 '+rows.filter(r=>r.q).length+'건'}
-/* 카드 필터: '전체 계약'/'전체 견적'은 사업 구분 없이 주간영업현황 계약/견적 전체 */
-const ALL_Q={'전체 계약':' 계약','전체 견적':' 견적'};const GRP={'영업관리 전체':SALES_CATS,'운영관리 전체':OPS_CATS};
-const catMatch=(r,f)=>!f||(GRP[f]?r.cats.some(c=>GRP[f].includes(c)):ALL_Q[f]?r.cats.some(c=>BIZ.some(b=>c===b+ALL_Q[f])):r.cats.includes(f));
+/* 카드 필터: '주간 전체'는 사업 구분 없이 주간영업현황 계약·견적 전체 */
+const ALL_Q={'주간 전체':[' 계약',' 견적']};const GRP={'영업관리 전체':SALES_CATS,'운영관리 전체':OPS_CATS};
+const catMatch=(r,f)=>!f||(GRP[f]?r.cats.some(c=>GRP[f].includes(c)):ALL_Q[f]?r.cats.some(c=>BIZ.some(b=>ALL_Q[f].some(k=>c===b+k))):r.cats.includes(f));
 function visible(){const f=$('catf').value;return OUT.filter(r=>catMatch(r,f))}
 function uniqueFirmCount(list){return new Set(list.filter(r=>!r.q).map(r=>String(r.d.code||'').trim()||String(r.d.name||'').replace(/\s+/g,'').trim()||r.d.num)).size}
 function render(){if(!OUT)return;const rows=visible();
@@ -642,7 +642,7 @@ function render(){if(!OUT)return;const rows=visible();
   const metric=(c,label,cls)=>'<button type="button" class="metric-card'+(cls?' '+cls:'')+(c===selCat?' active':'')+'" data-cat="'+esc(c)+'" aria-pressed="'+(c===selCat)+'"><span>'+esc(label)+'</span><strong>'+cnt[c]+'</strong></button>';
   const weekly=['PPS','SCM','산업자재유통','글로벌비즈','지게차'];
   const bizGroup=b=>'<section class="biz-group"><h4>'+esc(b==='글로벌비즈'?'글로비즈':b)+'</h4><div class="metric-cards">'+metric(b+' 계약','계약')+metric(b+' 견적','견적')+'</div></section>';
-  $('cards').innerHTML='<section class="card-group"><h3>주간영업현황</h3><div class="biz-groups">'+'<section class="biz-group"><h4>전체</h4><div class="metric-cards">'+metric('전체 계약','계약','all')+metric('전체 견적','견적','all')+'</div></section>'+weekly.map(bizGroup).join('')+'</div></section>'+
+  $('cards').innerHTML='<section class="card-group"><h3>주간영업현황</h3><div class="biz-groups">'+'<section class="biz-group"><h4>전체</h4><div class="metric-cards">'+metric('주간 전체','계약·견적','all')+'</div></section>'+weekly.map(bizGroup).join('')+'</div></section>'+
     '<section class="card-group"><h3>대분류 · 영업관리</h3><div class="sales-row"><div class="activity-cards">'+metric('영업관리 전체','전체','all')+'</div><section class="biz-group"><h4>중분류 · 영업활동</h4><div class="activity-cards">'+NEW_SALES_SUBS.map(b=>metric('신규영업 '+b,b==='글로벌비즈'?'글로비즈':b)).join('')+'</div></section><div class="activity-cards">'+SALES_CATS.filter(c=>!c.startsWith('신규영업 ')).map(c=>metric(c,c)).join('')+'</div></div></section>'+
     '<section class="card-group"><h3>대분류 · 운영관리</h3><div class="activity-cards">'+metric('운영관리 전체','전체','all')+OPS_CATS.map(c=>metric(c,c)).join('')+'</div></section>';
   $('cards').querySelectorAll('.metric-card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
