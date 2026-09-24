@@ -119,7 +119,7 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
     <div>주간영업현황의 계약·견적은 사업별 데이터 입력 자료만 집계합니다. 신규영업은 업무일지의 신규 활동만 사업별로 표시합니다.</div>
     <div>업무일지 카드 숫자는 원본 일지 건수가 아니라 같은 담당자·업체·주차를 합친 분류 건수입니다. 입력 원본에서 담당자(이민승) 제외, 휴가·상세 없는 일지·업무일지기타(40)만 있는 일지 제외, 동일 업체 병합, 분류 보류를 거친 숫자를 위에 따로 보여줍니다.</div>
     <div>한 업체에 서로 다른 활동이 있으면 해당 항목마다 표시하고, 업체수는 같은 업체 코드를 한 번만 셉니다. 견적만 기록한 일지(품의 자동생성 포함)는 계약형태·상세구분으로 영업관리 사업별 항목(경쟁사 전환은 경쟁사)에, TF 구분이 "기타"인 일지는 운영관리 기타에 넣습니다. 산업자재유통·SCM·물류장비·RRPP 상세구분은 신규영업의 해당 사업 항목입니다. 견적 자료를 입력하면 주간영업현황의 해당 사업 견적에 자동 반영됩니다.</div>
-    <div>하단 상세는 날짜·담당자·분류·활동·코드·업체·예상매출·내용 표입니다(운영관리는 예상매출 제외). 내용은 업무일지 원문에서 지역·업종, 유형·단가, 물동량, 경쟁사, 원문 내용을 순서대로 모아 적습니다. 원문 양식은 번호형("1. 활동 2. 담당자 3. 내용-"), 하이픈형("*활동-담당자-내용"), 품의 견적서형(계약특이사항), 경쟁사 등록형(경쟁사 구분, 현황구분, 비고)을 해석합니다. 예상매출은 억 단위, 수익률은 소수점 1자리입니다.</div>
+    <div>하단 상세는 날짜·담당자·분류·활동·코드·업체·예상매출·내용 표입니다(운영관리는 예상매출 제외). 내용은 업무일지 원문에서 지역·업종, 유형·단가, 물동량, 경쟁사, 원문 내용을 순서대로 모아 적습니다. 원문 양식은 번호형("1. 활동 2. 담당자 3. 내용-"), 하이픈형("*활동-담당자-내용"), 품의 견적서형(계약특이사항), 경쟁사 등록형(경쟁사 구분, 현황구분, 비고)을 해석합니다. 예상매출은 억 단위, 수익률은 소수점 1자리입니다. 영업관리 활동은 방문이 기본이고, 내용에 계약완료·계약진행·계약체결·계약서 작성 등이 있으면 계약, 견적서 양식이면 견적입니다. 견적 자료에서 자동 연동된 일지(업무일지기타 40 또는 견적서/견적요청 양식)는 신규영업에서 제외하고 주간영업현황 견적 자료로 집계합니다.</div>
     <div>같은 주·같은 업체에 신규업체와 수불관리가 모두 해당하면 신규업체로 분류합니다. 다른 주의 수불관리 기록은 따로 표시합니다. 손익개선에는 단가협의·단가인상, 수불관리에는 공파렛트확인·수불·실착지오류·무적/사장업체를 포함합니다.</div>
   </details>
   <div id="sum" class="prev" style="margin-bottom:12px"></div>
@@ -477,7 +477,10 @@ function fin(P,t){if(P.body.length)P.body[0]=P.body[0].replace(/^업체\s*현황
 const ACT_WORDS=[[/계약서|계약\s*(체결|완료|갱신)/,'계약'],[/견적/,'견적'],[/발주/,'발주'],[/미수금|결제/,'미수금'],[/보증/,'보증'],[/재고\s*(조사|실사)|유휴재고|실재고/,'재고조사'],[/입고미회수/,'입고미회수'],[/DRS/,'DRS'],[/마감|계산서/,'마감'],[/중복업체/,'중복업체'],[/클레임|컴플레인/,'클레임'],[/이동전표|출고\s*(내역|파렛트)|수불/,'수불'],[/회수/,'회수'],[/방문|면담|미팅/,'방문'],[/문의/,'문의']];
 function actOf(text,typ){const t=String(text||'');const a=ACT_WORDS.find(([re])=>re.test(t));return a?a[1]:String(typ||'').replace(/(거래처|실수요처)$/,'')}
 /* 내용 요약: 지역·업종, 유형·단가, 물동량, 경쟁사, 원문 내용 순 (원문에 있는 것만) */
-function lineSummary(P){const a=[P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan].map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
+const AUTO_QUOTE_RE=/업체코드\s*:[\s\S]*제목\s*:\s*\[[^\]]+\][\s\S]*(견적요청|견적서|발주요청서)/;
+const CONTRACT_ACT_RE=/계약\s*(완료|진행|체결|성사)|계약서\s*(작성|체결|날인)/;
+function salesAct(ln){return CONTRACT_ACT_RE.test(ln.text)?'계약':ln.P.form==='품의'?'견적':'방문'}
+function lineSummary(P,lead){const a=[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan].map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
   return a.filter((x,i)=>a.indexOf(x)===i).map(x=>x.length>80?x.slice(0,80)+'…':x).join(', ')}
 /* 상세 줄: 업체 묶음의 상세 한 줄마다 분류를 다시 판정해 해당 항목 줄만 남긴다 */
 function detailLines(r,cats){const out=[],seen=new Set();const day=dt=>dt?String(dt.m).padStart(2,'0')+'월 '+String(dt.d).padStart(2,'0')+'일':'';
@@ -580,6 +583,8 @@ function build(){const wk=curWeek();
      견적만 기록한 일지 → 영업관리 사업별 항목, TF 구분이 "기타"인 일지 → 기타 항목 */
   const isLeave=d=>d.dtl.length>0&&d.dtl.every(x=>/^\s*휴가|반차|연차/.test(x.text)&&x.text.length<20);
   const diaryRows=inWk.filter(d=>d.dtl.length&&!isLeave(d)).map(d=>{const q=isQuoteOnlyDiary(d),o=OTHER_DIARY_RE.test(String(d.group||'').trim());
+    /* 견적 자료에서 자동 연동된 일지(업무일지기타 40 또는 "일자 : … 업체코드 : … 제목 : [..] 견적서/견적요청" 양식)는 신규영업 분류에서 제외: 주간영업현황 견적 자료로 집계 */
+    if(q&&d.dtl.every(x=>x.code==='40'||OTHER_DIARY_RE.test(String(x.typ||'').trim())||AUTO_QUOTE_RE.test(x.text))&&salesCatOf(d).startsWith('신규영업'))return null;
     if(q||o)return {...d,_q:q,_other:o&&!q};const dtl=d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()));return dtl.length?{...d,dtl}:null}).filter(Boolean);
   const mergedDiary=mergeByCode(diaryRows),unclassified=mergedDiary.filter(d=>!classify(d).length);
   const rows=mergedDiary.filter(d=>classify(d).length).map(d=>{const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);const cats=classify(d);const amt=d.parts.map(x=>diaryInfo(x).amt).find(a=>a)||null;
@@ -660,7 +665,7 @@ function render(){if(!OUT)return;const rows=visible();
       o+='<details open class="det-br"><summary>'+esc(G.reg+' · '+G.br)+' <span class="hint" style="margin:0">'+items.length+'개 업체 · '+emps.size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>';
       items.forEach(({r,lines})=>lines.forEach(ln=>{const P=ln.P,amt=[P.sales,P.rate?'수익률 '+P.rate:''].filter(Boolean).join(' · ');
         o+='<tr><td class="c">'+esc(ln.day)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+ln.cats.map(c=>'<span class="tag" style="margin:1px">'+esc(c.replace('신규영업 ','신규·').replace('글로벌비즈','글로비즈'))+'</span>').join('')+'</td>'+
-          '<td class="txt">'+esc(P.act)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td>'+(withAmt?'<td class="n">'+esc(amt)+'</td>':'')+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P))+'</td></tr>'}));
+          '<td class="txt">'+esc(withAmt&&!r.q?salesAct(ln):P.act)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td>'+(withAmt?'<td class="n">'+esc(amt)+'</td>':'')+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P,withAmt&&!r.q&&/번호형|하이픈형/.test(P.form)?P.act:''))+'</td></tr>'}));
       o+='</table></div></details>'});return o};
   let h='';
   /* 계약·견적 상세: 계약구분/형태 · 계약형태 · 예상매출 · 날짜 · 지점 · 담당자 · 코드 · 업체 · 내용(원문) */
