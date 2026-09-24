@@ -477,7 +477,8 @@ function fin(P,t){if(P.body.length)P.body[0]=P.body[0].replace(/^업체\s*현황
 const ACT_WORDS=[[/계약서|계약\s*(체결|완료|갱신)/,'계약'],[/견적/,'견적'],[/발주/,'발주'],[/미수금|결제/,'미수금'],[/보증/,'보증'],[/재고\s*(조사|실사)|유휴재고|실재고/,'재고조사'],[/입고미회수/,'입고미회수'],[/DRS/,'DRS'],[/마감|계산서/,'마감'],[/중복업체/,'중복업체'],[/클레임|컴플레인/,'클레임'],[/이동전표|출고\s*(내역|파렛트)|수불/,'수불'],[/회수/,'회수'],[/방문|면담|미팅/,'방문'],[/문의/,'문의']];
 function actOf(text,typ){const t=String(text||'');const a=ACT_WORDS.find(([re])=>re.test(t));return a?a[1]:String(typ||'').replace(/(거래처|실수요처)$/,'')}
 /* 내용 요약: 지역·업종, 유형·단가, 물동량, 경쟁사, 원문 내용 순 (원문에 있는 것만) */
-const AUTO_QUOTE_RE=/업체코드\s*:[\s\S]*제목\s*:\s*\[[^\]]+\][^:\n]*?(견적요청|견적서|발주요청서)/;
+/* 견적·계약 자료에서 자동 연동된 일지 양식: 업체코드 : … 제목 : [구분]업체명 견적서/견적요청 … 또는 계약형태 : 칸이 있는 품의 양식 */
+const AUTO_QUOTE_RE=/업체코드\s*:[\s\S]*제목\s*:\s*\[[^\]]+\](?:[^:\n]*?(견적요청|견적서|발주요청서|계약서)|[\s\S]*계약형태\s*:)/;
 const CONTRACT_ACT_RE=/계약\s*(완료|진행|체결|성사)|계약서\s*(작성|체결|날인)/;
 function salesAct(ln){return CONTRACT_ACT_RE.test(ln.text)?'계약':ln.P.form==='품의'?'견적':'방문'}
 function lineSummary(P,lead){const a=[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan].map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
