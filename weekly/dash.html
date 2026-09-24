@@ -48,6 +48,7 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}@media(max-width:1100px){.grid3{grid-template-columns:1fr 1fr}}
 .card-groups{display:grid;gap:9px;margin-bottom:10px}
 .card-group{border:1px solid var(--line);border-radius:8px;background:#f8fafd;padding:8px 10px}
@@ -88,7 +89,7 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
   <div id="diarystat" class="hint"></div>
 </div>
 <div class="card">
-  <h2>2. 데이터 붙여넣기 <span class="tag">영남자동 데이터 탭과 같은 자료</span></h2>
+  <details id="dItemBox"><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">2. 항목별 계약·견적 붙여넣기 <span class="tag">영남자동 데이터 탭과 같은 자료</span> <span id="dItemCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
   <div class="hint">전사 시트를 그대로 붙여도 내장 명단(경북·부산·경남 권역의 지점/담당자)에 속한 행만 골라 씁니다. 계약은 "○○ 계약", 견적은 "○○ 견적", 손익개선은 "단가인상"으로 집계됩니다.</div>
   <div class="grid3">
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">PPS 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 천원</span></h3><textarea id="dPpsQ" style="min-height:110px" placeholder="PPS 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dPpsQ-stat" class="hint"></div></div>
@@ -100,6 +101,13 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">산업자재유통 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 원(÷1000)</span></h3><textarea id="dIndC" style="min-height:110px" placeholder="산업자재유통 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dIndC-stat" class="hint"></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">지게차(MHE) 견적 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheQ" style="min-height:110px" placeholder="MHE 견적 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheQ-stat" class="hint"></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">지게차(MHE) 계약 <span style="font-size:11px;color:var(--mut);font-weight:400">금액 단위 월 임대료 원(×12÷1000)</span></h3><textarea id="dMheC" style="min-height:110px" placeholder="MHE 계약 시트를 머리글 포함 그대로 붙여넣기"></textarea><div id="dMheC-stat" class="hint"></div>
+  </div>
+  </details>
+</div>
+<div class="card">
+  <h2>3. LPS 계약·견적 붙여넣기 <span class="tag">계약 데이터 · 견적 데이터 조회 결과</span></h2>
+  <div class="hint">전 사업이 섞인 조회 행을 그대로 붙이면 계약형태 열로 사업을 나눕니다. 머리글이 없어도 되고 뒤쪽 열이 잘려도 됩니다(결재상태 열이 잘리면 반려 건도 포함). 2번 항목별 칸과 같은 자료를 함께 붙이면 두 번 집계됩니다.</div>
+  <div class="grid2">
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">계약 데이터 <span style="font-size:11px;color:var(--mut);font-weight:400">전 사업 · 계약형태 열로 사업 구분 · 금액 원(÷1000)</span></h3><textarea id="dAllC" style="min-height:110px" placeholder="계약 데이터 시트 행을 그대로 붙여넣기 (머리글 없어도 되고, 뒤쪽 열이 잘려도 됩니다)"></textarea><div id="dAllC-stat" class="hint"></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">견적 데이터 <span style="font-size:11px;color:var(--mut);font-weight:400">전 사업 · 계약형태 열로 사업 구분 · 금액 원(÷1000)</span></h3><textarea id="dAllQ" style="min-height:110px" placeholder="견적 데이터 시트 행을 그대로 붙여넣기 (머리글 없어도 되고, 뒤쪽 열이 잘려도 됩니다)"></textarea><div id="dAllQ-stat" class="hint"></div></div></div>
   </div>
@@ -606,6 +614,7 @@ function build(){const wk=curWeek();
   const YN=q=>{const e=EMP2[q.emp]||EMP2[String(q.emp||'').replace(/\d+$/,'')];return !!e||/^(경북|경남|부산)권역$/.test(q.reg||'')||CITY2BR.some(x=>x[1]===q.br)};/* 영남 소속만 */
   DBOX.forEach(b=>{const raw=$(b.id).value;const Q=parseQuote(raw,b.mode,b.opt);const all=Q.list.length;Q.list=Q.list.filter(YN);const inn=Q.list.filter(inWkQ);inn.forEach(q=>rows.push(quoteRow(q)));
     $(b.id+'-stat').textContent=raw.trim()?(all?b.label+' 인식: '+all+'건 → 영남 소속 '+Q.list.length+'건'+(inn.length!==Q.list.length?' 중 기간 내 '+inn.length+'건':'')+' · '+Q.matched.join(' / '):b.label+' 형식을 인식하지 못했습니다 · '+diagQuote(raw)):''});
+  {const n=DBOX.filter(b=>!/^dAll/.test(b.id)&&$(b.id).value.trim()).length;$('dItemCnt').textContent=n?'· 붙여넣은 칸 '+n+'개':''}
   const diaryClassified=rows.filter(r=>!r.q),cardTotal=diaryClassified.reduce((s,r)=>s+r.cats.length,0);
   OUT=rows;$('diarystat').textContent='업무일지 원본 '+ALL.length+'건 → '+(wk&&!$('allweeks').checked?wk.text+' 기간 ':'')+'대상 '+inWk.length+'건 → 견적 자동 연동·휴가·상세 없음·업무일지기타(40)만 있는 일지 제외 '+(inWk.length-diaryRows.length)+'건'+(autoQ?' (견적 자동 연동 '+autoQ+'건)':'')+' → 남은 일지 '+diaryRows.length+'건 → 담당자·업체·주차별 '+mergedDiary.length+'묶음 → 분류 보류 '+unclassified.length+'묶음 → 분류 '+diaryClassified.length+'묶음 (카드 숫자 합계 '+cardTotal+'건)';
   const review=$('review');review.style.display=unclassified.length?'':'none';review.innerHTML=unclassified.length?'<summary style="cursor:pointer">분류 보류 '+unclassified.length+'업체 · 원문 확인</summary><div class="prev"><table class="xl"><tr><td class="hg">담당자</td><td class="hg">업체</td><td class="hg">원문 분류</td><td class="hg">내용</td></tr>'+unclassified.map(d=>'<tr><td>'+esc(d.emp)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.dtl.map(x=>x.code+' '+x.typ).join(' / '))+'</td><td class="txt">'+esc(d.dtl.map(x=>x.text).join(' / '))+'</td></tr>').join('')+'</table></div>':'';
