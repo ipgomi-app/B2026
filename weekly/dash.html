@@ -380,8 +380,8 @@ function salesCatOf(p){const codes=p.dtl.map(x=>x.code);const t=p.dtl.map(x=>x.t
   if(biz==='PPS')return /경쟁사|재전환|AJ/.test(t)?'경쟁사':'신규영업 신규';return '신규영업 '+biz}
 function classify(d){
   const parts=d.parts&&d.parts.length?d.parts:[d];const c=new Set();
-  parts.forEach(p=>{if(p._q)c.add(salesCatOf(p));else if(p._other)c.add('기타')});
-  const normal=parts.filter(p=>!p._q&&!p._other);
+  parts.forEach(p=>{if(p._q)c.add(salesCatOf(p));else if(p._other||p._etc)c.add('기타')});
+  const normal=parts.filter(p=>!p._q&&!p._other&&!p._etc);
   if(normal.length){const nd={...d,dtl:normal.flatMap(p=>p.dtl),parts:normal,group:normal.map(p=>p.group).join(' ')};classifyNormal(nd,c)}
   return CATS.filter(k=>c.has(k))}
 function classifyNormal(d,c){
@@ -508,10 +508,10 @@ function lineSummary(P,lead){const a=[lead,P.region,P.industry,P.type,P.vol?'물
   return a.filter((x,i)=>a.indexOf(x)===i).map(x=>x.length>80?x.slice(0,80)+'…':x).join(', ')}
 /* 상세 줄: 업체 묶음의 상세 한 줄마다 분류를 다시 판정해 해당 항목 줄만 남긴다 */
 function detailLines(r,cats){const out=[],seen=new Set();const day=dt=>dt?String(dt.m).padStart(2,'0')+'월 '+String(dt.d).padStart(2,'0')+'일':'';
-  const mk=(x,dt,c)=>{const P=parseForm(x.text);if(!P.act)P.act=actOf(x.text,x.typ);return {day:day(dt),cats:c,text:x.text,P}};
+  const mk=(x,dt,c,etc)=>{const P=parseForm(etc?x.text.replace(/^\s*\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}(:\d{2})?\s*/,'').replace(/^\[?직출\]?\s*/,''):x.text);if(etc)P.act=etc;else if(!P.act)P.act=actOf(x.text,x.typ);return {day:day(dt),cats:c,text:x.text,P,etc}};
   if(r.q){const x=r.d.dtl[0]||{text:''};const c=cats.find(k=>r.cats.includes(k));const L=mk(x,r.d.date,r.cats.filter(k=>cats.includes(k)));if(!r.d.date)L.day=r.d.days.join(',');if(r.camt[c]){L.P.won=r.camt[c]*1000;L.P.sales=eokOf(L.P.won)}if(r.items[c])L.P.type=L.P.type||r.items[c];L.P.act=/ 계약$/.test(c)?'계약':'견적';return [L]}
   (r.d.parts||[r.d]).forEach(pt=>pt.dtl.forEach(x=>{const one={...pt,dtl:[x]};let c=classify({...one,parts:[one]});if(!c.some(k=>cats.includes(k)))c=classify({...pt,parts:[pt]});c=c.filter(k=>cats.includes(k));
-    const key=x.text.replace(/\s+/g,'');if(!c.length||!key||seen.has(key))return;seen.add(key);out.push(mk(x,pt.date,c))}));
+    const key=(pt._etc&&pt.date?pt.date.key:'')+x.text.replace(/\s+/g,'');if(!c.length||!key||seen.has(key))return;seen.add(key);out.push(mk(x,pt.date,c,pt._etc))}));
   if(!out.length&&r.cats.some(k=>cats.includes(k)))r.d.dtl.forEach(x=>{const key=x.text.replace(/\s+/g,'');if(key&&!seen.has(key)){seen.add(key);out.push(mk(x,r.d.date,r.cats.filter(k=>cats.includes(k))))}});
   return out}
 /* 같은 업체(코드)의 일지를 한 행으로 합침 */
@@ -609,9 +609,14 @@ function build(){const wk=curWeek();
   /* 견적 자동 연동 일지("일자 : … 업체코드 : … 제목 : [..] 견적서/견적요청" 양식)는 상세구분과 관계없이 영업·운영 활동에서 제외한다.
      계약·견적 리스트(주간영업현황)에 이미 있다. 같은 업체의 다른 일지(경쟁사 등)는 그대로 남는다. */
   let autoQ=0;
+  /* 운영관리 기타: 휴무(휴가만 적힌 일지) · DRS작성(상세 없는 DRS일괄작성) · 직출(업무일지기타(40)의 직출 기록)은 각각 따로 표시 */
+  const etcRows=[];
+  inWk.forEach(d=>{if(isLeave(d))etcRows.push({...d,_etc:'휴무'});else if(!d.dtl.length&&/DRS\s*일괄\s*작성/i.test(d.group))etcRows.push({...d,dtl:[{code:'',typ:'DRS일괄작성',text:'DRS 일괄작성'}],_etc:'DRS작성'})});
+  const isOut=(d,x)=>OTHER_DIARY_RE.test(String(x.typ||'').trim())&&(/직출/.test(x.text)||/^직출/.test(String(d.group||'').trim()));
   const diaryRows=inWk.filter(d=>d.dtl.length&&!isLeave(d)).map(d=>{const keep=d.dtl.filter(x=>!AUTO_QUOTE_RE.test(x.text));if(keep.length<d.dtl.length){autoQ++;if(!keep.length)return null;d={...d,dtl:keep}}
+    const out=d.dtl.filter(x=>isOut(d,x));if(out.length){etcRows.push({...d,dtl:out,_etc:'직출'});d={...d,dtl:d.dtl.filter(x=>!isOut(d,x))};if(!d.dtl.length)return null}
     const q=isQuoteOnlyDiary(d),o=OTHER_DIARY_RE.test(String(d.group||'').trim());
-    if(q||o)return {...d,_q:q,_other:o&&!q};const dtl=d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()));return dtl.length?{...d,dtl}:null}).filter(Boolean);
+    if(q||o)return {...d,_q:q,_other:o&&!q};const dtl=d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()));return dtl.length?{...d,dtl}:null}).filter(Boolean).concat(etcRows);
   const mergedDiary=mergeByCode(diaryRows),unclassified=mergedDiary.filter(d=>!classify(d).length);
   const rows=mergedDiary.filter(d=>classify(d).length).map(d=>{const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);const cats=classify(d);const amt=d.parts.map(x=>diaryInfo(x).amt).find(a=>a)||null;
     const items={},camt={};cats.forEach(c=>{items[c]=itemOf(c,d);camt[c]=Math.max(0,...d.parts.filter(pt=>classify({...pt,parts:[pt]}).includes(c)).map(pt=>diaryInfo(pt).amt||0))||null});
@@ -624,7 +629,7 @@ function build(){const wk=curWeek();
   {const n=DBOX.filter(b=>!/^dAll/.test(b.id)&&$(b.id).value.trim()).length;$('dItemCnt').textContent=n?'· 붙여넣은 칸 '+n+'개':'';
    const st=id=>($(id+'-stat').textContent.match(/기간 내 (\d+)건/)||$(id+'-stat').textContent.match(/영남 소속 (\d+)건/)||[])[1];const c=st('dAllC'),q=st('dAllQ');$('dLpsCnt').textContent=[c?'· 계약 '+c+'건':'',q?'· 견적 '+q+'건':''].filter(Boolean).join(' ')}
   const diaryClassified=rows.filter(r=>!r.q),cardTotal=diaryClassified.reduce((s,r)=>s+r.cats.length,0);
-  OUT=rows;$('diarystat').textContent='업무일지 원본 '+ALL.length+'건 → '+(wk&&!$('allweeks').checked?wk.text+' 기간 ':'')+'대상 '+inWk.length+'건 → 견적 자동 연동·휴가·상세 없음·업무일지기타(40)만 있는 일지 제외 '+(inWk.length-diaryRows.length)+'건'+(autoQ?' (견적 자동 연동 '+autoQ+'건)':'')+' → 남은 일지 '+diaryRows.length+'건 → 담당자·업체·주차별 '+mergedDiary.length+'묶음 → 분류 보류 '+unclassified.length+'묶음 → 분류 '+diaryClassified.length+'묶음 (카드 숫자 합계 '+cardTotal+'건)';
+  OUT=rows;$('diarystat').textContent='업무일지 원본 '+ALL.length+'건 → '+(wk&&!$('allweeks').checked?wk.text+' 기간 ':'')+'대상 '+inWk.length+'건 → 견적 자동 연동·업무일지기타(40)만 있는 일지 제외 '+inWk.filter(d=>!diaryRows.some(x=>x.num===d.num)).length+'건'+(autoQ?' (견적 자동 연동 '+autoQ+'건)':'')+' → 남은 일지 '+diaryRows.length+'건 → 담당자·업체·주차별 '+mergedDiary.length+'묶음 → 분류 보류 '+unclassified.length+'묶음 → 분류 '+diaryClassified.length+'묶음 (카드 숫자 합계 '+cardTotal+'건)';
   const review=$('review');review.style.display=unclassified.length?'':'none';review.innerHTML=unclassified.length?'<summary style="cursor:pointer">분류 보류 '+unclassified.length+'업체 · 원문 확인</summary><div class="prev"><table class="xl"><tr><td class="hg">담당자</td><td class="hg">업체</td><td class="hg">원문 분류</td><td class="hg">내용</td></tr>'+unclassified.map(d=>'<tr><td>'+esc(d.emp)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.dtl.map(x=>x.code+' '+x.typ).join(' / '))+'</td><td class="txt">'+esc(d.dtl.map(x=>x.text).join(' / '))+'</td></tr>').join('')+'</table></div>':'';
   const sel=$('catf');const cur=sel.value;
   const opts=cs=>cs.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
@@ -661,16 +666,21 @@ function render(){if(!OUT)return;const rows=visible();
   const stats1=list=>{return [...BIZ1.flatMap(b=>[cntOf(list,b+' 계약'),amtOf(list,b+' 계약'),cntOf(list,b+' 견적'),amtOf(list,b+' 견적')]),...['계약','견적'].flatMap(k=>[BIZ.reduce((s,b)=>s+cntOf(list,b+' '+k),0),BIZ.reduce((s,b)=>s+amtOf(list,b+' '+k),0)])]};
   /* 표2: 기타 분류 건수 */
   const CATS2=SALES_CATS,CATS3=OPS_CATS;
+  /* 표③ 기타는 직출·휴무·DRS작성·기타로 나눠 표시 */
+  const OPS_MAIN=OPS_CATS.filter(c=>c!=='기타'),ETC_SUB=['직출','휴무','DRS작성','기타'],CATS3H=[...OPS_MAIN,...ETC_SUB.map(k=>k==='기타'?'기타':'기타·'+k)];
+  /* 직출·휴무·DRS작성은 날짜·업체별 건수(같은 담당자의 휴무 3일 → 3), 기타는 업체 수 */
+  const etcCnt=(list,k)=>k==='기타'?list.filter(r=>r.cats.includes('기타')&&(r.d.parts||[r.d]).some(p=>p._other)).length:
+    list.reduce((n,r)=>n+new Set((r.d.parts||[r.d]).filter(p=>p._etc===k).map(p=>(p.date?p.date.key:'')+'|'+p.code)).size,0);
   /* 업체수는 영업관리/운영관리 각각: 해당 항목으로 분류된 업체 수 (카드 필터와 무관하게 전체 기준) */
-  const visitFirm=(list,cats)=>[uniqueFirmCount((list.__all||list).filter(r=>!r.q&&r.cats.some(c=>cats.includes(c))))];
-  const stats2=list=>[...visitFirm(list,CATS2),...CATS2.map(c=>cntOf(list,c))];const stats3=list=>[...visitFirm(list,CATS3),...CATS3.map(c=>cntOf(list,c))];
+  const visitFirm=(list,cats)=>[uniqueFirmCount((list.__all||list).filter(r=>!r.q&&r.cats.some(c=>cats.includes(c))&&!(r.d.parts||[r.d]).every(p=>p._etc)))];/* 휴무·직출·DRS작성만 있는 행은 업체수에서 제외 */
+  const stats2=list=>[...visitFirm(list,CATS2),...CATS2.map(c=>cntOf(list,c))];const stats3=list=>[...visitFirm(list,CATS3),...OPS_MAIN.map(c=>cntOf(list,c)),...ETC_SUB.map(k=>etcCnt(list,k))];
   const activeRegs=REG_ORDER.filter(reg=>OUT.some(r=>r.reg===reg));/* 데이터가 있는 권역만 표시 */
   const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length||!activeRegs.includes(reg))return;gs.forEach(g=>{const L=g.rows.slice();L.__all=OUT.filter(r=>key(r).join('|')===g.k.join('|'));T.push([...g.k,...stats(L)]);flags.push('')});
       const SL=gs.flatMap(g=>g.rows);SL.__all=OUT.filter(r=>key(r)[0]===reg);T.push([reg,'',...(emp?['']:[]),...stats(SL)]);flags.push('sub')});
     if(activeRegs.length>1){const TL=rows.slice();TL.__all=OUT;T.push(['영남영업본부','',...(emp?['']:[]),...stats(TL)]);flags.push('tot')}return {T,flags}};
   const h1a=[...keyH,...BIZ1.flatMap(b=>[BIZ_LBL[b]||b,'','','']),'합계','','',''];const h1b=[...keyH.map(()=>''),...BIZ1.flatMap(()=>['계약','','견적','']),'계약','','견적',''];const h1c=[...keyH.map(()=>''),...BIZ1.flatMap(()=>['건수','금액','건수','금액']),'건수','금액','건수','금액'];
   const S1=rowsOf(stats1),S2=rowsOf(stats2),S3=rowsOf(stats3);
-  const z=T=>T.map(r=>r.map(v=>v===0?'':v));OUT.sumTable=[h1a,h1b,h1c,...z(S1.T)];OUT.sumTable2=[[...keyH,'업체수',...CATS2],...z(S2.T),[],[...keyH,'업체수',...CATS3],...z(S3.T)];
+  const z=T=>T.map(r=>r.map(v=>v===0?'':v));OUT.sumTable=[h1a,h1b,h1c,...z(S1.T)];OUT.sumTable2=[[...keyH,'업체수',...CATS2],...z(S2.T),[],[...keyH,'업체수',...CATS3H],...z(S3.T)];
   const body=(T,flags)=>T.map((r,i)=>'<tr>'+r.map(v=>'<td class="'+(typeof v==='number'?'n':'c')+(flags[i]?' bd':'')+'" style="'+(flags[i]==='sub'?'background:#fff2cc;':flags[i]==='tot'?'background:#dce6f1;':'')+'">'+(typeof v==='number'?(v===0?'':v.toLocaleString('en-US')):esc(v))+'</td>').join('')+'</tr>').join('');
   const nk=keyH.length;const hg=(t,cs,rs)=>'<td class="hg" style="text-align:center"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+'>'+esc(t)+'</td>';
   const head1='<tr>'+keyH.map(h=>hg(h,1,3)).join('')+[...BIZ1.map(b=>BIZ_LBL[b]||b),'합계'].map(b=>hg(b,4,1)).join('')+'</tr>'+
@@ -684,7 +694,7 @@ function render(){if(!OUT)return;const rows=visible();
   const only=!selCat?0:grp?(grp===SALES_CATS?2:3):SALES_CATS.includes(selCat)?2:OPS_CATS.includes(selCat)?3:1;
   const sec1='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)'+ft+'</div><table class="xl sumt"'+tw1+'>'+cg1+head1+body(S1.T,S1.flags)+'</table>',
     sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 영업관리 건수'+ft+' <span class="hint" style="margin:0">(영업활동은 업무일지 기준, 동일 업체가 여러 활동을 하면 각 분류에 표시)</span></div><table class="xl sumt"'+tw(CATS2.length+1)+'>'+cg(CATS2.length+1)+head2+body(S2.T,S2.flags)+'</table>',
-    sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 운영관리 건수'+ft+'</div><table class="xl sumt"'+tw(CATS3.length+1)+'>'+cg(CATS3.length+1)+'<tr>'+[...keyH,'업체수',...CATS3].map(h=>hg(h)).join('')+'</tr>'+body(S3.T,S3.flags)+'</table>';
+    sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 운영관리 건수'+ft+'</div><table class="xl sumt"'+tw(CATS3H.length+1)+'>'+cg(CATS3H.length+1)+'<tr>'+[...keyH,'업체수',...OPS_MAIN].map(h=>hg(h,1,2)).join('')+hg('기타',ETC_SUB.length,1)+'</tr><tr>'+ETC_SUB.map(k=>hg(k)).join('')+'</tr>'+body(S3.T,S3.flags)+'</table>';
   $('sum').innerHTML=(only?[sec1,sec2,sec3][only-1]:[sec1,sec2,sec3].join('<div style="height:12px"></div>'));
   /* 상세: 영업관리·계약견적 → 날짜·담당자·분류·활동·코드·업체·예상매출·내용, 운영관리 → 예상매출 없이 같은 표 */
   const secSales=!selCat||SALES_CATS.includes(selCat)||grp===SALES_CATS,secOps=!selCat||OPS_CATS.includes(selCat)||grp===OPS_CATS,secQ=!!selCat&&!secSales&&!secOps;
@@ -696,7 +706,7 @@ function render(){if(!OUT)return;const rows=visible();
     brGroups(L).forEach(G=>{const items=G.list.sort((a,b)=>byEmpDate(a.r,b.r));const emps=new Set(items.map(x=>x.r.d.emp));
       o+='<details open class="det-br"><summary>'+esc(G.reg+' · '+G.br)+' <span class="hint" style="margin:0">'+items.length+'개 업체 · '+emps.size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>';
       items.forEach(({r,lines})=>lines.forEach(ln=>{const P=ln.P,ak=amtKindOf(ln.cats,selC),amt=lineAmtK(ln,ak);
-        o+='<tr><td class="c">'+esc(ln.day)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+ln.cats.map(c=>'<span class="tag" style="margin:1px">'+esc(c.replace('신규영업 ','신규·').replace('글로벌비즈','글로비즈'))+'</span>').join('')+'</td>'+
+        o+='<tr><td class="c">'+esc(ln.day)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+ln.cats.map(c=>'<span class="tag" style="margin:1px">'+esc(c==='기타'&&ln.etc?'기타·'+ln.etc:c.replace('신규영업 ','신규·').replace('글로벌비즈','글로비즈'))+'</span>').join('')+'</td>'+
           '<td class="txt">'+esc(withAmt&&!r.q?salesAct(ln):P.act)+'</td>'+(withAmt?'<td class="n" style="font-weight:700" title="'+ak+'">'+esc(amt)+'</td>':'')+'<td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td>'+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P,withAmt&&!r.q&&/번호형|하이픈형/.test(P.form)?P.act:''))+'</td></tr>'}));
       o+='</table></div></details>'});return o};
   let h='';
