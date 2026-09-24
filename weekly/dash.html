@@ -141,18 +141,15 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
 <div class="tabpane" id="pane-list">
 <div class="card">
   <h2>리스트 붙여넣기 <span class="tag">농산업종·단가인상·타겟업체·경쟁사·건설현장 (머리글 포함)</span></h2>
-  <div class="hint">코드(5~7자리) 열 또는 업체명 열로 이번 주 업무일지와 맞춰 봅니다. 결과는 리스트마다 붙여넣은 표 오른쪽에 금주활동·활동일·담당자·분류·단계·금액·요약 열이 붙습니다. 위 "주차 선택"과 "기간 무시" 설정을 따릅니다.</div>
+  <div class="hint">리스트마다 아래 <b>생성</b>을 누르면 붙여넣은 리스트 중 이번 주 업무일지가 있는 행만 같은 형태로 나옵니다. 맞춤 기준: <b>코드 우선</b>, 코드가 맞지 않으면 <b>업체명 앞 4글자</b>가 같은 업체((주)·주식회사·괄호 안 글자·띄어쓰기 제외). 오른쪽에 매칭·활동일·담당자·분류·단계·금액·요약 열이 붙습니다. 위 "주차 선택"과 "기간 무시" 설정을 따릅니다.</div>
   <div class="grid5">
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">농산업종</h3><textarea id="lst-nong" style="min-height:110px" placeholder="농산업종 리스트를 머리글 포함 그대로 붙여넣기"></textarea></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">단가인상</h3><textarea id="lst-price" style="min-height:110px" placeholder="단가인상 리스트를 머리글 포함 그대로 붙여넣기"></textarea></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">타겟업체</h3><textarea id="lst-target" style="min-height:110px" placeholder="타겟업체 리스트를 머리글 포함 그대로 붙여넣기"></textarea></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">경쟁사</h3><textarea id="lst-comp" style="min-height:110px" placeholder="경쟁사 리스트를 머리글 포함 그대로 붙여넣기"></textarea></div>
-  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">건설현장</h3><textarea id="lst-site" style="min-height:110px" placeholder="건설현장 리스트를 머리글 포함 그대로 붙여넣기"></textarea></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">농산업종</h3><textarea id="lst-nong" style="min-height:110px" placeholder="농산업종 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-nong">생성</button><span class="hint" style="margin:0" id="lst-nong-stat"></span></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">단가인상</h3><textarea id="lst-price" style="min-height:110px" placeholder="단가인상 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-price">생성</button><span class="hint" style="margin:0" id="lst-price-stat"></span></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">타겟업체</h3><textarea id="lst-target" style="min-height:110px" placeholder="타겟업체 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-target">생성</button><span class="hint" style="margin:0" id="lst-target-stat"></span></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">경쟁사</h3><textarea id="lst-comp" style="min-height:110px" placeholder="경쟁사 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-comp">생성</button><span class="hint" style="margin:0" id="lst-comp-stat"></span></div></div>
+  <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">건설현장</h3><textarea id="lst-site" style="min-height:110px" placeholder="건설현장 리스트를 머리글 포함 그대로 붙여넣기"></textarea><div class="row" style="margin-top:4px;gap:6px"><button type="button" data-gen="lst-site">생성</button><span class="hint" style="margin:0" id="lst-site-stat"></span></div></div>
   </div>
-  <div class="row" style="margin:8px 0">
-    <button id="lst-run">활동 점검</button>
-    <label><input type="checkbox" id="lst-only"> 활동 있는 행만 표시</label>
-    <span id="lst-stat" class="ok"></span></div>
+  <div class="row" style="margin:8px 0"><span id="lst-stat" class="ok"></span></div>
   <div id="lst-out" class="prev"></div>
 </div>
 </div>
@@ -741,34 +738,36 @@ const normName=n=>String(n||'').replace(/\(주\)|㈜|주식회사|농업회사�
 const isCodeV=v=>/^\d{5,7}$/.test(String(v||'').trim());
 function outIndex(){const byCode={},byName={};OUT.forEach(r=>{if(r.q)return;const c=String(r.d.code||'').trim();if(c)(byCode[c]=byCode[c]||[]).push(r);const n=normName(r.d.name);if(n)(byName[n]=byName[n]||[]).push(r)});return {byCode,byName}}
 /* ===== 2. 주간회의 자료 (리스트 점검) ===== */
-const LST_H=['금주활동','활동일','담당자','분류','단계','금액(천원)','요약'];let LST=null;
+const LST_H=['매칭','활동일','담당자','분류','단계','금액(천원)','요약'];let LST={};
 const LISTS=[{id:'lst-nong',label:'농산업종'},{id:'lst-price',label:'단가인상'},{id:'lst-target',label:'타겟업체'},{id:'lst-comp',label:'경쟁사'},{id:'lst-site',label:'건설현장'}];
-/* 리스트 한 개 점검: 코드 열(없으면 5~7자리 숫자가 가장 많은 열)과 업체명 열로 금주 업무일지와 맞춤 */
+/* 리스트 한 개 생성: 코드 열(없으면 코드 모양 값이 가장 많은 열)로 먼저 맞추고, 코드가 맞지 않으면 업체명 앞 4글자가 같은 업체와 맞춤. 업무일지가 있는 행만 남김 */
+const LCODE_RE=/^[A-Z]{0,2}\d{4,7}$/;const n4=n=>n.length>=4?n.slice(0,4):n;
 function lstCheck(raw){const rows=parseTSV(raw).filter(r=>r.some(x=>String(x).trim()));if(rows.length<2)return {err:'머리글과 데이터 행이 필요합니다'};
-  const W=Math.max(...rows.map(r=>r.length));const H=rows[0].map(x=>String(x||'').replace(/\s+/g,''));
-  let ci=H.findIndex(h=>/코드|CST/i.test(h));if(ci<0){let best=-1,bs=0;for(let i=0;i<W;i++){const n=rows.slice(1).filter(r=>isCodeV(r[i])).length;if(n>bs){bs=n;best=i}}ci=bs?best:-1}
-  let ni=H.findIndex(h=>/업체명|거래처명|계약처명|고객명|현장명|업체|거래처|현장/.test(h));if(ni<0){let best=-1,bs=0;for(let i=0;i<W;i++){if(i===ci)continue;const n=rows.slice(1).reduce((a,r)=>a+((String(r[i]||'').match(/[가-힣]/g)||[]).length>1?1:0),0);if(n>bs){bs=n;best=i}}ni=best}
-  const {byCode,byName}=outIndex();let hit=0;
-  const out=rows.slice(1).map(r=>{const code=ci>=0?String(r[ci]||'').trim():'';const nm=ni>=0?normName(r[ni]):'';let m=(code&&byCode[code])||(nm&&byName[nm])||[];
-    if(!m.length&&nm&&nm.length>=3){const k=Object.keys(byName).find(x=>x.includes(nm)||nm.includes(x));if(k)m=byName[k]}
-    if(!m.length)return {r,add:['X','','','','','',''],m:[]};hit++;
+  const W=Math.max(...rows.map(r=>r.length));const H=rows[0].map(x=>String(x||'').replace(/\s+/g,''));const cv=v=>String(v||'').trim().toUpperCase();
+  let ci=H.findIndex(h=>/코드|CST/i.test(h));if(ci<0){let best=-1,bs=0;for(let i=0;i<W;i++){const n=rows.slice(1).filter(r=>LCODE_RE.test(cv(r[i]))).length;if(n>bs){bs=n;best=i}}ci=bs?best:-1}
+  let ni=H.findIndex((h,i)=>i!==ci&&/업체명|거래처명|계약처명|고객명|현장명|실수요처명|업체|거래처|현장/.test(h));if(ni<0){let best=-1,bs=0;for(let i=0;i<W;i++){if(i===ci)continue;const n=rows.slice(1).reduce((a,r)=>a+((String(r[i]||'').match(/[가-힣]/g)||[]).length>1?1:0),0);if(n>bs){bs=n;best=i}}ni=best}
+  const byCode={},byN4={};OUT.forEach(r=>{if(r.q||String(r.d.code).trim()==='600000')return;const c=cv(r.d.code);if(c)(byCode[c]=byCode[c]||[]).push(r);const n=normName(r.d.name);if(n)(byN4[n4(n)]=byN4[n4(n)]||[]).push(r)});
+  const out=[];let total=0;
+  rows.slice(1).forEach(r=>{total++;const code=ci>=0?cv(r[ci]):'';const nm=ni>=0?normName(r[ni]):'';let m=code&&byCode[code]||[],how='코드';
+    if(!m.length&&nm){m=(byN4[n4(nm)]||[]).filter(x=>{const n=normName(x.d.name);return nm.length>=4&&n.length>=4?true:n===nm});how='업체명'}
+    if(!m.length)return;
     const days=[...new Set(m.flatMap(x=>x.d.days))].join(',');const emps=[...new Set(m.map(x=>x.d.emp))].join(',');const cats=[...new Set(m.flatMap(x=>x.cats))].join('/');const stage=[...new Set(m.map(x=>x.stage).filter(Boolean))].join('/');
-    const amt=m.reduce((s,x)=>s+(x.amt||0),0);const sum=m.map(x=>x.sum).filter(Boolean).join(' | ');return {r,add:['O',days,emps,cats,stage,amt||'',sum],m}});
-  return {hdr:rows[0].map(x=>String(x||'')),out,W,hit,cn:ci>=0?rows[0][ci]:'없음',nn:ni>=0?rows[0][ni]:'없음'}}
-function lstRun(){if(!ensureOut())return;const L=LISTS.filter(l=>$(l.id).value.trim());if(!L.length){alert('리스트를 하나 이상 붙여넣으세요');return}
-  LST=L.map(l=>({...l,...lstCheck($(l.id).value)}));$('lst-stat').textContent='점검 완료: '+LST.map(x=>x.err?x.label+' 오류':x.label+' '+x.out.length+'행 중 금주 활동 '+x.hit+'행').join(' · ');lstRender()}
-const lstRowsOf=x=>$('lst-only').checked?x.out.filter(o=>o.m.length):x.out;
-function lstRender(){if(!LST)return;let h='';
-  LST.forEach((x,k)=>{h+='<h3 class="det-h">'+esc(x.label)+(x.err?' <span class="bad">'+esc(x.err)+'</span></h3>':' <span class="hint" style="margin:0">'+x.out.length+'행 중 금주 활동 '+x.hit+'행 (코드 열: '+esc(x.cn)+', 업체명 열: '+esc(x.nn)+')</span> <button class="sec xs" style="float:none" data-cp="add" data-k="'+k+'">추가 열만 복사</button> <button class="sec xs" style="float:none" data-cp="all" data-k="'+k+'">표 전체 복사</button></h3>');
-    if(x.err)return;const R=lstRowsOf(x);
+    const amt=m.reduce((s,x)=>s+(x.amt||0),0);const sum=m.map(x=>x.sum).filter(Boolean).join(' | ');
+    out.push({r,add:[how==='코드'?'코드':'업체명('+[...new Set(m.map(x=>x.d.name))].join(',')+')',days,emps,cats,stage,amt||'',sum],m})});
+  return {hdr:rows[0].map(x=>String(x||'')),out,W,total,hit:out.length,cn:ci>=0?rows[0][ci]:'없음',nn:ni>=0?rows[0][ni]:'없음'}}
+function lstGen(id,quiet){const l=LISTS.find(x=>x.id===id);const raw=$(id).value;if(!raw.trim()){if(!quiet)alert(l.label+' 리스트를 붙여넣으세요');return}if(!ensureOut())return;
+  const x={...l,...lstCheck(raw)};LST[id]=x;$(id+'-stat').textContent=x.err?x.err:x.total+'행 중 업무일지 있음 '+x.hit+'행';lstRender()}
+function lstRender(){let h='';
+  LISTS.filter(l=>LST[l.id]).forEach(l=>{const x=LST[l.id];h+='<h3 class="det-h">'+esc(x.label)+(x.err?' <span class="bad">'+esc(x.err)+'</span></h3>':' <span class="hint" style="margin:0">'+x.total+'행 중 업무일지 있음 '+x.hit+'행 (코드 열: '+esc(x.cn)+', 업체명 열: '+esc(x.nn)+')</span> <button class="sec xs" style="float:none" data-cp="add" data-k="'+l.id+'">추가 열만 복사</button> <button class="sec xs" style="float:none" data-cp="all" data-k="'+l.id+'">표 전체 복사</button></h3>');
+    if(x.err)return;if(!x.out.length){h+='<div class="hint">이번 주 업무일지가 있는 행이 없습니다</div>';return}
     h+='<div class="prev"><table class="xl"><tr>'+x.hdr.map(v=>'<td class="hg">'+esc(v)+'</td>').join('')+LST_H.map(v=>'<td class="hg" style="background:#fff2cc">'+esc(v)+'</td>').join('')+'</tr>';
-    R.forEach(o=>{h+='<tr>'+Array.from({length:x.W},(_,i)=>'<td class="txt">'+esc(o.r[i]||'')+'</td>').join('')+o.add.map((v,i)=>'<td class="'+(i===5?'n':i===6?'txt':'c')+'" style="'+(o.m.length?'background:#fffbe6;':'')+(i===6?'white-space:normal;min-width:300px':'')+'">'+esc(typeof v==='number'?v.toLocaleString('en-US'):v)+'</td>').join('')+'</tr>'});
+    x.out.forEach(o=>{h+='<tr>'+Array.from({length:x.W},(_,i)=>'<td class="txt">'+esc(o.r[i]||'')+'</td>').join('')+o.add.map((v,i)=>'<td class="'+(i===5?'n':i===6||i===0?'txt':'c')+'" style="background:#fffbe6;'+(i===6?'white-space:normal;min-width:300px':'')+'">'+esc(typeof v==='number'?v.toLocaleString('en-US'):v)+'</td>').join('')+'</tr>'});
     h+='</table></div>'});
   $('lst-out').innerHTML=h;
-  $('lst-out').querySelectorAll('button[data-cp]').forEach(b=>b.onclick=async()=>{const x=LST[+b.dataset.k],R=lstRowsOf(x);
+  $('lst-out').querySelectorAll('button[data-cp]').forEach(b=>b.onclick=async()=>{const x=LST[b.dataset.k],R=x.out;
     const t=b.dataset.cp==='add'?[LST_H,...R.map(o=>o.add)]:[[...x.hdr,...LST_H],...R.map(o=>[...Array.from({length:x.W},(_,i)=>o.r[i]||''),...o.add])];
-    const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('lst-stat').textContent=ok?x.label+(b.dataset.cp==='add'?' 추가 열 '+R.length+'행 복사됨 → 리스트 오른쪽 첫 빈 열(머리글 행)에 붙여넣기':' 표 전체 복사됨'):'복사 실패'})}
-$('lst-run').onclick=lstRun;$('lst-only').onchange=lstRender;
+    const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('lst-stat').textContent=ok?x.label+(b.dataset.cp==='add'?' 추가 열 '+R.length+'행 복사됨':' 표 전체 '+R.length+'행 복사됨'):'복사 실패'})}
+document.querySelectorAll('button[data-gen]').forEach(b=>b.onclick=()=>lstGen(b.dataset.gen));
 /* ===== 3. 목표 진척도 ===== */
 const cntOfG=(list,c)=>list.filter(r=>r.cats.includes(c)).length,amtOfG=(list,c)=>list.filter(r=>r.cats.includes(c)).reduce((s,r)=>s+(r.camt[c]||0),0);
 function goalMetric(h){const t=String(h||'').replace(/\s+/g,'');if(!t)return null;if(/방문건수|일지건수|방문수/.test(t))return {k:'visits',lbl:'방문건수'};if(/업체수/.test(t))return {k:'firms',lbl:'업체수'};
@@ -803,7 +802,7 @@ function goalRender(){if(!GOAL)return;const pct=(a,g)=>g?Math.round(a/g*100):'';
 $('goal-run').onclick=goalRun;
 $('goal-copy').onclick=async()=>{if(!GOAL){alert('먼저 진척도 계산을 실행하세요');return}const ok=await copyText(GOAL.table.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('goal-stat').textContent=ok?'표 복사됨 (달성률은 소수 → 엑셀에서 % 서식)':'복사 실패'};
 /* 대시보드를 다시 만들면 점검·진척도도 갱신 */
-const _build=build;build=function(){_build();if(LST&&LISTS.some(l=>$(l.id).value.trim()))lstRun();if(GOAL&&$('goal-src').value.trim())goalRun()};
+const _build=build;build=function(){_build();Object.keys(LST).forEach(id=>{if($(id).value.trim())lstGen(id,true);else{delete LST[id];$(id+'-stat').textContent='';lstRender()}});if(GOAL&&$('goal-src').value.trim())goalRun()};
 /* ===== 아래 집계표·상세 확대/축소 ===== */
 (function(){const area=document.getElementById('zoomArea');let z=1;try{z=parseFloat(localStorage.getItem('det_zoom'))||1}catch(e){}
   const apply=()=>{z=Math.min(2,Math.max(0.5,Math.round(z*10)/10));if('zoom' in area.style){area.style.zoom=z}else{area.style.transform='scale('+z+')';area.style.transformOrigin='top left';area.style.width=(100/z)+'%'}
