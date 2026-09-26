@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엔지니어링 주간 제출본</title>
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #ffffff; --ink: #1c2433; --sub: #5b6577; --line: #dde2ea;
+    --navy: #1f3864; --blue: #2f5597; --accent: #ffc000; --ok: #1e7f4f; --warn: #b3261e; --soft: #eef2f9;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif; }
+  header { background: var(--navy); color: #fff; padding: 18px 16px 14px; }
+  header h1 { margin: 0; font-size: 19px; letter-spacing: -0.2px; }
+  header p { margin: 4px 0 0; color: #c9d4ea; font-size: 12.5px; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+  .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 12px; flex: none; }
+  .hint { color: var(--sub); font-size: 12.5px; margin: 2px 0 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+  .slot { border: 1px dashed #b8c2d3; border-radius: 10px; padding: 12px; background: #fbfcfe; }
+  .slot.filled { border-style: solid; border-color: #9fb4d9; background: var(--soft); }
+  .slot h3 { margin: 0 0 6px; font-size: 14px; }
+  .slot .st { font-size: 12px; color: var(--sub); min-height: 18px; word-break: break-all; }
+  label.btn, button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8c2d3; background: #fff; color: var(--ink); border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  label.btn:hover, button:hover { background: var(--soft); }
+  button.primary { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; padding: 10px 18px; font-size: 14px; }
+  button.primary:hover { background: var(--blue); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input[type=file] { display: none; }
+  textarea { width: 100%; min-height: 70px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
+  select, input[type=text] { border: 1px solid #b8c2d3; border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 13px; background: #fff; }
+  details { margin-top: 8px; } summary { cursor: pointer; color: var(--blue); font-size: 12.5px; }
+  .drop { border: 2px dashed #9fb4d9; border-radius: 10px; padding: 14px; text-align: center; color: var(--sub); margin-bottom: 10px; }
+  .drop.over { background: var(--soft); border-color: var(--navy); color: var(--navy); }
+  .badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; background: #e7ecf5; color: var(--navy); }
+  .badge.new { background: #fff1c2; color: #7a5600; } .badge.rev { background: #e3f1e9; color: var(--ok); } .badge.le { background: #ffe0cc; color: #8a3b00; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 6px; text-align: left; vertical-align: middle; }
+  th { background: #f2f4f8; font-weight: 600; color: #394256; position: sticky; top: 0; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tablewrap { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .log { font-size: 12.5px; }
+  .log div { margin: 3px 0; }
+  .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
+  .msg.err { background: #fdecea; color: var(--warn); } .msg.ok { background: #e6f4ec; color: var(--ok); } .msg.warn { background: #fff5d6; color: #7a5600; }
+  .muted { color: var(--sub); }
+  .kv { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
+  .kv b { color: var(--navy); }
+  footer { color: var(--sub); font-size: 12px; text-align: center; padding: 8px 16px 28px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>엔지니어링 영업추진현황 · 주간 제출본 만들기</h1>
+  <p>지난주 제출본 + 경북/부산/경남 권역 자료 → 원본 서식 그대로 이번 주 제출본(.xlsx). 파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않습니다.</p>
+</header>
+<main>
+  <section class="card">
+    <h2><span class="step">1</span>지난주 제출본 (템플릿)</h2>
+    <p class="hint">지난주에 제출한 엑셀을 올리세요. 서식·수식·3번째 시트는 이 파일을 그대로 따릅니다.</p>
+    <div class="row">
+      <label class="btn">파일 선택<input type="file" id="tplFile" accept=".xlsx"></label>
+      <button id="useLast" hidden>이 브라우저에서 마지막으로 만든 제출본 사용</button>
+    </div>
+    <div id="tplInfo" class="kv" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">2</span>이번 주 권역 자료</h2>
+    <p class="hint">권역 담당이 보낸 엑셀(수주풀 시트 포함)을 한꺼번에 끌어다 놓으면 권역을 자동으로 판별합니다. 엑셀 대신 시트 내용을 복사해 붙여넣어도 됩니다(헤더 행 포함).</p>
+    <div id="drop" class="drop">여기로 권역 파일 3개를 끌어다 놓거나 <label class="btn" style="margin-left:6px">여러 파일 선택<input type="file" id="multiFile" accept=".xlsx" multiple></label></div>
+    <div class="grid3" id="slots"></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">3</span>보고 주차 · 병합 미리보기</h2>
+    <div class="row">
+      <span>보고 주차</span>
+      <input type="text" id="week" placeholder="예: 9월 4주" style="width:110px">
+      <span class="muted" id="weekHint"></span>
+      <button id="previewBtn" disabled>병합 미리보기</button>
+    </div>
+    <div id="mergeLog" class="log" style="margin-top:10px"></div>
+    <div id="candWrap" hidden style="margin-top:12px">
+      <p class="hint">이번 주 방문 업체입니다. ‘배치’를 바꿔 <b>▶ 금주 주요 업체</b>에 넣을 업체를 고르세요. 서술(주요 이슈 및 고객사 Needs)은 수주풀 원문 그대로 옮겨집니다. 본부 니즈/견적 리스트 업체는 <b>◎ 금주 주요 업체</b>와 리스트의 추가진행 주차/현황에 자동 반영됩니다.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>권역</th><th>업체명</th><th>담당자</th><th>단계</th><th class="num">예상매출</th><th>방문</th><th>배치</th></tr></thead>
+        <tbody id="candBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">4</span>별도 작성 목록 (선택)</h2>
+    <p class="hint">비워두면 지난주 제출본 내용을 그대로 씁니다. 바꿀 때만 엑셀/Zoom에서 해당 표의 데이터 행을 복사해 붙여넣으세요(헤더 제외, 열 순서는 제출본 표와 동일).</p>
+    <details><summary>LE 동행방문 대상 리스트 교체</summary><textarea id="man_leTarget" placeholder="팀권역	지점	담당자	코드	업체명	업종	지역	업체 연매출	사업구분	세부내용"></textarea></details>
+    <details><summary>LE 차주 방문요청 리스트 교체</summary><textarea id="man_leNext" placeholder="팀권역	지점	담당자	코드	업체명	업종	지역	업체 연매출	사업구분	세부내용"></textarea></details>
+    <details><summary>계약성사 가능성 업체 교체</summary><textarea id="man_contract" placeholder="구분	팀/권역	담당자	코드	업체명	추진과제/범위	진행단계	예상매출	계약 예상시기	진행 현황"></textarea></details>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">5</span>제출본 만들기</h2>
+    <div class="row">
+      <button class="primary" id="buildBtn" disabled>엑셀 제출본 만들기</button>
+      <label style="font-size:13px"><input type="checkbox" id="addBonbu" checked> 새로 니즈확인/견적/계약이 된 업체를 본부 리스트에 추가</label>
+    </div>
+    <div id="buildMsg"></div>
+  </section>
+</main>
+<footer>수주풀 병합은 원문 그대로(요약·수정 없음) · 요약표는 템플릿 수식 그대로 · 열 때 엑셀이 자동 재계산합니다</footer>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/exceljs.min.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  const E = window.EngEngine;
+  const $ = (id) => document.getElementById(id);
+  const REG = E.REGIONS;
+  const LS_KEY = 'eng-weekly-last-output';
+  const state = { tpl: null, tplName: '', tplRows: null, inputs: {}, cands: [], placement: {} };
+
+  const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
+  const readFile = (f) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(new Uint8Array(r.result)); r.onerror = no; r.readAsArrayBuffer(f); });
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const msg = (el, cls, text) => { el.innerHTML = text ? '<div class="msg ' + cls + '">' + esc(text) + '</div>' : ''; };
+
+  // ---- 권역 슬롯 ----
+  function renderSlots() {
+    $('slots').innerHTML = REG.map((r) => {
+      const inp = state.inputs[r];
+      const st = !inp ? '자료 없음 — 올리지 않으면 지난주 내용 유지' : inp.type === 'file' ? '📄 ' + inp.name + (inp.guess ? ' · 자동판별' : '') : '📋 붙여넣기 ' + (inp.text.split('\n').length - 1) + '행';
+      return '<div class="slot ' + (inp ? 'filled' : '') + '"><h3>' + r + '</h3><div class="st">' + esc(st) + '</div>' +
+        '<div class="row" style="margin-top:8px"><label class="btn">엑셀<input type="file" accept=".xlsx" data-reg="' + r + '"></label>' +
+        (inp ? '<button data-clear="' + r + '">비우기</button>' : '') + '</div>' +
+        '<details><summary>붙여넣기로 입력</summary><textarea data-paste="' + r + '" placeholder="권역 시트를 헤더 포함 복사 → 붙여넣기">' + (inp && inp.type === 'paste' ? esc(inp.text) : '') + '</textarea></details></div>';
+    }).join('');
+    $('slots').querySelectorAll('input[type=file]').forEach((el) => el.addEventListener('change', async (e) => { const f = e.target.files[0]; if (f) await addRegionFile(f, el.dataset.reg); }));
+    $('slots').querySelectorAll('[data-clear]').forEach((el) => el.addEventListener('click', () => { delete state.inputs[el.dataset.clear]; changed(); }));
+    $('slots').querySelectorAll('[data-paste]').forEach((el) => el.addEventListener('change', () => {
+      const r = el.dataset.paste; if (el.value.trim()) state.inputs[r] = { type: 'paste', text: el.value }; else delete state.inputs[r]; changed();
+    }));
+  }
+
+  async function addRegionFile(file, forced) {
+    const bytes = await readFile(file);
+    let region = forced, guess = false;
+    if (!region) {
+      if (!state.tplRows) { msg($('buildMsg'), 'err', '먼저 1단계에서 지난주 제출본을 올려주세요. (권역 자동판별에 필요)'); return; }
+      try {
+        const wb = await load(bytes);
+        const r = E.readRegionWorkbook(wb);
+        const g = E.guessRegion(state.tplRows, r.rows);
+        region = g.region; guess = true;
+        if (!region) { msg($('buildMsg'), 'warn', file.name + ': 지난주 제출본과 달라진 행이 없어 권역을 판별하지 못했습니다. 권역 칸의 [엑셀] 버튼으로 직접 넣어주세요.'); return; }
+      } catch (e) { msg($('buildMsg'), 'err', file.name + ': ' + e.message); return; }
+    }
+    state.inputs[region] = { type: 'file', name: file.name, bytes, guess };
+    changed();
+  }
+
+  function changed() {
+    renderSlots();
+    $('previewBtn').disabled = !state.tpl;
+    $('buildBtn').disabled = !state.tpl;
+    $('candWrap').hidden = true; $('mergeLog').innerHTML = '';
+    state.cands = [];
+  }
+
+  // ---- 템플릿 ----
+  async function setTemplate(bytes, name) {
+    try {
+      const wb = await load(bytes);
+      const { pool, sum } = E.findSheets(wb);
+      if (!pool || !sum) throw new Error('영남영업본부 / 수주풀 시트가 있는 제출본이 아닙니다.');
+      const L = E.poolLayout(pool);
+      const rows = E.readPool(pool, L).rows;
+      state.tpl = bytes; state.tplName = name; state.tplRows = rows;
+      const w = E.wk(E.text(sum.getCell('X1').value));
+      const cnt = {}; rows.forEach((r) => { cnt[r.region] = (cnt[r.region] || 0) + 1; });
+      $('tplInfo').innerHTML = '<span>📄 ' + esc(name) + '</span><span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>';
+      if (!$('week').value) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
+      msg($('buildMsg'), '', '');
+      changed();
+    } catch (e) { msg($('buildMsg'), 'err', '템플릿 오류: ' + e.message); }
+  }
+
+  // ---- 입력 → 엔진 옵션 ----
+  async function engineInputs() {
+    const inputs = {};
+    for (const r of REG) {
+      const i = state.inputs[r]; if (!i) continue;
+      inputs[r] = i.type === 'file' ? { type: 'file', wb: await load(i.bytes) } : { type: 'paste', text: i.text };
+    }
+    return inputs;
+  }
+  function manualInputs() {
+    const out = {};
+    ['leTarget', 'leNext', 'contract'].forEach((k) => {
+      const t = $('man_' + k).value; if (!t.trim()) return;
+      out[k] = E.parseTSV(t).filter((row) => row.some((c) => c.trim())).map((row) => row.map((c, j) => (j === row.length - 1 ? c : c.trim())).map((c) => (/^-?\d+(\.\d+)?$/.test(c.replace(/,/g, '')) && c.length < 12 ? Number(c.replace(/,/g, '')) : c)));
+    });
+    return out;
+  }
+  const week = () => E.wk($('week').value);
+
+  function renderLog(log) {
+    $('mergeLog').innerHTML = log.map((l) => {
+      const parts = ['<b>' + l.region + '</b> (' + (l.mode === 'file' ? '엑셀' : '붙여넣기') + ' ' + l.source + '행)', '갱신 ' + l.updated.length, '변경없음 ' + l.same];
+      if (l.added.length) parts.push('<span class="badge new">신규 ' + l.added.length + '</span> ' + esc(l.added.map((a) => a.name).join(', ')));
+      if (l.removed.length) parts.push('<span class="badge le">삭제 ' + l.removed.length + '</span> ' + esc(l.removed.map((a) => a.name).join(', ')));
+      return '<div>' + parts.join(' · ') + '</div>';
+    }).join('') || '<div class="muted">올린 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>';
+  }
+
+  function renderCands() {
+    const opts = [['main', '▶ 금주 주요 업체'], ['rev', '▶ 전주 재방문 업체'], ['none', '제외']];
+    $('candBody').innerHTML = state.cands.map((c, i) => {
+      const tags = (c.isNew ? '<span class="badge new">신규</span> ' : '') + (c.isRev ? '<span class="badge rev">재방문</span> ' : '') + (c.isLE ? '<span class="badge le">LE동행</span>' : '');
+      let sel;
+      if (!c.visit) sel = '<span class="muted">▶ 전주 LE 동행방문 업체</span>';
+      else if (c.place === 'bonbu') sel = '<span class="muted">◎ 본부 금주 주요 업체 (자동)</span>';
+      else sel = '<select data-i="' + i + '">' + opts.map(([v, t]) => '<option value="' + v + '"' + ((state.placement[c.key] || c.place) === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>';
+      return '<tr><td>' + esc(c.region.slice(0, 2)) + '</td><td>' + esc(c.name) + '</td><td>' + esc(c.mgr) + '</td><td>' + esc(c.stage) + '</td><td class="num">' + (c.amt == null ? '-' : c.amt) + '</td><td>' + tags + '</td><td>' + sel + '</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="muted">보고 주차에 방문한 업체가 없습니다.</td></tr>';
+    $('candBody').querySelectorAll('select').forEach((el) => el.addEventListener('change', () => { state.placement[state.cands[+el.dataset.i].key] = el.value; }));
+    $('candWrap').hidden = false;
+  }
+
+  async function doPreview() {
+    msg($('buildMsg'), '', '');
+    if (!E.isWeek($('week').value)) { msg($('buildMsg'), 'err', '보고 주차를 "9월 4주" 형식으로 입력하세요.'); return false; }
+    try {
+      const tpl = await load(state.tpl);
+      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs() });
+      renderLog(ctx.log);
+      state.cands = E.preview(ctx, week());
+      renderCands();
+      return true;
+    } catch (e) { console.error(e); msg($('buildMsg'), 'err', '병합 오류: ' + e.message); return false; }
+  }
+
+  async function doBuild() {
+    $('buildBtn').disabled = true;
+    msg($('buildMsg'), 'ok', '만드는 중…');
+    try {
+      if (!state.cands.length && !(await doPreview())) return;
+      const W = week();
+      const tpl = await load(state.tpl);
+      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs() });
+      const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, manual: manualInputs(), addBonbu: $('addBonbu').checked });
+      const buf = new Uint8Array(await tpl.xlsx.writeBuffer());
+      const name = /\d{1,2}월\s*\d주/.test(state.tplName) ? state.tplName.replace(/\d{1,2}월\s*\d주/, W) : '엔지니어링 영업추진현황_' + W + '.xlsx';
+      const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ name, data: b64(buf), at: new Date().toISOString() })); } catch (e) { /* 저장 공간 부족 시 무시 */ }
+      const lines = ['완료: ' + name];
+      if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) lines.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
+      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) lines.push('본부 리스트 신규 추가: ' + res.bonbu.bonbuAdded.join(', '));
+      res.warn.forEach((w) => lines.push('⚠ ' + w));
+      msg($('buildMsg'), res.warn.length ? 'warn' : 'ok', lines.join('\n'));
+    } catch (e) { console.error(e); msg($('buildMsg'), 'err', '생성 오류: ' + e.message); }
+    finally { $('buildBtn').disabled = false; }
+  }
+
+  function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+  function unb64(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+
+  // ---- 이벤트 ----
+  $('tplFile').addEventListener('change', async (e) => { const f = e.target.files[0]; if (f) setTemplate(await readFile(f), f.name); });
+  $('multiFile').addEventListener('change', async (e) => { for (const f of e.target.files) await addRegionFile(f); });
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', async (e) => { for (const f of e.dataTransfer.files) if (/\.xlsx$/i.test(f.name)) await addRegionFile(f); });
+  $('week').addEventListener('change', () => { $('weekHint').textContent = ''; state.cands = []; $('candWrap').hidden = true; });
+  $('previewBtn').addEventListener('click', doPreview);
+  $('buildBtn').addEventListener('click', doBuild);
+  try {
+    const last = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if (last && last.data) {
+      $('useLast').hidden = false;
+      $('useLast').textContent = '마지막으로 만든 제출본 사용 (' + last.name + ')';
+      $('useLast').addEventListener('click', () => setTemplate(unb64(last.data), last.name));
+    }
+  } catch (e) { /* 저장소 사용 불가 */ }
+  if (!window.ExcelJS || !window.JSZip) msg($('buildMsg'), 'err', '엑셀 라이브러리(vendor 폴더)를 불러오지 못했습니다. index.html 과 같은 폴더에 engine.js, vendor/ 가 있는지 확인하세요.');
+  renderSlots();
+})();
+</script>
+</body>
+</html>
