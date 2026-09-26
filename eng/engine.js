@@ -607,6 +607,19 @@
     // 본부 니즈/견적 리스트
     const list = secs.find((s) => s.kind === 'bonbuList');
     if (list && list.cols) {
+      // 화면에서 수정한 업체는 리스트 행도 같은 값으로, 삭제한 업체는 리스트에서도 뺀다
+      const ed = opts._edit;
+      if (ed) {
+        list.data = list.data.filter((sn) => !ed.deleted.has(listKey(sn, list.cols)));
+        list.data.forEach((sn) => {
+          const k0 = listKey(sn, list.cols); const k = ed.renamed[k0] || k0;
+          if (!ed.touched.has(k) || !byKey[k]) return;
+          const f = F(byKey[k]);
+          const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period };
+          Object.keys(vals).forEach((x) => setField(sn, list.cols, x, vals[x]));
+          if (text(fieldVal(sn, list.cols, 'addWeek')) === W) setField(sn, list.cols, 'addText', clone(f.needs)); else setField(sn, list.cols, 'text', clone(f.needs));
+        });
+      }
       const have = new Set(list.data.map((sn) => listKey(sn, list.cols)));
       // 화면에서 '본부'로 고른 업체 중 이미 리스트에 있는 업체 → 추가진행 주차/현황
       list.data.forEach((sn) => {
@@ -1044,6 +1057,73 @@
     return thursdays(y, month);
   }
 
+
+  // ---------- 화면에서 업체 수정·추가·삭제 ----------
+  const FLAG_KEYS = ['자동상하차', '스태커크레인', '멀티셔틀시스템', '복합로봇자동화', 'AGVAMR', '무인지게차AGF', '로봇파렛타이져', '모노레일', '자동소터로봇소터', '기타설비'];
+  const FLAG_LABEL = { '자동상하차': '자동상하차', '스태커크레인': '스태커크레인', '멀티셔틀시스템': '멀티셔틀시스템', '복합로봇자동화': '복합로봇자동화', 'AGVAMR': 'AGV/AMR', '무인지게차AGF': '무인지게차/AGF', '로봇파렛타이져': '로봇파렛타이져', '모노레일': '모노레일', '자동소터로봇소터': '자동소터/로봇소터', '기타설비': '기타설비' };
+  const FORM_COLS = { grp: 'grp', region: 'reg', mgr: 'mgr', code: 'code', name: 'name', task: 'task', stage: 'stage', amt: 'amt', period: 'period', plan: 'plan', newv: 'newv', rev: 'rev', le: 'le', note: 'note', month: 'month', needs: 'needs' };
+  // 수주풀 행 → 수정 폼 값
+  function rowForm(sn, L) {
+    const g = (c) => (c ? sn.cells[c - 1].v : null);
+    const f = {};
+    Object.keys(FORM_COLS).forEach((k) => { const v = g(L[FORM_COLS[k]]); f[k] = k === 'amt' ? (v == null || v === '' ? '' : num(v)) : text(v); });
+    f.flags = FLAG_KEYS.filter((k) => L.headers[k] && trim(text(g(L.headers[k]))).toUpperCase() === 'O');
+    return f;
+  }
+  function setForm(sn, L, f) {
+    Object.keys(FORM_COLS).forEach((k) => {
+      if (!(k in f)) return;
+      const c = L[FORM_COLS[k]]; if (!c) return;
+      const cell = sn.cells[c - 1];
+      let v = f[k];
+      if (k === 'needs' && cell.v && cell.v.richText && text(cell.v) === v) return; // 서식 있는 원문은 그대로
+      if (k === 'amt') v = v === '' || v == null ? null : (isFinite(Number(String(v).replace(/,/g, ''))) ? Number(String(v).replace(/,/g, '')) : v);
+      else if (k === 'code') v = /^\d+$/.test(trim(v)) ? Number(trim(v)) : trim(v);
+      else if (['plan', 'newv', 'rev', 'le'].includes(k)) v = wk(v) || null;
+      else if (k === 'needs') v = String(v).replace(/\r\n?/g, '\n').replace(/\s+$/, '') || null;
+      else v = trim(v) || null;
+      cell.v = v; delete cell.f;
+    });
+    if (f.flags) FLAG_KEYS.forEach((k) => { const c = L.headers[k]; if (c) { sn.cells[c - 1].v = f.flags.includes(k) ? 'O' : null; delete sn.cells[c - 1].f; } });
+    return decorate(sn, L);
+  }
+  // edits: {원래key: 폼값}, adds: [폼값], deletes: [key]
+  function applyEdits(rows, L, edits, adds, deletes) {
+    const renamed = {}; const touched = new Set();
+    Object.keys(edits || {}).forEach((k) => {
+      const sn = rows.find((r) => r.key === k); if (!sn) return;
+      setForm(sn, L, edits[k]);
+      if (sn.key !== k) renamed[k] = sn.key;
+      touched.add(sn.key);
+    });
+    const del = new Set(deletes || []);
+    const kept = rows.filter((r) => !del.has(r.key));
+    (adds || []).forEach((f) => {
+      const region = REGIONS.includes(f.region) ? f.region : REGIONS[0];
+      const base = [...kept].reverse().find((x) => x.region === region && !isOldRow(fields(x, L))) || kept[kept.length - 1];
+      const sn = { cells: base.cells.map((c) => ({ v: null, s: clone(c.s) })), height: base.height, merges: clone(base.merges), hidden: false, outline: 0 };
+      setForm(sn, L, Object.assign({ note: '신규', grp: '신규' }, f, { region }));
+      let at = -1; kept.forEach((x, i) => { if (x.region === region) at = i; });
+      kept.splice(at + 1, 0, sn);
+      touched.add(sn.key);
+    });
+    return { rows: kept, renamed, touched, deleted: del };
+  }
+  // 앞시트 별도 목록(LE 대상 / 차주 방문요청 / 계약성사) 읽기 — 화면 편집용
+  function readLists(ctx) {
+    const info = readSections(ctx.sum, sumMaxCol(ctx.sum));
+    const out = {};
+    if (!info) return out;
+    info.secs.forEach((sec) => {
+      if (!['leTarget', 'leNext', 'contract'].includes(sec.kind) || !sec.header) return;
+      const cols = sec.header.cells.map((c, i) => (trim(text(c.v)) ? i + 1 : null)).filter(Boolean);
+      out[sec.kind] = { title: text(sec.titleRow.cells[1].v), headers: cols.map((c) => text(sec.header.cells[c - 1].v).replace(/\s+/g, ' ').trim()), rows: sec.data.map((sn) => cols.map((c) => text(sn.cells[c - 1].v))) };
+    });
+    const list = info.secs.find((s) => s.kind === 'bonbuList');
+    out.bonbuKeys = list && list.cols ? list.data.map((sn) => listKey(sn, list.cols)) : [];
+    return out;
+  }
+
   // 과거 양식에서 넘어온 숨김 정의된 이름(수천 개, #REF! 등)을 제거하고 연다 — ExcelJS 로딩이 수십 초 → 1초 미만
   async function loadWorkbook(ExcelJS, JSZip, data) {
     const zip = await JSZip.loadAsync(data);
@@ -1075,10 +1155,13 @@
       if (inp.type === 'file') { const r = readRegionWorkbook(inp.wb); inputs[region] = { mode: 'file', rows: r.rows, L: r.L }; }
       else if (inp.type === 'paste' && trim(inp.text)) { const r = readRegionPaste(inp.text, region, TL); inputs[region] = { mode: 'paste', rows: r.rows }; }
     });
-    const { rows, log } = mergeRows(tpl.rows, inputs, TL);
-    const fixes = opts.fixText === false ? {} : fixRows(rows, TL);
+    const merged = mergeRows(tpl.rows, inputs, TL);
+    const log = merged.log;
+    const fixes = opts.fixText === false ? {} : fixRows(merged.rows, TL);
+    const ed = applyEdits(merged.rows, TL, opts.edits, opts.adds, opts.deletes);
+    const rows = ed.rows;
     const checks = checkRows(rows, TL);
-    const changedKeys = new Set(); log.forEach((l) => { l.updated.forEach((u) => changedKeys.add(u.code + '|' + u.name)); l.added.forEach((u) => changedKeys.add(u.code + '|' + u.name)); });
+    const changedKeys = new Set(); log.forEach((l) => { l.updated.forEach((u) => changedKeys.add(ed.renamed[u.code + '|' + u.name] || u.code + '|' + u.name)); l.added.forEach((u) => changedKeys.add(ed.renamed[u.code + '|' + u.name] || u.code + '|' + u.name)); });
     // 보고주차 추정: 입력 권역 행의 최신 방문주차, 없으면 템플릿 X1 다음 주
     const tplWeek = wk(text(sum.getCell('X1').value));
     let latest = null;
@@ -1086,7 +1169,7 @@
       const f = fields(sn, TL); [f.newv, f.rev, f.le].forEach((w) => { if (isWeek(w) && (!latest || weekOrder(w) > weekOrder(latest))) latest = w; });
     }));
     const suggested = latest && weekOrder(latest) > weekOrder(tplWeek) ? latest : nextWeek(tplWeek);
-    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs) };
+    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed };
   }
 
   function preview(ctx, W) {
@@ -1115,7 +1198,7 @@
     const maxCol = sumMaxCol(sum);
     const info = readSections(sum, maxCol);
     let res = { cands: [], log: {} };
-    if (info) { info.maxCol = maxCol; res = rebuildSections(sum, info, ctx.rows, TL, W, opts); }
+    if (info) { info.maxCol = maxCol; res = rebuildSections(sum, info, ctx.rows, TL, W, Object.assign({ _edit: ctx.edit }, opts)); }
     else warn.push('하단 업체 목록(▶ LE 동행방문 대상 리스트)을 찾지 못해 목록 갱신을 건너뜀');
     // 4) 열 때 재계산
     tplWb.calcProperties = Object.assign({}, tplWb.calcProperties, { fullCalcOnLoad: true });
@@ -1138,7 +1221,7 @@
 
   return {
     REGIONS, loadWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
-    templateFromPaste, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
+    templateFromPaste, rowForm, readLists, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
     // 틀(kit) 생성 도구용
     _i: { readSections, snapRow, writeRow, unmergeRows, rowMergeMap, writePool, formulaPatterns, writeSections, sumMaxCol, stripResults },
   };

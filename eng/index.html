@@ -15,7 +15,33 @@
   header { background: var(--navy); color: #fff; padding: 18px 16px 14px; }
   header h1 { margin: 0; font-size: 19px; letter-spacing: -0.2px; }
   header p { margin: 4px 0 0; color: #c9d4ea; font-size: 12.5px; }
-  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .tabs { display: flex; gap: 6px; margin: 0 0 12px; border-bottom: 2px solid var(--line); }
+  .tab { border: 1px solid var(--line); border-bottom: none; border-radius: 10px 10px 0 0; background: #e9edf4; padding: 9px 16px; font-size: 14px; font-weight: 600; color: #394256; cursor: pointer; }
+  .tab.on { background: var(--card); color: var(--navy); border-color: #c5cfdf; position: relative; top: 2px; }
+  .tab .cnt { font-weight: 400; font-size: 12px; color: var(--sub); }
+  .ed { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .ed { grid-template-columns: 1fr; } }
+  .ed label.f { display: block; font-size: 12.5px; color: #394256; font-weight: 600; margin-bottom: 4px; }
+  .ed .fgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
+  .ed .fgrid.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  @media (max-width: 720px) { .ed .fgrid, .ed .fgrid.six { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ed input.fi, .ed select.fi { width: 100%; border: 1px solid #b8c2d3; border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 14px; background: #fff; }
+  .ed textarea.needs { height: 460px; min-height: 160px; font: 14px/1.6 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; padding: 10px 12px; resize: vertical; }
+  .ed .items { height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .ed .item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f2f6; font-size: 13.5px; }
+  .ed .item:hover { background: var(--soft); } .ed .item.on { background: #d5dcea; font-weight: 600; }
+  .ed .item .t { font-size: 11.5px; color: var(--sub); font-weight: 400; }
+  .ed .item .mk { float: right; font-size: 12px; }
+  .ms { position: relative; } .ms > button { width: 100%; justify-content: space-between; padding: 9px 10px; font-size: 14px; min-height: 40px; text-align: left; }
+  .ms .pop { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #b8c2d3; border-radius: 8px; box-shadow: 0 8px 24px rgba(20,30,60,.15); padding: 6px; margin-top: 4px; }
+  .ms .pop label { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; font-size: 13.5px; font-weight: 400; cursor: pointer; }
+  .ms .pop label:hover { background: var(--soft); }
+  button.danger { color: var(--warn); border-color: #e3b4ae; }
+  dialog { border: none; border-radius: 12px; padding: 0; width: min(720px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog .dh { background: var(--navy); color: #fff; padding: 12px 16px; font-weight: 600; }
+  dialog .db { padding: 14px 16px; max-height: 60vh; overflow: auto; font-size: 13px; white-space: pre-wrap; }
+  dialog .df { padding: 10px 16px 14px; display: flex; gap: 8px; justify-content: flex-end; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 4px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
   .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 12px; flex: none; }
@@ -70,6 +96,8 @@
   <p>엑셀에서 복사 → 붙여넣기만으로 이번 주 제출본(.xlsx)을 원본 서식 그대로 만듭니다. 붙여넣은 내용은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않습니다.</p>
 </header>
 <main>
+  <nav class="tabs"><div class="tab on" data-tab="p1">① 붙여넣기 · 배치</div><div class="tab" data-tab="p2">② 업체 수정 <span class="cnt" id="editCnt"></span></div></nav>
+  <div id="p1">
   <section class="card">
     <h2><span class="step">1</span>지난주 제출본 붙여넣기</h2>
     <p class="how">지난주 제출본에서 시트마다 <b>시트 왼쪽 위 모서리 클릭(또는 Ctrl+A) → Ctrl+C</b> 후 아래 칸에 <b>Ctrl+V</b>. 필터가 걸려 있으면 먼저 해제하세요.</p>
@@ -111,16 +139,27 @@
     </div>
   </section>
 
+  </div>
+
+  <div id="p2" hidden>
   <section class="card">
-    <h2><span class="step">4</span>별도 작성 목록 (선택)</h2>
-    <p class="hint">비워두면 지난주 내용을 그대로 씁니다. 바꿀 때만 해당 표의 데이터 행을 복사해 붙여넣으세요(머리글 제외, 열 순서는 제출본 표와 동일).</p>
-    <details><summary>LE 동행방문 대상 리스트 교체</summary><textarea id="man_leTarget" placeholder="팀권역	지점	담당자	코드	업체명	업종	지역	업체 연매출	사업구분	세부내용"></textarea></details>
-    <details><summary>LE 차주 방문요청 리스트 교체</summary><textarea id="man_leNext" placeholder="팀권역	지점	담당자	코드	업체명	업종	지역	업체 연매출	사업구분	세부내용"></textarea></details>
-    <details><summary>계약성사 가능성 업체 교체</summary><textarea id="man_contract" placeholder="구분	팀/권역	담당자	코드	업체명	추진과제/범위	진행단계	예상매출	계약 예상시기	진행 현황"></textarea></details>
+    <h2>금주 업데이트 업체 수정</h2>
+    <p class="hint">표를 고르고 업체를 선택해 내용을 고친 뒤 <b>본문 변경 저장</b>을 누르세요. 수주풀 업체는 수주풀 시트와 앞시트(금주 주요 업체·본부 리스트 등)에 함께 반영됩니다. 새 업체는 <b>업체 추가</b> 후 오른쪽 내용을 채워 저장하세요.</p>
+    <div class="ed">
+      <div>
+        <label class="f">표 선택</label>
+        <select class="fi" id="edGroup" style="width:100%;padding:8px;font-size:13.5px"></select>
+        <input type="text" id="edSearch" placeholder="업체명·코드·담당자 검색" style="width:100%;margin:8px 0">
+        <div class="items" id="edItems"></div>
+        <div class="row" style="margin-top:10px"><button id="edAdd">업체 추가</button><button id="edDel" class="danger">선택 업체 삭제</button></div>
+      </div>
+      <div id="edForm"><div class="muted" style="padding:40px 0">왼쪽에서 업체를 선택하세요.</div></div>
+    </div>
   </section>
+  </div>
 
   <section class="card">
-    <h2><span class="step">5</span>제출본 만들기</h2>
+    <h2><span class="step">✓</span>엑셀 제출본 만들기</h2>
     <div class="row">
       <button class="primary" id="buildBtn" disabled>엑셀 제출본 만들기</button>
       <label style="font-size:13px"><input type="checkbox" id="addBonbu" checked> 새로 니즈확인/견적/계약이 된 업체를 본부 리스트 맨 아래에 추가(권역·매출순)</label>
@@ -129,6 +168,7 @@
     <div id="buildMsg"></div>
   </section>
 </main>
+<dialog id="dlg"><div class="dh" id="dlgT"></div><div class="db" id="dlgB"></div><div class="df"><button id="dlgNo">취소</button><button class="primary" id="dlgYes">진행</button></div></dialog>
 <footer>수주풀 병합은 원문 그대로(요약·수정 없음) · 요약표는 제출본 수식 그대로 · 파일을 열면 엑셀이 자동 재계산합니다</footer>
 
 <script src="vendor/jszip.min.js"></script>
@@ -143,7 +183,8 @@
   const REG = E.REGIONS;
   const LS_KEY = 'eng-weekly-last-output';
   // tpl: {type:'paste'} | {type:'file', bytes, name}
-  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, ctx: null };
+  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, ctx: null,
+    edits: {}, orig: {}, notes: {}, adds: [], deletes: [], delNames: {}, lists: {}, listNotes: {}, listsBase: null, back: {}, addKeys: [], ed: { group: 'upd', sel: null } };
 
   const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
   const readFile = (f) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(new Uint8Array(r.result)); r.onerror = no; r.readAsArrayBuffer(f); });
@@ -226,7 +267,8 @@
     $('previewBtn').disabled = !ready;
     $('buildBtn').disabled = !ready;
     $('candWrap').hidden = true; $('checkWrap').hidden = true; $('mergeLog').innerHTML = '';
-    state.cands = [];
+    state.cands = []; state.ctx = null; state.listsBase = null;
+    if (!$('p2').hidden) renderEditor();
   }
 
   // ---- 엔진 입력 ----
@@ -240,9 +282,8 @@
   }
   function manualInputs() {
     const out = {};
-    ['leTarget', 'leNext', 'contract'].forEach((k) => {
-      const t = $('man_' + k).value; if (!t.trim()) return;
-      out[k] = E.parseTSV(t).filter((row) => row.some((c) => c.trim())).map((row) => row.map((c, j) => (j === row.length - 1 ? c : c.trim())).map((c) => (/^-?\d+(\.\d+)?$/.test(c.replace(/,/g, '')) && c.length < 12 ? Number(c.replace(/,/g, '')) : c)));
+    Object.keys(state.lists).forEach((k) => {
+      out[k] = state.lists[k].rows.map((row) => row.map((c, j) => (j < row.length - 1 && /^-?\d+(\.\d+)?$/.test(String(c).replace(/,/g, '')) && String(c).length < 12 ? Number(String(c).replace(/,/g, '')) : c)));
     });
     return out;
   }
@@ -273,7 +314,7 @@
       const bon = '<label class="chk"><input type="checkbox" data-b="' + i + '"' + (state.bonbu[c.key] ? ' checked' : '') + '> ' + (c.inBonbu ? '리스트 업체' : '추가') + '</label>';
       return '<tr><td>' + esc(c.region.slice(0, 2)) + '</td><td>' + esc(c.name) + '<div class="muted" style="font-size:11.5px">' + esc(c.task || '') + '</div></td><td>' + esc(c.mgr) + '</td><td>' + esc(c.stage) + '</td><td class="num">' + (c.amt == null ? '-' : c.amt) + '</td><td>' + tags + '</td><td>' + sel + '</td><td>' + bon + '</td><td class="wrap">' + checkCell(ctx.checks[c.key]) + '</td><td class="wrap fix">' + esc(ctx.fixes[c.key] || '-') + '</td></tr>';
     }).join('') || '<tr><td colspan="10" class="muted">보고 주차에 방문한 업체가 없습니다.</td></tr>';
-    $('candBody').querySelectorAll('select').forEach((el) => el.addEventListener('change', () => { state.placement[state.cands[+el.dataset.i].key] = el.value; }));
+    $('candBody').querySelectorAll('select').forEach((el) => el.addEventListener('change', () => { state.placement[state.cands[+el.dataset.i].key] = el.value; updateEditCnt(); }));
     $('candBody').querySelectorAll('input[data-b]').forEach((el) => el.addEventListener('change', () => { state.bonbu[state.cands[+el.dataset.b].key] = el.checked; }));
     $('candWrap').hidden = false;
     renderCheckList();
@@ -293,28 +334,63 @@
     $('checkWrap').hidden = false;
   }
 
+  const engineOpts = async () => ({ inputs: await engineInputs(), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
+  const keyOfForm = (f) => String(f.code == null ? '' : f.code).trim() + '|' + String(f.name || '').trim();
+
+  async function refreshCtx() {
+    if (!E.isWeek($('week').value)) throw new Error('보고 주차를 "9월 4주" 형식으로 입력하세요.');
+    const tpl = await templateWorkbook();
+    const ctx = E.prepare(ExcelJS, tpl, await engineOpts());
+    state.ctx = ctx;
+    if (!state.listsBase) state.listsBase = E.readLists(ctx);
+    state.back = {}; Object.keys(ctx.edit.renamed).forEach((o) => { state.back[ctx.edit.renamed[o]] = o; });
+    state.addKeys = state.adds.map(keyOfForm);
+    renderLog(ctx.log);
+    state.cands = E.preview(ctx, week());
+    renderCands();
+    if (!$('p2').hidden) renderEditor();
+    return ctx;
+  }
   async function doPreview() {
     msg($('buildMsg'), '', '');
-    if (!E.isWeek($('week').value)) { msg($('buildMsg'), 'err', '보고 주차를 "9월 4주" 형식으로 입력하세요.'); return false; }
-    try {
-      const tpl = await templateWorkbook();
-      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs(), fixText: $('fixText').checked });
-      state.ctx = ctx;
-      renderLog(ctx.log);
-      state.cands = E.preview(ctx, week());
-      renderCands();
-      return true;
-    } catch (e) { console.error(e); msg($('buildMsg'), 'err', '병합 오류: ' + e.message); return false; }
+    try { await refreshCtx(); return true; } catch (e) { console.error(e); msg($('buildMsg'), 'err', '병합 오류: ' + e.message); return false; }
+  }
+
+  // ---- 확인 창 ----
+  function ask(title, body, yes) {
+    return new Promise((ok) => {
+      const d = $('dlg'); $('dlgT').textContent = title; $('dlgB').textContent = body; $('dlgYes').textContent = yes || '진행';
+      const done = (v) => { d.close(); $('dlgYes').onclick = $('dlgNo').onclick = null; ok(v); };
+      $('dlgYes').onclick = () => done(true); $('dlgNo').onclick = () => done(false);
+      d.showModal();
+    });
+  }
+  function editSummary() {
+    const out = [];
+    Object.keys(state.edits).forEach((k) => out.push('✎ ' + (state.notes[k] || k.split('|')[1] + ': 수정')));
+    state.adds.forEach((f) => out.push('＋ 신규 업체 추가: ' + f.name + ' (' + f.region + ', ' + (f.stage || '') + ')'));
+    state.deletes.forEach((k) => out.push('－ 삭제: ' + (state.delNames[k] || k.split('|')[1])));
+    Object.keys(state.listNotes).forEach((k) => state.listNotes[k].forEach((n) => out.push('▶ ' + n)));
+    return out;
+  }
+  function updateEditCnt() { const n = editSummary().length; $('editCnt').textContent = n ? '(' + n + '건 수정)' : ''; }
+
+  async function onBuild() {
+    const lines = editSummary();
+    const ok = lines.length
+      ? await ask('수정 내용 ' + lines.length + '건을 반영해 엑셀을 만듭니다', lines.join('\n'), '반영하고 생성')
+      : await ask('수정 없이 생성할까요?', '② 업체 수정 탭에서 바꾼 내용이 없습니다.\n수정 없이 이번 주 제출본 엑셀을 생성할까요?', '예, 생성');
+    if (ok) doBuild();
   }
 
   async function doBuild() {
     $('buildBtn').disabled = true;
     msg($('buildMsg'), 'ok', '만드는 중…');
     try {
-      if (!state.cands.length && !(await doPreview())) return;
+      if (!state.ctx && !(await doPreview())) return;
       const W = week();
       const tpl = await templateWorkbook();
-      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs(), fixText: $('fixText').checked });
+      const ctx = E.prepare(ExcelJS, tpl, await engineOpts());
       const bonbu = Object.keys(state.bonbu).filter((k) => state.bonbu[k]);
       const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, bonbu, manual: manualInputs(), addBonbu: $('addBonbu').checked, fixText: $('fixText').checked });
       const buf = new Uint8Array(await tpl.xlsx.writeBuffer());
@@ -325,6 +401,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 5000);
       try { localStorage.setItem(LS_KEY, JSON.stringify({ name, data: b64(buf), at: new Date().toISOString() })); } catch (e) { /* 저장 공간 부족 시 무시 */ }
       const out = ['완료: ' + name];
+      const ed = editSummary(); if (ed.length) out.push('업체 수정 반영 ' + ed.length + '건');
       if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) out.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
       if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('본부 리스트 맨 아래 추가: ' + res.bonbu.bonbuAdded.join(', '));
       const nfix = Object.keys(ctx.fixes).length; if (nfix) out.push('오탈자·띄어쓰기 수정: 수주풀 ' + nfix + '행' + (res.bonbu.sheetFixes ? ', 앞시트 ' + res.bonbu.sheetFixes + '칸' : ''));
@@ -332,6 +409,190 @@
       msg($('buildMsg'), res.warn.length ? 'warn' : 'ok', out.join('\n'));
     } catch (e) { console.error(e); msg($('buildMsg'), 'err', '생성 오류: ' + e.message); }
     finally { $('buildBtn').disabled = false; }
+  }
+
+  // ---- ② 업체 수정 ----
+  const STAGES = ['정보조사', '니즈확인', '방문/협의', '견적', '계약', '보류'];
+  const GRPS = ['일반', '그룹', '신규', '재고증가', '냉동냉장', '창고'];
+  const FORM_LABEL = { grp: '그룹/일반', region: '권역', mgr: '담당자', code: '코드', name: '업체명', task: '추진과제/범위', stage: '진행단계', amt: '예상매출', period: '사업시기', plan: '방문계획', newv: '방문실적(신규)', rev: '방문실적(재방문)', le: 'LE동행방문', note: '비고', month: '월구분', needs: 'Needs', flags: '솔루션' };
+  function listData(kind) { return state.lists[kind] || (state.listsBase && state.listsBase[kind]); }
+  function editGroups() {
+    const ctx = state.ctx; const W = week(); const F = (sn) => E.fields(sn, ctx.TL);
+    const bk = new Set((state.listsBase ? state.listsBase.bonbuKeys : []).map((k) => ctx.edit.renamed[k] || k));
+    const mk = (cond) => ctx.rows.filter((sn) => cond(F(sn), sn)).map((sn) => ({ type: 'row', key: sn.key, name: sn.name, code: sn.code, sub: sn.region.slice(0, 2) + ' · ' + F(sn).stage }));
+    const g = [
+      ['upd', '수주풀 · 금주 업데이트 업체', mk((f, sn) => ctx.changedKeys.has(sn.key))],
+      ['new', '수주풀 · 금주 신규방문 업체', mk((f) => f.newv === W)],
+      ['rev', '수주풀 · 재방문 업체', mk((f) => f.rev === W)],
+      ['le', '수주풀 · LE 동행방문 업체', mk((f) => f.le === W)],
+      ['main', '보고 · 금주 주요 업체 (배치)', mk((f, sn) => state.placement[sn.key] === 'main')],
+      ['bonbu', '보고 · 본부 주요업체 (니즈/견적 리스트)', mk((f, sn) => bk.has(sn.key) || state.bonbu[sn.key])],
+      ['added', '수주풀 · 직접 추가한 업체', mk((f, sn) => state.addKeys.includes(sn.key))],
+      ['all', '수주풀 · 전체 업체', mk(() => true)],
+    ];
+    ['leTarget', 'leNext', 'contract'].forEach((k) => {
+      const L = listData(k); if (!L) return;
+      const ni = L.headers.findIndex((h) => h.replace(/\s/g, '') === '업체명'), ci = L.headers.findIndex((h) => h.replace(/\s/g, '') === '코드');
+      g.push(['L:' + k, '보고 · ' + L.title.replace(/^▶\s*/, '') + ' (별도 목록)', L.rows.map((r, i) => ({ type: 'list', kind: k, idx: i, name: r[ni] || '(새 행)', code: r[ci] || '', sub: r[0] || '' }))]);
+    });
+    return g;
+  }
+  function renderEditor() {
+    if (!state.ctx) { $('edItems').innerHTML = '<div class="muted" style="padding:12px">① 탭에서 지난주 제출본과 보고 주차를 넣고 병합 미리보기를 누르면 목록이 나옵니다.</div>'; $('edGroup').innerHTML = ''; return; }
+    const gs = editGroups();
+    if (!gs.find((x) => x[0] === state.ed.group)) state.ed.group = 'upd';
+    if (!state.ed.picked) { const first = gs.find((x) => x[2].length); if (first) state.ed.group = first[0]; }
+    $('edGroup').innerHTML = gs.map(([id, t, l]) => '<option value="' + id + '"' + (id === state.ed.group ? ' selected' : '') + '>' + esc(t) + ' (' + l.length + ')</option>').join('');
+    const q = $('edSearch').value.trim().toLowerCase();
+    const items = (gs.find((x) => x[0] === state.ed.group) || gs[0])[2].filter((it) => !q || (it.name + ' ' + it.code + ' ' + it.sub).toLowerCase().includes(q));
+    state.ed.items = items;
+    const ck = state.ctx.checks;
+    $('edItems').innerHTML = items.map((it, i) => {
+      const edited = it.type === 'row' ? (state.edits[state.back[it.key] || it.key] || state.addKeys.includes(it.key)) : false;
+      const bad = it.type === 'row' && ck[it.key] && ck[it.key].some((x) => !/^확인:/.test(x));
+      const on = state.ed.sel && (it.type === 'row' ? state.ed.sel.key === it.key : state.ed.sel.kind === it.kind && state.ed.sel.idx === it.idx);
+      return '<div class="item' + (on ? ' on' : '') + '" data-i="' + i + '"><span class="mk">' + (edited ? '✎' : '') + (bad ? ' <span style="color:var(--warn)">⚠</span>' : '') + '</span>' + esc(it.name) + (it.code ? ' · ' + esc(it.code) : '') + '<div class="t">' + esc(it.sub) + '</div></div>';
+    }).join('') || '<div class="muted" style="padding:12px">해당 업체가 없습니다.</div>';
+    $('edItems').querySelectorAll('.item').forEach((el) => el.addEventListener('click', () => { state.ed.sel = items[+el.dataset.i]; renderEditor(); renderForm(); }));
+    updateEditCnt();
+  }
+
+  const fld = (id, label, val, extra) => '<div><label class="f" for="' + id + '">' + label + '</label><input class="fi" id="' + id + '" value="' + esc(val == null ? '' : val) + '"' + (extra || '') + '></div>';
+  const sel = (id, label, opts, val) => '<div><label class="f" for="' + id + '">' + label + '</label><select class="fi" id="' + id + '">' + (opts.includes(val) || !val ? '' : '<option>' + esc(val) + '</option>') + opts.map((o) => '<option' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select></div>';
+  function weekList() { const W = week(); const m = +(E.monthOf(W) || '9월').replace('월', ''); const out = []; for (let mm = Math.max(5, m - 2); mm <= m + 1; mm++) for (let w = 1; w <= 5; w++) out.push(mm + '월 ' + w + '주'); return out; }
+
+  function renderForm() {
+    const it = state.ed.sel; const box = $('edForm');
+    if (!it) { box.innerHTML = '<div class="muted" style="padding:40px 0">왼쪽에서 업체를 선택하세요.</div>'; return; }
+    if (it.type === 'list') return renderListForm(it);
+    let f;
+    if (it.isNew) f = it.form;
+    else {
+      const sn = state.ctx.rows.find((r) => r.key === it.key);
+      if (!sn) { box.innerHTML = '<div class="muted">업체를 찾을 수 없습니다.</div>'; return; }
+      f = E.rowForm(sn, state.ctx.TL);
+      const ok = state.back[it.key] || it.key;
+      if (!state.orig[ok] && !state.addKeys.includes(it.key)) state.orig[ok] = JSON.parse(JSON.stringify(f));
+    }
+    const W = week();
+    box.innerHTML =
+      '<datalist id="dlWeeks">' + weekList().map((w) => '<option value="' + w + '">').join('') + '</datalist><datalist id="dlGrp">' + GRPS.map((g) => '<option value="' + g + '">').join('') + '</datalist>' +
+      '<div class="fgrid">' + fld('ef_grp', '그룹/일반', f.grp, ' list="dlGrp"') + sel('ef_region', '권역', REG, f.region || REG[0]) + fld('ef_mgr', '담당자', f.mgr) +
+      fld('ef_code', '업체 코드', f.code) + fld('ef_name', '업체명', f.name) + fld('ef_task', '추진과제/범위', f.task) +
+      '<div><label class="f">솔루션 사업구분 (O 표시)</label><div class="ms" id="ef_flags"><button type="button" id="msBtn"></button><div class="pop" hidden>' +
+      E.FLAG_KEYS.map((k) => '<label><input type="checkbox" value="' + k + '"' + (f.flags.includes(k) ? ' checked' : '') + '> ' + esc(E.FLAG_LABEL[k]) + '</label>').join('') + '</div></div></div>' +
+      sel('ef_stage', '진행단계', STAGES, f.stage || '정보조사') + fld('ef_amt', '예상매출(억원)', f.amt, ' inputmode="decimal"') +
+      fld('ef_period', '사업시기', f.period, ' placeholder="예: 27년 4Q"') + '</div>' +
+      '<div class="fgrid six" style="margin-top:12px">' + fld('ef_plan', '방문계획', f.plan, ' list="dlWeeks"') + fld('ef_newv', '방문실적(신규)', f.newv, ' list="dlWeeks"') + fld('ef_rev', '방문실적(재방문)', f.rev, ' list="dlWeeks"') +
+      fld('ef_le', 'LE동행방문', f.le, ' list="dlWeeks"') + fld('ef_note', '비고', f.note) + fld('ef_month', '월구분', f.month) + '</div>' +
+      '<div style="margin-top:12px"><label class="f" for="ef_needs">주요 이슈 및 고객사 Needs</label><textarea class="needs" id="ef_needs">' + esc(f.needs) + '</textarea></div>' +
+      '<div id="ef_check" style="margin:8px 0"></div>' +
+      (it.isNew ? '' : '<div class="fix" style="margin-bottom:8px">' + (state.ctx.fixes[state.back[it.key] || it.key] ? '자동 수정: ' + esc(state.ctx.fixes[state.back[it.key] || it.key]) : '') + '</div>') +
+      '<div class="row"><button class="primary" id="efSave">' + (it.isNew ? '신규 업체로 저장' : '본문 변경 저장') + '</button>' + (state.edits[state.back[it.key] || it.key] ? '<button id="efUndo">수정 취소(원래대로)</button>' : '') + '<span class="muted" id="efSt"></span></div>';
+    const upd = () => { const on = [...box.querySelectorAll('#ef_flags input:checked')].map((x) => x.value); $('msBtn').textContent = (on.length ? on.map((k) => E.FLAG_LABEL[k]).join(', ') : '선택 안 함') + '  ▾'; liveCheck(); };
+    $('msBtn').addEventListener('click', () => { const p = box.querySelector('.pop'); p.hidden = !p.hidden; });
+    box.querySelectorAll('#ef_flags input').forEach((x) => x.addEventListener('change', upd));
+    $('ef_task').addEventListener('input', liveCheck);
+    upd();
+    $('efSave').addEventListener('click', saveForm);
+    if ($('efUndo')) $('efUndo').addEventListener('click', async () => { const k = state.back[it.key] || it.key; delete state.edits[k]; delete state.notes[k]; await refreshAndSelect(state.orig[k] ? keyOfForm(state.orig[k]) : it.key); });
+  }
+  function readForm() {
+    const g = (id) => $(id).value;
+    return { grp: g('ef_grp'), region: g('ef_region'), mgr: g('ef_mgr'), code: g('ef_code'), name: g('ef_name'), task: g('ef_task'), stage: g('ef_stage'), amt: g('ef_amt'), period: g('ef_period'),
+      plan: g('ef_plan'), newv: g('ef_newv'), rev: g('ef_rev'), le: g('ef_le'), note: g('ef_note'), month: g('ef_month'), needs: g('ef_needs'),
+      flags: [...document.querySelectorAll('#ef_flags input:checked')].map((x) => x.value) };
+  }
+  function liveCheck() {
+    const f = readForm(); const L = state.ctx.TL;
+    const sn = { cells: new Array(L.maxCol).fill(null).map(() => ({ v: null })) };
+    sn.cells[L.task - 1].v = f.task; E.FLAG_KEYS.forEach((k) => { if (L.headers[k]) sn.cells[L.headers[k] - 1].v = f.flags.includes(k) ? 'O' : null; });
+    $('ef_check').innerHTML = '<b style="font-size:12.5px">점검:</b> ' + checkCell(E.checkRow(sn, L));
+  }
+  function diffNote(o, f) {
+    const ch = [];
+    Object.keys(FORM_LABEL).forEach((k) => {
+      const a = k === 'flags' ? (o.flags || []).join(',') : String(o[k] == null ? '' : o[k]).trim();
+      const b = k === 'flags' ? (f.flags || []).join(',') : String(f[k] == null ? '' : f[k]).trim();
+      if (a === b) return;
+      if (k === 'needs') ch.push('Needs 수정');
+      else if (k === 'flags') ch.push('솔루션 ' + ((o.flags || []).map((x) => E.FLAG_LABEL[x]).join('/') || '-') + '→' + ((f.flags || []).map((x) => E.FLAG_LABEL[x]).join('/') || '-'));
+      else ch.push(FORM_LABEL[k] + ' ' + (a || '-') + '→' + (b || '-'));
+    });
+    return ch;
+  }
+  async function refreshAndSelect(key) {
+    try { await refreshCtx(); } catch (e) { msg($('buildMsg'), 'err', e.message); return; }
+    state.ed.sel = null;
+    for (const [, , l] of editGroups()) { const hit = l.find((x) => x.type === 'row' && x.key === key); if (hit) { state.ed.sel = hit; break; } }
+    renderEditor(); renderForm();
+  }
+  async function saveForm() {
+    const it = state.ed.sel; const f = readForm();
+    if (!f.name.trim()) { $('efSt').textContent = '업체명을 입력하세요.'; return; }
+    $('efSt').textContent = '저장 중…';
+    if (it.isNew) { state.adds.push(f); }
+    else {
+      const ai = state.addKeys.indexOf(it.key);
+      if (ai >= 0) state.adds[ai] = f;
+      else {
+        const ok = state.back[it.key] || it.key;
+        const ch = diffNote(state.orig[ok] || {}, f);
+        if (!ch.length) { delete state.edits[ok]; delete state.notes[ok]; }
+        else { state.edits[ok] = f; state.notes[ok] = f.name + ': ' + ch.join(', '); }
+      }
+    }
+    await refreshAndSelect(keyOfForm(f));
+    $('efSt') && ($('efSt').textContent = '저장했습니다 — 엑셀 생성 시 수주풀·앞시트에 함께 반영됩니다.');
+  }
+
+  function renderListForm(it) {
+    const L = listData(it.kind); const row = L.rows[it.idx] || [];
+    const last = L.headers.length - 1;
+    $('edForm').innerHTML = '<div class="muted" style="margin-bottom:8px">' + esc(L.title) + ' — 앞시트 별도 목록</div><div class="fgrid">' +
+      L.headers.slice(0, last).map((h, j) => fld('lf_' + j, h, row[j])).join('') + '</div>' +
+      '<div style="margin-top:12px"><label class="f" for="lf_' + last + '">' + esc(L.headers[last]) + '</label><textarea class="needs" style="height:300px" id="lf_' + last + '">' + esc(row[last] || '') + '</textarea></div>' +
+      '<div class="row" style="margin-top:10px"><button class="primary" id="lfSave">본문 변경 저장</button><span class="muted" id="efSt"></span></div>';
+    $('lfSave').addEventListener('click', () => {
+      const cur = state.lists[it.kind] || (state.lists[it.kind] = JSON.parse(JSON.stringify(state.listsBase[it.kind])));
+      const vals = L.headers.map((h, j) => $('lf_' + j).value);
+      const before = cur.rows[it.idx];
+      cur.rows[it.idx] = vals;
+      const nm = vals[L.headers.findIndex((h) => h.replace(/\s/g, '') === '업체명')] || '';
+      (state.listNotes[it.kind] = state.listNotes[it.kind] || []).push(L.title.replace(/^▶\s*/, '') + ': ' + (before && before.some((x) => String(x).trim()) ? '수정 ' : '추가 ') + nm);
+      renderEditor(); $('efSt').textContent = '저장했습니다.';
+    });
+  }
+
+  async function edAdd() {
+    if (!state.ctx) return;
+    if (state.ed.group.startsWith('L:')) {
+      const kind = state.ed.group.slice(2);
+      const cur = state.lists[kind] || (state.lists[kind] = JSON.parse(JSON.stringify(state.listsBase[kind])));
+      cur.rows.push(cur.headers.map(() => ''));
+      state.ed.sel = { type: 'list', kind, idx: cur.rows.length - 1 };
+      renderEditor(); renderForm(); return;
+    }
+    const W = week();
+    state.ed.sel = { type: 'row', isNew: true, key: null, form: { grp: '신규', region: REG[0], mgr: '', code: '', name: '', task: '', stage: '정보조사', amt: '', period: '', plan: '', newv: W, rev: '', le: '', note: '신규', month: E.monthOf(W), needs: '1. 업체 현황\n\n2. 운영 현황\n\n3. 향후 영업 계획\n', flags: [] } };
+    renderEditor(); renderForm();
+  }
+  async function edDel() {
+    const it = state.ed.sel; if (!it) return;
+    if (it.type === 'list') {
+      if (!(await ask('행 삭제', it.name + ' 행을 ' + listData(it.kind).title + '에서 삭제할까요?', '삭제'))) return;
+      const cur = state.lists[it.kind] || (state.lists[it.kind] = JSON.parse(JSON.stringify(state.listsBase[it.kind])));
+      cur.rows.splice(it.idx, 1);
+      (state.listNotes[it.kind] = state.listNotes[it.kind] || []).push(cur.title.replace(/^▶\s*/, '') + ': 삭제 ' + it.name);
+      state.ed.sel = null; renderEditor(); renderForm(); return;
+    }
+    if (it.isNew) { state.ed.sel = null; renderForm(); return; }
+    if (!(await ask('업체 삭제', it.name + '(' + it.code + ')을 수주풀에서 삭제할까요?\n앞시트(금주 주요·본부 리스트)에서도 빠집니다.', '삭제'))) return;
+    const ai = state.addKeys.indexOf(it.key);
+    if (ai >= 0) state.adds.splice(ai, 1);
+    else { const ok = state.back[it.key] || it.key; state.deletes.push(ok); state.delNames[ok] = it.name + ' (' + it.code + ')'; delete state.edits[ok]; delete state.notes[ok]; }
+    state.ed.sel = null;
+    await refreshAndSelect(null);
   }
 
   function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
@@ -349,7 +610,17 @@
   });
   $('week').addEventListener('change', () => { $('week').dataset.touched = '1'; $('weekHint').textContent = ''; state.cands = []; $('candWrap').hidden = true; });
   $('previewBtn').addEventListener('click', doPreview);
-  $('buildBtn').addEventListener('click', doBuild);
+  $('buildBtn').addEventListener('click', onBuild);
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', async () => {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t));
+    $('p1').hidden = t.dataset.tab !== 'p1'; $('p2').hidden = t.dataset.tab !== 'p2';
+    if (t.dataset.tab === 'p2') { if (!state.ctx && state.tplRows) await doPreview(); renderEditor(); renderForm(); }
+  }));
+  $('edGroup').addEventListener('change', () => { state.ed.group = $('edGroup').value; state.ed.picked = true; state.ed.sel = null; renderEditor(); renderForm(); });
+  $('edSearch').addEventListener('input', debounce(renderEditor, 200));
+  $('edAdd').addEventListener('click', edAdd);
+  document.addEventListener('click', (e) => { const ms = $('ef_flags'); if (ms && !ms.contains(e.target)) { const p = ms.querySelector('.pop'); if (p) p.hidden = true; } });
+  $('edDel').addEventListener('click', edDel);
   try {
     const last = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
     if (last && last.data) {
