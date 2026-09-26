@@ -7,7 +7,7 @@
 <style>
   :root {
     --bg: #f4f6fa; --card: #ffffff; --ink: #1c2433; --sub: #5b6577; --line: #dde2ea;
-    --navy: #1f3864; --blue: #2f5597; --accent: #ffc000; --ok: #1e7f4f; --warn: #b3261e; --soft: #eef2f9;
+    --navy: #1f3864; --blue: #2f5597; --ok: #1e7f4f; --warn: #b3261e; --soft: #eef2f9;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -23,59 +23,66 @@
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   @media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
-  .slot { border: 1px dashed #b8c2d3; border-radius: 10px; padding: 12px; background: #fbfcfe; }
-  .slot.filled { border-style: solid; border-color: #9fb4d9; background: var(--soft); }
-  .slot h3 { margin: 0 0 6px; font-size: 14px; }
-  .slot .st { font-size: 12px; color: var(--sub); min-height: 18px; word-break: break-all; }
-  label.btn, button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8c2d3; background: #fff; color: var(--ink); border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .box { border: 1px dashed #b8c2d3; border-radius: 10px; padding: 10px 12px; background: #fbfcfe; }
+  .box.filled { border-style: solid; border-color: #9fb4d9; background: var(--soft); }
+  .box h3 { margin: 0 0 6px; font-size: 13.5px; display: flex; justify-content: space-between; gap: 6px; }
+  .box h3 .opt { font-weight: 400; color: var(--sub); font-size: 12px; }
+  .st { font-size: 12px; color: var(--sub); min-height: 18px; margin-top: 4px; word-break: break-all; }
+  .st.ok { color: var(--ok); } .st.err { color: var(--warn); }
+  textarea { width: 100%; height: 64px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; background: #fff; }
+  textarea::placeholder { color: #9aa3b2; }
+  label.btn, button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8c2d3; background: #fff; color: var(--ink); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
   label.btn:hover, button:hover { background: var(--soft); }
   button.primary { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; padding: 10px 18px; font-size: 14px; }
   button.primary:hover { background: var(--blue); }
   button:disabled { opacity: .45; cursor: not-allowed; }
   input[type=file] { display: none; }
-  textarea { width: 100%; min-height: 70px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
-  select, input[type=text] { border: 1px solid #b8c2d3; border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 13px; background: #fff; }
+  input[type=text] { border: 1px solid #b8c2d3; border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 13px; }
+  select { border: 1px solid #b8c2d3; border-radius: 8px; padding: 4px 6px; font: inherit; font-size: 12.5px; background: #fff; }
   details { margin-top: 8px; } summary { cursor: pointer; color: var(--blue); font-size: 12.5px; }
-  .drop { border: 2px dashed #9fb4d9; border-radius: 10px; padding: 14px; text-align: center; color: var(--sub); margin-bottom: 10px; }
-  .drop.over { background: var(--soft); border-color: var(--navy); color: var(--navy); }
   .badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; background: #e7ecf5; color: var(--navy); }
   .badge.new { background: #fff1c2; color: #7a5600; } .badge.rev { background: #e3f1e9; color: var(--ok); } .badge.le { background: #ffe0cc; color: #8a3b00; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th, td { border-bottom: 1px solid var(--line); padding: 6px 6px; text-align: left; vertical-align: middle; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: middle; }
   th { background: #f2f4f8; font-weight: 600; color: #394256; position: sticky; top: 0; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .tablewrap { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
-  .log { font-size: 12.5px; }
-  .log div { margin: 3px 0; }
+  .log { font-size: 12.5px; } .log div { margin: 3px 0; }
   .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
   .msg.err { background: #fdecea; color: var(--warn); } .msg.ok { background: #e6f4ec; color: var(--ok); } .msg.warn { background: #fff5d6; color: #7a5600; }
   .muted { color: var(--sub); }
-  .kv { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
-  .kv b { color: var(--navy); }
+  .kv { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; margin-top: 8px; } .kv b { color: var(--navy); }
+  .how { background: var(--soft); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: #394256; margin: 0 0 10px; }
+  .how b { color: var(--navy); }
   footer { color: var(--sub); font-size: 12px; text-align: center; padding: 8px 16px 28px; }
 </style>
 </head>
 <body>
 <header>
   <h1>엔지니어링 영업추진현황 · 주간 제출본 만들기</h1>
-  <p>지난주 제출본 + 경북/부산/경남 권역 자료 → 원본 서식 그대로 이번 주 제출본(.xlsx). 파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않습니다.</p>
+  <p>엑셀에서 복사 → 붙여넣기만으로 이번 주 제출본(.xlsx)을 원본 서식 그대로 만듭니다. 붙여넣은 내용은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않습니다.</p>
 </header>
 <main>
   <section class="card">
-    <h2><span class="step">1</span>지난주 제출본 (템플릿)</h2>
-    <p class="hint">지난주에 제출한 엑셀을 올리세요. 서식·수식·3번째 시트는 이 파일을 그대로 따릅니다.</p>
-    <div class="row">
-      <label class="btn">파일 선택<input type="file" id="tplFile" accept=".xlsx"></label>
-      <button id="useLast" hidden>이 브라우저에서 마지막으로 만든 제출본 사용</button>
+    <h2><span class="step">1</span>지난주 제출본 붙여넣기</h2>
+    <p class="how">지난주 제출본에서 시트마다 <b>시트 왼쪽 위 모서리 클릭(또는 Ctrl+A) → Ctrl+C</b> 후 아래 칸에 <b>Ctrl+V</b>. 필터가 걸려 있으면 먼저 해제하세요.</p>
+    <div class="grid3">
+      <div class="box" id="box_sum"><h3>영남영업본부</h3><textarea id="p_sum" placeholder="영남영업본부 시트 전체 붙여넣기"></textarea><div class="st" id="s_sum"></div></div>
+      <div class="box" id="box_pool"><h3>영남대상업체(수주풀)</h3><textarea id="p_pool" placeholder="수주풀 시트 전체 붙여넣기"></textarea><div class="st" id="s_pool"></div></div>
+      <div class="box" id="box_third"><h3>3번째 시트 <span class="opt">재영업 등 · 선택</span></h3><textarea id="p_third" placeholder="재영업 시트 전체 붙여넣기 (비우면 머리글만)"></textarea><div class="st" id="s_third"></div></div>
     </div>
-    <div id="tplInfo" class="kv" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="useLast" hidden></button>
+      <label class="btn">엑셀 파일로 넣기<input type="file" id="tplFile" accept=".xlsx"></label>
+      <span class="muted" id="tplSrc"></span>
+    </div>
+    <div id="tplInfo" class="kv"></div>
   </section>
 
   <section class="card">
-    <h2><span class="step">2</span>이번 주 권역 자료</h2>
-    <p class="hint">권역 담당이 보낸 엑셀(수주풀 시트 포함)을 한꺼번에 끌어다 놓으면 권역을 자동으로 판별합니다. 엑셀 대신 시트 내용을 복사해 붙여넣어도 됩니다(헤더 행 포함).</p>
-    <div id="drop" class="drop">여기로 권역 파일 3개를 끌어다 놓거나 <label class="btn" style="margin-left:6px">여러 파일 선택<input type="file" id="multiFile" accept=".xlsx" multiple></label></div>
-    <div class="grid3" id="slots"></div>
+    <h2><span class="step">2</span>이번 주 권역 자료 붙여넣기</h2>
+    <p class="how">권역 담당이 보낸 파일의 <b>영남대상업체(수주풀) 시트 전체</b>(또는 권역 시트, 머리글 행 포함)를 복사해 해당 권역 칸에 붙여넣으세요. 그 권역 업체 행만 반영됩니다. 비워두면 지난주 내용 그대로입니다.</p>
+    <div class="grid3" id="regions"></div>
   </section>
 
   <section class="card">
@@ -88,7 +95,7 @@
     </div>
     <div id="mergeLog" class="log" style="margin-top:10px"></div>
     <div id="candWrap" hidden style="margin-top:12px">
-      <p class="hint">이번 주 방문 업체입니다. ‘배치’를 바꿔 <b>▶ 금주 주요 업체</b>에 넣을 업체를 고르세요. 서술(주요 이슈 및 고객사 Needs)은 수주풀 원문 그대로 옮겨집니다. 본부 니즈/견적 리스트 업체는 <b>◎ 금주 주요 업체</b>와 리스트의 추가진행 주차/현황에 자동 반영됩니다.</p>
+      <p class="hint">이번 주 방문 업체입니다. ‘배치’로 <b>▶ 금주 주요 업체</b>에 넣을 업체를 고르세요. 서술(주요 이슈 및 고객사 Needs)은 수주풀 원문 그대로 옮겨집니다. 본부 니즈/견적 리스트 업체는 <b>◎ 금주 주요 업체</b>와 리스트의 추가진행 주차/현황에 자동 반영됩니다.</p>
       <div class="tablewrap"><table>
         <thead><tr><th>권역</th><th>업체명</th><th>담당자</th><th>단계</th><th class="num">예상매출</th><th>방문</th><th>배치</th></tr></thead>
         <tbody id="candBody"></tbody>
@@ -98,7 +105,7 @@
 
   <section class="card">
     <h2><span class="step">4</span>별도 작성 목록 (선택)</h2>
-    <p class="hint">비워두면 지난주 제출본 내용을 그대로 씁니다. 바꿀 때만 엑셀/Zoom에서 해당 표의 데이터 행을 복사해 붙여넣으세요(헤더 제외, 열 순서는 제출본 표와 동일).</p>
+    <p class="hint">비워두면 지난주 내용을 그대로 씁니다. 바꿀 때만 해당 표의 데이터 행을 복사해 붙여넣으세요(머리글 제외, 열 순서는 제출본 표와 동일).</p>
     <details><summary>LE 동행방문 대상 리스트 교체</summary><textarea id="man_leTarget" placeholder="팀권역	지점	담당자	코드	업체명	업종	지역	업체 연매출	사업구분	세부내용"></textarea></details>
     <details><summary>LE 차주 방문요청 리스트 교체</summary><textarea id="man_leNext" placeholder="팀권역	지점	담당자	코드	업체명	업종	지역	업체 연매출	사업구분	세부내용"></textarea></details>
     <details><summary>계약성사 가능성 업체 교체</summary><textarea id="man_contract" placeholder="구분	팀/권역	담당자	코드	업체명	추진과제/범위	진행단계	예상매출	계약 예상시기	진행 현황"></textarea></details>
@@ -113,10 +120,11 @@
     <div id="buildMsg"></div>
   </section>
 </main>
-<footer>수주풀 병합은 원문 그대로(요약·수정 없음) · 요약표는 템플릿 수식 그대로 · 열 때 엑셀이 자동 재계산합니다</footer>
+<footer>수주풀 병합은 원문 그대로(요약·수정 없음) · 요약표는 제출본 수식 그대로 · 파일을 열면 엑셀이 자동 재계산합니다</footer>
 
 <script src="vendor/jszip.min.js"></script>
 <script src="vendor/exceljs.min.js"></script>
+<script src="kit.js"></script>
 <script src="engine.js"></script>
 <script>
 (function () {
@@ -125,78 +133,95 @@
   const $ = (id) => document.getElementById(id);
   const REG = E.REGIONS;
   const LS_KEY = 'eng-weekly-last-output';
-  const state = { tpl: null, tplName: '', tplRows: null, inputs: {}, cands: [], placement: {} };
+  // tpl: {type:'paste'} | {type:'file', bytes, name}
+  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {} };
 
   const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
   const readFile = (f) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(new Uint8Array(r.result)); r.onerror = no; r.readAsArrayBuffer(f); });
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const msg = (el, cls, text) => { el.innerHTML = text ? '<div class="msg ' + cls + '">' + esc(text) + '</div>' : ''; };
+  const status = (id, cls, text) => { const el = $(id); el.className = 'st ' + (cls || ''); el.textContent = text || ''; };
+  const lines = (t) => E.parseTSV(t).filter((r) => r.some((c) => String(c).trim())).length;
+  function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+  function unb64(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  const KIT = window.ENG_KIT ? unb64(window.ENG_KIT) : null;
 
-  // ---- 권역 슬롯 ----
-  function renderSlots() {
-    $('slots').innerHTML = REG.map((r) => {
-      const inp = state.inputs[r];
-      const st = !inp ? '자료 없음 — 올리지 않으면 지난주 내용 유지' : inp.type === 'file' ? '📄 ' + inp.name + (inp.guess ? ' · 자동판별' : '') : '📋 붙여넣기 ' + (inp.text.split('\n').length - 1) + '행';
-      return '<div class="slot ' + (inp ? 'filled' : '') + '"><h3>' + r + '</h3><div class="st">' + esc(st) + '</div>' +
-        '<div class="row" style="margin-top:8px"><label class="btn">엑셀<input type="file" accept=".xlsx" data-reg="' + r + '"></label>' +
-        (inp ? '<button data-clear="' + r + '">비우기</button>' : '') + '</div>' +
-        '<details><summary>붙여넣기로 입력</summary><textarea data-paste="' + r + '" placeholder="권역 시트를 헤더 포함 복사 → 붙여넣기">' + (inp && inp.type === 'paste' ? esc(inp.text) : '') + '</textarea></details></div>';
-    }).join('');
-    $('slots').querySelectorAll('input[type=file]').forEach((el) => el.addEventListener('change', async (e) => { const f = e.target.files[0]; if (f) await addRegionFile(f, el.dataset.reg); }));
-    $('slots').querySelectorAll('[data-clear]').forEach((el) => el.addEventListener('click', () => { delete state.inputs[el.dataset.clear]; changed(); }));
-    $('slots').querySelectorAll('[data-paste]').forEach((el) => el.addEventListener('change', () => {
-      const r = el.dataset.paste; if (el.value.trim()) state.inputs[r] = { type: 'paste', text: el.value }; else delete state.inputs[r]; changed();
+  // ---- 템플릿(지난주 제출본) 만들기 ----
+  async function templateWorkbook() {
+    if (!state.tpl) throw new Error('1단계에서 지난주 제출본을 붙여넣어 주세요.');
+    if (state.tpl.type === 'file') return load(state.tpl.bytes);
+    const r = await E.templateFromPaste(ExcelJS, JSZip, KIT, { summary: $('p_sum').value, pool: $('p_pool').value, third: $('p_third').value });
+    return r.wb;
+  }
+
+  async function refreshTemplate() {
+    msg($('buildMsg'), '', '');
+    const hasPaste = $('p_sum').value.trim() && $('p_pool').value.trim();
+    ['sum', 'pool', 'third'].forEach((k) => { const v = $('p_' + k).value.trim(); $('box_' + k).classList.toggle('filled', !!v); status('s_' + k, '', v ? lines(v) + '행 붙여넣음' : ''); });
+    if (state.tpl && state.tpl.type === 'file' && !hasPaste) { await showTemplate(); return; }
+    if (!hasPaste) { state.tpl = null; state.tplRows = null; $('tplInfo').innerHTML = ''; $('tplSrc').textContent = ''; changed(); return; }
+    state.tpl = { type: 'paste' };
+    $('tplSrc').textContent = '붙여넣은 지난주 제출본 사용';
+    await showTemplate();
+  }
+
+  async function showTemplate() {
+    try {
+      const wb = await templateWorkbook();
+      const { pool, sum } = E.findSheets(wb);
+      const L = E.poolLayout(pool);
+      const rows = E.readPool(pool, L).rows;
+      state.tplRows = rows;
+      const w = E.wk(E.text(sum.getCell('X1').value));
+      const cnt = {}; rows.forEach((r) => { cnt[r.region] = (cnt[r.region] || 0) + 1; });
+      $('tplInfo').innerHTML = '<span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>';
+      if (state.tpl.type === 'paste') { status('s_sum', 'ok', '✓ ' + lines($('p_sum').value) + '행 · 기준 ' + w); status('s_pool', 'ok', '✓ 업체 ' + rows.length + '개'); }
+      if (!$('week').dataset.touched) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
+      changed();
+    } catch (e) {
+      console.error(e);
+      state.tplRows = null; $('tplInfo').innerHTML = '';
+      msg($('buildMsg'), 'err', '지난주 제출본 오류: ' + e.message);
+      changed(true);
+    }
+  }
+
+  // ---- 권역 ----
+  function renderRegions() {
+    $('regions').innerHTML = REG.map((r) =>
+      '<div class="box" id="rbox_' + r + '"><h3>' + r + ' <label class="btn" style="padding:2px 8px;font-size:11.5px">엑셀<input type="file" accept=".xlsx" data-reg="' + r + '"></label></h3>' +
+      '<textarea data-reg="' + r + '" placeholder="' + r + ' 담당 파일의 수주풀 시트 전체 붙여넣기"></textarea><div class="st" id="rs_' + r + '"></div></div>').join('');
+    $('regions').querySelectorAll('textarea').forEach((el) => el.addEventListener('input', debounce(() => setRegionText(el.dataset.reg, el.value), 300)));
+    $('regions').querySelectorAll('input[type=file]').forEach((el) => el.addEventListener('change', async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      state.regions[el.dataset.reg] = { type: 'file', name: f.name, bytes: await readFile(f) };
+      $('regions').querySelector('textarea[data-reg="' + el.dataset.reg + '"]').value = '';
+      markRegion(el.dataset.reg); changed();
     }));
   }
-
-  async function addRegionFile(file, forced) {
-    const bytes = await readFile(file);
-    let region = forced, guess = false;
-    if (!region) {
-      if (!state.tplRows) { msg($('buildMsg'), 'err', '먼저 1단계에서 지난주 제출본을 올려주세요. (권역 자동판별에 필요)'); return; }
-      try {
-        const wb = await load(bytes);
-        const r = E.readRegionWorkbook(wb);
-        const g = E.guessRegion(state.tplRows, r.rows);
-        region = g.region; guess = true;
-        if (!region) { msg($('buildMsg'), 'warn', file.name + ': 지난주 제출본과 달라진 행이 없어 권역을 판별하지 못했습니다. 권역 칸의 [엑셀] 버튼으로 직접 넣어주세요.'); return; }
-      } catch (e) { msg($('buildMsg'), 'err', file.name + ': ' + e.message); return; }
-    }
-    state.inputs[region] = { type: 'file', name: file.name, bytes, guess };
-    changed();
+  function setRegionText(r, t) {
+    if (t.trim()) state.regions[r] = { type: 'paste', text: t }; else delete state.regions[r];
+    markRegion(r); changed();
+  }
+  function markRegion(r) {
+    const i = state.regions[r];
+    $('rbox_' + r).classList.toggle('filled', !!i);
+    status('rs_' + r, '', !i ? '비어 있음 — 지난주 내용 유지' : i.type === 'file' ? '📄 ' + i.name : lines(i.text) + '행 붙여넣음');
   }
 
-  function changed() {
-    renderSlots();
-    $('previewBtn').disabled = !state.tpl;
-    $('buildBtn').disabled = !state.tpl;
+  function changed(keepMsg) {
+    const ready = !!state.tplRows;
+    $('previewBtn').disabled = !ready;
+    $('buildBtn').disabled = !ready;
     $('candWrap').hidden = true; $('mergeLog').innerHTML = '';
     state.cands = [];
   }
 
-  // ---- 템플릿 ----
-  async function setTemplate(bytes, name) {
-    try {
-      const wb = await load(bytes);
-      const { pool, sum } = E.findSheets(wb);
-      if (!pool || !sum) throw new Error('영남영업본부 / 수주풀 시트가 있는 제출본이 아닙니다.');
-      const L = E.poolLayout(pool);
-      const rows = E.readPool(pool, L).rows;
-      state.tpl = bytes; state.tplName = name; state.tplRows = rows;
-      const w = E.wk(E.text(sum.getCell('X1').value));
-      const cnt = {}; rows.forEach((r) => { cnt[r.region] = (cnt[r.region] || 0) + 1; });
-      $('tplInfo').innerHTML = '<span>📄 ' + esc(name) + '</span><span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>';
-      if (!$('week').value) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
-      msg($('buildMsg'), '', '');
-      changed();
-    } catch (e) { msg($('buildMsg'), 'err', '템플릿 오류: ' + e.message); }
-  }
-
-  // ---- 입력 → 엔진 옵션 ----
+  // ---- 엔진 입력 ----
   async function engineInputs() {
     const inputs = {};
     for (const r of REG) {
-      const i = state.inputs[r]; if (!i) continue;
+      const i = state.regions[r]; if (!i) continue;
       inputs[r] = i.type === 'file' ? { type: 'file', wb: await load(i.bytes) } : { type: 'paste', text: i.text };
     }
     return inputs;
@@ -213,11 +238,12 @@
 
   function renderLog(log) {
     $('mergeLog').innerHTML = log.map((l) => {
-      const parts = ['<b>' + l.region + '</b> (' + (l.mode === 'file' ? '엑셀' : '붙여넣기') + ' ' + l.source + '행)', '갱신 ' + l.updated.length, '변경없음 ' + l.same];
+      const parts = ['<b>' + l.region + '</b> (' + (l.mode === 'file' ? '엑셀' : '붙여넣기') + ' ' + l.source + '행)', '변경 ' + l.updated.length, '그대로 ' + l.same];
       if (l.added.length) parts.push('<span class="badge new">신규 ' + l.added.length + '</span> ' + esc(l.added.map((a) => a.name).join(', ')));
       if (l.removed.length) parts.push('<span class="badge le">삭제 ' + l.removed.length + '</span> ' + esc(l.removed.map((a) => a.name).join(', ')));
+      if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.slice(0, 8).map((u) => u.name).join(', ') + (l.updated.length > 8 ? ' …' : '')) + '</span>');
       return '<div>' + parts.join(' · ') + '</div>';
-    }).join('') || '<div class="muted">올린 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>';
+    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>';
   }
 
   function renderCands() {
@@ -238,7 +264,7 @@
     msg($('buildMsg'), '', '');
     if (!E.isWeek($('week').value)) { msg($('buildMsg'), 'err', '보고 주차를 "9월 4주" 형식으로 입력하세요.'); return false; }
     try {
-      const tpl = await load(state.tpl);
+      const tpl = await templateWorkbook();
       const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs() });
       renderLog(ctx.log);
       state.cands = E.preview(ctx, week());
@@ -253,47 +279,55 @@
     try {
       if (!state.cands.length && !(await doPreview())) return;
       const W = week();
-      const tpl = await load(state.tpl);
+      const tpl = await templateWorkbook();
       const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs() });
       const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, manual: manualInputs(), addBonbu: $('addBonbu').checked });
       const buf = new Uint8Array(await tpl.xlsx.writeBuffer());
-      const name = /\d{1,2}월\s*\d주/.test(state.tplName) ? state.tplName.replace(/\d{1,2}월\s*\d주/, W) : '엔지니어링 영업추진현황_' + W + '.xlsx';
+      const base = state.tpl.type === 'file' && /\d{1,2}월\s*\d주/.test(state.tpl.name) ? state.tpl.name : '엔지니어링 영업추진현황_0월 0주.xlsx';
+      const name = base.replace(/\d{1,2}월\s*\d주/, W);
       const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
       try { localStorage.setItem(LS_KEY, JSON.stringify({ name, data: b64(buf), at: new Date().toISOString() })); } catch (e) { /* 저장 공간 부족 시 무시 */ }
-      const lines = ['완료: ' + name];
-      if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) lines.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
-      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) lines.push('본부 리스트 신규 추가: ' + res.bonbu.bonbuAdded.join(', '));
-      res.warn.forEach((w) => lines.push('⚠ ' + w));
-      msg($('buildMsg'), res.warn.length ? 'warn' : 'ok', lines.join('\n'));
+      const out = ['완료: ' + name];
+      if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) out.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
+      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('본부 리스트 신규 추가: ' + res.bonbu.bonbuAdded.join(', '));
+      res.warn.forEach((w) => out.push('⚠ ' + w));
+      msg($('buildMsg'), res.warn.length ? 'warn' : 'ok', out.join('\n'));
     } catch (e) { console.error(e); msg($('buildMsg'), 'err', '생성 오류: ' + e.message); }
     finally { $('buildBtn').disabled = false; }
   }
 
-  function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
-  function unb64(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
   // ---- 이벤트 ----
-  $('tplFile').addEventListener('change', async (e) => { const f = e.target.files[0]; if (f) setTemplate(await readFile(f), f.name); });
-  $('multiFile').addEventListener('change', async (e) => { for (const f of e.target.files) await addRegionFile(f); });
-  const drop = $('drop');
-  ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
-  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
-  drop.addEventListener('drop', async (e) => { for (const f of e.dataTransfer.files) if (/\.xlsx$/i.test(f.name)) await addRegionFile(f); });
-  $('week').addEventListener('change', () => { $('weekHint').textContent = ''; state.cands = []; $('candWrap').hidden = true; });
+  ['p_sum', 'p_pool', 'p_third'].forEach((id) => $(id).addEventListener('input', debounce(refreshTemplate, 400)));
+  $('tplFile').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    ['p_sum', 'p_pool', 'p_third'].forEach((id) => { $(id).value = ''; });
+    state.tpl = { type: 'file', bytes: await readFile(f), name: f.name };
+    $('tplSrc').textContent = '📄 ' + f.name;
+    await refreshTemplate();
+  });
+  $('week').addEventListener('change', () => { $('week').dataset.touched = '1'; $('weekHint').textContent = ''; state.cands = []; $('candWrap').hidden = true; });
   $('previewBtn').addEventListener('click', doPreview);
   $('buildBtn').addEventListener('click', doBuild);
   try {
     const last = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
     if (last && last.data) {
       $('useLast').hidden = false;
-      $('useLast').textContent = '마지막으로 만든 제출본 사용 (' + last.name + ')';
-      $('useLast').addEventListener('click', () => setTemplate(unb64(last.data), last.name));
+      $('useLast').textContent = '지난번 이 화면에서 만든 제출본 사용 (' + last.name + ')';
+      $('useLast').addEventListener('click', async () => {
+        ['p_sum', 'p_pool', 'p_third'].forEach((id) => { $(id).value = ''; });
+        state.tpl = { type: 'file', bytes: unb64(last.data), name: last.name };
+        $('tplSrc').textContent = '📄 ' + last.name + ' (저장본)';
+        await refreshTemplate();
+      });
     }
   } catch (e) { /* 저장소 사용 불가 */ }
-  if (!window.ExcelJS || !window.JSZip) msg($('buildMsg'), 'err', '엑셀 라이브러리(vendor 폴더)를 불러오지 못했습니다. index.html 과 같은 폴더에 engine.js, vendor/ 가 있는지 확인하세요.');
-  renderSlots();
+  if (!window.ExcelJS || !window.JSZip || !KIT) msg($('buildMsg'), 'err', '구성 파일(vendor/, kit.js, engine.js)을 불러오지 못했습니다. index.html 과 같은 폴더에 있는지 확인하세요.');
+  renderRegions();
+  REG.forEach(markRegion);
 })();
 </script>
 </body>

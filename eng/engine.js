@@ -123,7 +123,8 @@
     const cells = [];
     for (let c = 1; c <= maxCol; c++) {
       const cell = row.getCell(c);
-      const o = { v: cell.value == null ? null : clone(cell.value), s: clone(cell.style || {}) };
+      const slave = cell.isMerged && cell.master && cell.master.address !== cell.address; // 병합 보조 칸은 대표 값을 되돌려주므로 비움
+      const o = { v: slave || cell.value == null ? null : clone(cell.value), s: clone(cell.style || {}) };
       if (cell.type === 6 /* Formula */) o.f = cell.formula;
       if (cell.note) o.note = clone(cell.note);
       if (cell.dataValidation) o.dv = clone(cell.dataValidation);
@@ -185,6 +186,14 @@
     if (h < 0) throw new Error('붙여넣은 내용에서 헤더(코드/업체명) 행을 찾지 못했습니다. 헤더 행까지 함께 복사해 주세요.');
     const map = {}; // src idx -> template col
     grid[h].forEach((t, j) => { const k = norm(t); const c = TL.headers[k]; if (c && !Object.values(map).includes(c)) map[j] = c; });
+    // 머리글이 비어 있는 열(보조 열 등)은 업체명 열 기준 같은 위치로
+    const hn = grid[h].findIndex((t) => norm(t) === '업체명');
+    const labeled = new Set(Object.values(TL.headers));
+    grid[h].forEach((t, j) => {
+      if (j in map || norm(t)) return;
+      const c = j + 1 + (TL.name - 1 - hn);
+      if (c >= 1 && c <= TL.maxCol && !labeled.has(c) && !Object.values(map).includes(c)) map[j] = c;
+    });
     const nameIdx = Object.keys(map).find((j) => map[j] === TL.name);
     const rows = [];
     for (let i = h + 1; i < grid.length; i++) {
@@ -192,7 +201,7 @@
       const vals = {};
       Object.keys(map).forEach((j) => {
         const c = map[j]; let v = src[j] == null ? '' : src[j];
-        if (c === TL.amt) { const t = trim(v).replace(/,/g, ''); v = t === '' || /^-+$/.test(t) ? null : (isFinite(Number(t)) ? Number(t) : v); }
+        if (c === TL.amt) { const t = trim(v).replace(/,/g, ''); v = t === '' ? null : /^-+$/.test(t) ? 0 : (isFinite(Number(t)) ? Number(t) : v); } // 회계서식 '-' = 0
         else if (c === TL.code) { const t = trim(v); v = /^\d+$/.test(t) ? Number(t) : t; }
         else if (c !== TL.needs) v = trim(v) === '' ? null : trim(v);
         else v = v === '' ? null : v.replace(/\n+$/, '');
@@ -501,7 +510,7 @@
     const units = (line) => { let u = 0; for (const ch of line) u += ch.charCodeAt(0) > 0x2E80 ? 1.75 : 0.95; return u; };
     const w = Math.max(8, widthChars * 1.02);
     const lines = s.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(units(line) / w)), 0);
-    const lh = (fontSize || 10) * 1.22;
+    const lh = (fontSize || 10) * 1.4;
     return Math.min(409, Math.max(min || 18, Math.round((lines * lh + 6) * 4) / 4));
   }
   function spanWidth(ws, sn, col) {
@@ -616,16 +625,18 @@
       }
     });
 
-    // 쓰기
-    const start = info.start;
-    const oldEnd = info.end;
+    writeSections(ws, info.start, info.end, secs, maxCol);
+    return { cands, log };
+  }
+
+  // 섹션 목록을 start 행부터 차례로 쓰기 (기존 영역은 비우고 병합/유효성 재부착)
+  function writeSections(ws, start, oldEnd, secs, maxCol) {
     const dvCells = [];
     const seq = [];
     secs.forEach((s) => { seq.push(s.titleRow); if (s.header) seq.push(s.header); s.data.forEach((d) => seq.push(d)); s.tail.forEach((t) => seq.push(t)); });
     const newEnd = start + seq.length - 1;
     const end = Math.max(oldEnd, newEnd);
     unmergeRows(ws, start, end);
-    // 기존 영역 데이터유효성 제거 후 재부착
     for (let r = start; r <= end; r++) for (let c = 1; c <= maxCol; c++) { const cell = ws.getCell(r, c); if (cell.dataValidation) cell.dataValidation = undefined; }
     seq.forEach((sn, i) => {
       writeRow(ws, start + i, sn, maxCol, null);
@@ -634,7 +645,164 @@
     for (let r = newEnd + 1; r <= end; r++) writeRow(ws, r, null, maxCol, null);
     seq.forEach((sn, i) => (sn.merges || []).forEach(([a, b]) => { if (b > a) ws.mergeCells(start + i, a, start + i, b); }));
     dvCells.forEach(([r, c, dv]) => { ws.getCell(r, c).dataValidation = dv; });
-    return { cands, log };
+    return newEnd;
+  }
+
+  // ---------- 붙여넣기로 지난주 제출본 복원 ----------
+  // 서식만 있는 빈 틀(kit)에 엑셀에서 복사해 붙여넣은 지난주 시트 값을 채워 넣어 템플릿 워크북을 만든다.
+
+  // 붙여넣은 셀 문자열 → 셀 값 (숫자처럼 보이면 숫자)
+  function cellVal(s) {
+    if (s == null) return null;
+    const raw = String(s);
+    const t = raw.trim();
+    if (t === '') return null;
+    if (/^-?[\d,]*\d(\.\d+)?$/.test(t) && !/^-?0\d/.test(t) && t.replace(/[^\d]/g, '').length < 15) return Number(t.replace(/,/g, ''));
+    return raw.includes('\n') ? raw.replace(/\n+$/, '') : t;
+  }
+  function locate(grid, pred) {
+    for (let r = 0; r < grid.length; r++) { const row = grid[r] || []; for (let c = 0; c < row.length; c++) if (pred(norm(row[c]))) return { r, c }; }
+    return null;
+  }
+  const rowHasVal = (vals) => vals.some((v, i) => i >= 1 && trim(v) !== '');
+
+  // 요약 시트 상단(집계표·방문실적 표): 수식이 아닌 입력 칸(방문계획 값, 4월 이전 실적, 주차, 라벨)만 붙여넣은 값으로
+  function fillSummaryTop(ws, grid, topEnd, maxCol) {
+    const a = locate(grid, (t) => t === '누계진행현황');
+    const k = findRowWith(ws, (t) => norm(t) === '누계진행현황');
+    if (!a || !k) throw new Error('영남영업본부 붙여넣기에서 "누계 진행현황" 표를 찾지 못했습니다. 영남영업본부 시트 전체(Ctrl+A)를 복사해 붙여넣어 주세요.');
+    const dr = a.r - (k.r - 1), dc = a.c - (k.c - 1);
+    const g = (r, c) => { const row = grid[r - 1 + dr]; return row ? row[c - 1 + dc] : undefined; };
+    for (let r = 1; r <= topEnd; r++) {
+      const isPlan = norm(text(ws.getCell(r, 3).value)) === '방문계획';
+      for (let c = 1; c <= maxCol; c++) {
+        const cell = ws.getCell(r, c);
+        if (cell.type === 6) continue;
+        const v = g(r, c); if (v === undefined) continue;
+        const kitEmpty = cell.value == null || cell.value === '';
+        if (kitEmpty && !isPlan) continue;
+        const t = trim(v);
+        if (typeof cell.value === 'string' && norm(cell.value) === norm(v)) continue; // 같은 라벨은 틀 그대로
+        if (t === '') { if (isPlan || typeof cell.value === 'number') cell.value = null; continue; }
+        cell.value = /^-+$/.test(t) && (isPlan || typeof cell.value === 'number') ? 0 : cellVal(v);
+      }
+    }
+    return { dr, dc };
+  }
+
+  // 요약 시트 하단 목록: 붙여넣은 섹션 값을 틀의 섹션 서식으로
+  function fillSummarySections(ws, grid, off, kitInfo, maxCol) {
+    const g = (r0, c) => { const row = grid[r0]; return row ? row[c - 1 + off.dc] : undefined; };
+    const rowVals = (r0) => { const v = []; for (let c = 1; c <= maxCol; c++) v.push(g(r0, c) == null ? '' : g(r0, c)); return v; };
+    const titleOf = (r0) => { const t = norm(g(r0, 2)); return /^[▶◎]/.test(t) ? t : null; };
+    let r0 = -1;
+    for (let i = 0; i < grid.length; i++) if (/^▶LE동행방문/.test(norm(g(i, 2)))) { r0 = i; break; }
+    if (r0 < 0) throw new Error('영남영업본부 붙여넣기에서 "▶ LE 동행방문 대상 리스트" 를 찾지 못했습니다.');
+    const kitSecs = kitInfo.secs;
+    const kitMain = kitSecs.find((s) => s.kind === 'main');
+    const out = [];
+    let r = r0;
+    while (r < grid.length) {
+      const title = titleOf(r);
+      if (!title) { r++; continue; }
+      let kind = 'other'; SECTION_KIND.forEach(([re, kk]) => { if (re.test(title)) kind = kk; });
+      const ks = kitSecs.find((s) => s.kind === kind) || kitSecs.find((s) => s.title === title) || kitMain;
+      const sec = { title, kind, titleRow: clone(ks.titleRow), header: null, data: [], tail: [] };
+      sec.titleRow.cells[1].v = cellVal(g(r, 2));
+      let q = r + 1;
+      if (q < grid.length && !titleOf(q) && rowHasVal(rowVals(q))) {
+        sec.header = clone(ks.header || kitMain.header);
+        rowVals(q).forEach((v, i) => { if (trim(v) && !(sec.header.cells[i].f)) sec.header.cells[i].v = cellVal(v); });
+        q++;
+        const style = ks.data[0] || (kitMain && kitMain.data[0]) || ks.tail[0] || sec.header;
+        while (q < grid.length && !titleOf(q) && rowHasVal(rowVals(q))) {
+          const sn = clone(style);
+          sn.cells.forEach((c, i) => { c.v = cellVal(rowVals(q)[i]); delete c.f; delete c.note; });
+          if (kind !== 'bonbuList') {
+            let tc = 0; sec.header.cells.forEach((c, i) => { if (trim(text(c.v))) tc = i + 1; });
+            if (tc) sn.height = estHeight(sn.cells[tc - 1].v, spanWidth(ws, sn, tc), (sn.cells[tc - 1].s.font && sn.cells[tc - 1].s.font.size) || 10, Math.min(style.height || 18, 27));
+          }
+          sec.data.push(sn); q++;
+        }
+      }
+      sec.tail = clone(ks.tail && ks.tail.length ? ks.tail : [{ cells: new Array(maxCol).fill(null).map(() => ({ v: null, s: {} })), height: 18, merges: [] }]);
+      while (q < grid.length && !titleOf(q)) q++;
+      out.push(sec);
+      r = q;
+    }
+    writeSections(ws, kitInfo.start, kitInfo.end, out, maxCol);
+  }
+
+  // 수주풀: 붙여넣은 전체 행을 틀의 데이터행 서식으로
+  function fillPool(ws, L, str) {
+    const kit = readPool(ws, L);
+    const base = kit.rows[0];
+    if (!base) throw new Error('틀(kit) 수주풀에 서식 행이 없습니다.');
+    const oldBase = kit.rows[1] || base; // 과거분(25 3Q, 2510 …) 행 서식
+    const p = readRegionPaste(str, null, L);
+    const rows = p.rows.map((r) => applyPaste(L.month && !/^\d{1,2}월$/.test(trim(text(r.vals[L.month]))) ? oldBase : base, r, L, true));
+    if (!rows.length) throw new Error('수주풀 붙여넣기에서 업체 행을 찾지 못했습니다.');
+    writePool(ws, L, rows, kit.lastRow, formulaPatterns(kit.rows, L));
+    return rows.length;
+  }
+
+  // 3번째 시트(재영업 등): 붙여넣은 표를 틀의 헤더/데이터행 서식으로 (표가 여러 개면 두 번째 표 서식 사용)
+  function fillThird(ws, grid) {
+    const maxCol = 30;
+    const merges = rowMergeMap(ws);
+    const isHdr = (vals) => { const k = vals.map(norm); return k.includes('업체명') && k.includes('코드'); };
+    const kitRows = []; for (let r = 1; r <= Math.min(ws.rowCount, 20); r++) kitRows.push(snapRow(ws, r, maxCol, merges));
+    const kh = kitRows.map((sn, i) => (isHdr(sn.cells.map((c) => text(c.v))) ? i : -1)).filter((i) => i >= 0);
+    if (!kh.length) return 0;
+    const H = kh.map((i) => kitRows[i]);
+    const D = kh.map((i) => kitRows[i + 1]);
+    const blank = { cells: new Array(maxCol).fill(null).map(() => ({ v: null, s: {} })), height: undefined, merges: [] };
+    const seq = [blank];
+    let dataRows = 0;
+    if (grid && grid.length) {
+      const a = locate(grid, (t) => t === '업체명');
+      const hc = H[0].cells.findIndex((c) => norm(text(c.v)) === '업체명');
+      if (!a || hc < 0) throw new Error('3번째 시트 붙여넣기에서 헤더(업체명) 행을 찾지 못했습니다.');
+      const dc = a.c - hc;
+      let t = -1, started = false;
+      for (let r0 = a.r; r0 < grid.length; r0++) {
+        const vals = []; for (let c = 1; c <= maxCol; c++) { const row = grid[r0] || []; vals.push(row[c - 1 + dc] == null ? '' : row[c - 1 + dc]); }
+        if (isHdr(vals)) { t++; started = true; const sn = clone(H[Math.min(t, H.length - 1)]); vals.forEach((v, i) => { if (trim(v)) sn.cells[i].v = cellVal(v); }); seq.push(sn); continue; }
+        if (!started) continue;
+        if (!rowHasVal(vals)) { seq.push(clone(blank)); continue; }
+        const sn = clone(D[Math.min(t, D.length - 1)]);
+        sn.cells.forEach((c, i) => { c.v = cellVal(vals[i]); delete c.f; delete c.note; });
+        seq.push(sn); dataRows++;
+      }
+      while (seq.length > 1 && !seq[seq.length - 1].cells.some((c) => c.v != null)) seq.pop();
+    } else {
+      seq.push(clone(H[0]));
+    }
+    const end = Math.max(ws.rowCount, seq.length);
+    unmergeRows(ws, 1, end);
+    seq.forEach((sn, i) => writeRow(ws, i + 1, sn, maxCol, null));
+    for (let r = seq.length + 1; r <= end; r++) writeRow(ws, r, null, maxCol, null);
+    seq.forEach((sn, i) => (sn.merges || []).forEach(([a, b]) => { if (b > a) ws.mergeCells(i + 1, a, i + 1, b); }));
+    return dataRows;
+  }
+
+  // kitBytes: 서식 틀 xlsx, p: { summary, pool, third } 붙여넣기 문자열
+  async function templateFromPaste(ExcelJS, JSZip, kitBytes, p) {
+    if (!trim(p.summary)) throw new Error('지난주 영남영업본부 시트를 붙여넣어 주세요.');
+    if (!trim(p.pool)) throw new Error('지난주 영남대상업체(수주풀) 시트를 붙여넣어 주세요.');
+    const wb = await loadWorkbook(ExcelJS, JSZip, kitBytes);
+    const { pool, sum } = findSheets(wb);
+    const L = poolLayout(pool);
+    const n = fillPool(pool, L, p.pool);
+    const maxCol = sumMaxCol(sum);
+    const kitInfo = readSections(sum, maxCol);
+    const grid = parseTSV(p.summary);
+    const off = fillSummaryTop(sum, grid, kitInfo.start - 1, maxCol);
+    fillSummarySections(sum, grid, off, kitInfo, maxCol);
+    const third = wb.worksheets.find((s) => s.state === 'visible' && s !== pool && s !== sum);
+    let thirdRows = 0;
+    if (third) thirdRows = fillThird(third, trim(p.third) ? parseTSV(p.third) : null);
+    return { wb, info: { poolRows: n, thirdRows, thirdName: third ? third.name : null, week: wk(text(sum.getCell('X1').value)) } };
   }
 
   // 과거 양식에서 넘어온 숨김 정의된 이름(수천 개, #REF! 등)을 제거하고 연다 — ExcelJS 로딩이 수십 초 → 1초 미만
@@ -727,6 +895,8 @@
 
   return {
     REGIONS, loadWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
-    nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
+    templateFromPaste, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
+    // 틀(kit) 생성 도구용
+    _i: { readSections, snapRow, writeRow, unmergeRows, rowMergeMap, writePool, formulaPatterns, writeSections, sumMaxCol, stripResults },
   };
 });
