@@ -45,6 +45,9 @@ table.xl td[contenteditable]:focus{outline:2px solid #2b6cb0;background:#eef4ff}
 table.xl td.bad{background:#fde2e2!important;color:#b00020}
 .legend{font-size:12px;color:var(--mut);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:12px;border:1px solid #999;vertical-align:middle;margin:0 3px 0 8px}
+.uprow{display:flex;align-items:center;gap:8px;margin-top:6px}.uprow b{width:36px;font-size:13px;color:var(--navy)}
+textarea.up1{min-height:0;height:30px;flex:1;resize:vertical;padding:5px 8px}
+button.xs1{padding:2px 8px;font-size:11px}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:#e8edf8;color:var(--navy);margin-left:6px}
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
 </style>
@@ -69,7 +72,10 @@ table.xl td.bad{background:#fde2e2!important;color:#b00020}
 </div>
 <div class="card">
   <h2>2. 권역 업데이트 붙여넣기 <span class="tag">경북 / 부산 / 경남</span></h2>
-  <textarea id="up" style="min-height:120px" placeholder="경북·부산·경남 시트의 업데이트 행(헤더 포함 가능, 같은 양식)을 붙여넣으세요. 세 권역을 한꺼번에 붙여도 되고 나눠 붙여도 됩니다. 코드가 같은 행은 교체, 없는 코드는 추가됩니다."></textarea>
+  <div class="uprow"><b>경북</b><textarea id="up_gb" class="up1" data-clr="1" data-region="경북권역" rows="1" placeholder="경북 시트 업데이트 행 붙여넣기 (헤더 포함 가능)"></textarea><button class="sec xs1" data-for="up_gb">초기화</button></div>
+  <div class="uprow"><b>부산</b><textarea id="up_bs" class="up1" data-clr="1" data-region="부산권역" rows="1" placeholder="부산 시트 업데이트 행 붙여넣기 (헤더 포함 가능)"></textarea><button class="sec xs1" data-for="up_bs">초기화</button></div>
+  <div class="uprow"><b>경남</b><textarea id="up_gn" class="up1" data-clr="1" data-region="경남권역" rows="1" placeholder="경남 시트 업데이트 행 붙여넣기 (헤더 포함 가능)"></textarea><button class="sec xs1" data-for="up_gn">초기화</button></div>
+  <div class="hint">코드가 같은 행은 교체, 없는 코드는 추가됩니다. 권역 칸이 비어 있으면 붙여넣은 칸의 권역으로 채웁니다.</div>
   <div id="upstat" class="hint"></div>
 </div>
 </div>
@@ -140,9 +146,10 @@ const REGIONS=['경북권역','부산권역','경남권역'];
 const CODE_RE=/^[A-Z]?\d{5,7}$/;
 const WEEK_RE=/^(\d{1,2})월\s*(\d)주$/;
 const normWeek=v=>{const m=String(v||'').trim().match(WEEK_RE);return m?m[1]+'월 '+m[2]+'주':String(v||'').trim()};
-function parsePool(raw){const rows=parseTSV(raw);const out=[];let hdrSeen=false;
+function parsePool(raw,defRegion){const rows=parseTSV(raw);const out=[];let hdrSeen=false;
   rows.forEach(r=>{const cells=r.map(x=>String(x).replace(/\r/g,'').trim());while(cells.length<PC.W)cells.push('');
     if(!CODE_RE.test(cells[PC.code])){if(/권역/.test(cells[0])&&/코드/.test(cells.join(' ')))hdrSeen=true;return}
+    if(defRegion&&!cells[PC.region])cells[PC.region]=defRegion;
     if(!/권역$/.test(cells[PC.region])){const r2=REGIONS.find(x=>cells[PC.region].startsWith(x.slice(0,2)));if(r2)cells[PC.region]=r2}
     [PC.plan,PC.vnew,PC.vre,PC.le].forEach(i=>cells[i]=normWeek(cells[i]));
     out.push(cells.slice(0,PC.W))});
@@ -150,12 +157,13 @@ function parsePool(raw){const rows=parseTSV(raw);const out=[];let hdrSeen=false;
 let POOL=null,UPD=new Set(),OUT=null;
 /* ===== 병합 ===== */
 function merge(){const ref=parsePool($('ref').value);if(!ref.rows.length){alert('참조시트(수주풀)를 먼저 붙여넣으세요');return false}
-  const up=parsePool($('up').value);const pool=ref.rows.map(r=>r.slice());
+  const UPIDS=['up_gb','up_bs','up_gn'];const upc={};const up={rows:[]};
+  UPIDS.forEach(id=>{const r=parsePool($(id).value,$(id).dataset.region).rows;upc[$(id).dataset.region.slice(0,2)]=r.length;up.rows.push(...r)});const pool=ref.rows.map(r=>r.slice());
   UPD=new Set();let rep=0,add=0;
   up.rows.forEach(r=>{const k=r[PC.code]+'|'+r[PC.region];const i=pool.findIndex(x=>x[PC.code]+'|'+x[PC.region]===k);if(i>=0){if(pool[i].join('\t')!==r.join('\t')){pool[i]=r;UPD.add(k);rep++}}else{pool.push(r);UPD.add(k);add++}});
   POOL=pool;
   $('refstat').textContent='참조시트 인식: '+ref.rows.length+'행 (경북 '+ref.rows.filter(r=>r[PC.region]==='경북권역').length+', 부산 '+ref.rows.filter(r=>r[PC.region]==='부산권역').length+', 경남 '+ref.rows.filter(r=>r[PC.region]==='경남권역').length+')';
-  $('upstat').textContent=up.rows.length?'업데이트 인식: '+up.rows.length+'행 → 교체 '+rep+'행, 신규 추가 '+add+'행':'업데이트 없음 (참조시트만으로 생성)';
+  $('upstat').textContent=up.rows.length?'업데이트 인식: '+up.rows.length+'행 (경북 '+upc['경북']+', 부산 '+upc['부산']+', 경남 '+upc['경남']+') → 교체 '+rep+'행, 신규 추가 '+add+'행':'업데이트 없음 (참조시트만으로 생성)';
   return true}
 /* ===== 집계 ===== */
 const isWeek=v=>WEEK_RE.test(v);
@@ -280,7 +288,8 @@ $('copyPoolUpd').onclick=async()=>{if(!POOL)return;const rows=POOL.filter(r=>UPD
 $('dlPool').onclick=()=>{if(!POOL)return;download('대상업체_수주풀.tsv',tsvOf([POOL_HDR,...POOL]))};
 $('copyAll').onclick=async()=>{if(!OUT)return;const ok=await copyText(tsvOf(OUT.S));$('stat').textContent=ok?'전체 시트 '+OUT.S.length+'행 복사됨 → 제출 시트 A1에 붙여넣기':'복사 실패'};
 $('dlAll').onclick=()=>{if(!OUT)return;download('엔지니어링_영업추진현황.tsv',tsvOf(OUT.S))};
-['ref','up'].forEach(id=>$(id).addEventListener('cleared',()=>{POOL=null;OUT=null;$('pool').innerHTML='';$('out').innerHTML='';$('refstat').textContent='';$('upstat').textContent='';$('stat').textContent=''}));
+document.querySelectorAll('.uprow button').forEach(b=>b.onclick=()=>{const ta=$(b.dataset.for);ta.value='';ta.dispatchEvent(new Event('cleared'));ta.focus()});
+['ref','up_gb','up_bs','up_gn'].forEach(id=>$(id).addEventListener('cleared',()=>{POOL=null;OUT=null;$('pool').innerHTML='';$('out').innerHTML='';$('refstat').textContent='';$('upstat').textContent='';$('stat').textContent=''}));
 $('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
 addClearButtons();
