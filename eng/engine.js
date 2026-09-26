@@ -130,7 +130,7 @@
       if (cell.dataValidation) o.dv = clone(cell.dataValidation);
       cells.push(o);
     }
-    return { cells, height: row.height, merges: clone((merges && merges[r]) || []) };
+    return { cells, height: row.height, hidden: !!row.hidden, outline: row.outlineLevel || 0, merges: clone((merges && merges[r]) || []) };
   }
 
   // 수주풀 → 행 스냅샷 목록
@@ -349,6 +349,8 @@
       if (o && o.note) cell.note = clone(o.note); else if (cell.note) cell.note = undefined;
     }
     row.height = sn && sn.height ? sn.height : undefined;
+    row.hidden = !!(sn && sn.hidden);
+    row.outlineLevel = (sn && sn.outline) || 0;
   }
 
   function unmergeRows(ws, fromRow, toRow) {
@@ -364,8 +366,12 @@
     // 데이터 아래 빈 서식행(있으면) 스타일 보존
     const blank = snapRow(ws, oldLast + 1, L.maxCol, {});
     unmergeRows(ws, first, end);
+    rows.forEach((sn) => { sn.hidden = false; sn.outline = 0; });
+    blank.hidden = false; blank.outline = 0;
+    for (let c = 1; c <= L.maxCol + 5; c++) { const col = ws.getColumn(c); if (col.hidden) col.hidden = false; if (col.outlineLevel) col.outlineLevel = 0; }
     rows.forEach((sn, i) => writeRow(ws, first + i, sn, L.maxCol, pats));
     for (let r = newLast + 1; r <= end; r++) writeRow(ws, r, blank, L.maxCol, null);
+    for (let r = first; r <= ws.rowCount; r++) { const row = ws.getRow(r); if (row.hidden) row.hidden = false; if (row.outlineLevel) row.outlineLevel = 0; }
     rows.forEach((sn, i) => (sn.merges || []).forEach(([a, b]) => { if (b > a) ws.mergeCells(first + i, a, first + i, b); }));
     if (ws.autoFilter) {
       const af = typeof ws.autoFilter === 'string' ? ws.autoFilter : null;
@@ -403,16 +409,33 @@
     return null;
   }
 
+  // 방문실적 표에서 W 주차 열 찾기 — 없으면 다음 달 주차 열을 옆에 추가
+  function ensureWeekColumn(ws, W, warn) {
+    const h = findRowWith(ws, (t) => norm(t) === '4월이전');
+    if (!h) return null;
+    const hr = h.r, c0 = h.c;
+    const scan = () => { const w = []; for (let c = c0 + 1; c < c0 + 80; c++) { const t = text(ws.getCell(hr, c).value); if (isWeek(t)) w.push({ c, w: wk(t) }); else break; } return w; };
+    let weeks = scan();
+    let target = weeks.find((x) => x.w === W);
+    for (let guard = 0; !target && guard < 3 && weeks.length; guard++) {
+      const lastM = +monthOf(weeks[weeks.length - 1].w).replace('월', '');
+      const nextM = lastM % 12 + 1;
+      if (lastM !== 12 && weekOrder(W) < weekOrder(nextM + '월 1주')) break;
+      addMonthColumns(ws, hr, weeks[weeks.length - 1].c, nextM + '월', monthWeeks(nextM), sumMaxCol(ws) + 6);
+      weeks = scan();
+      target = weeks.find((x) => x.w === W);
+      if (warn) warn.push('방문실적 표에 ' + nextM + '월 주차 열을 ' + weeks.filter((x) => monthOf(x.w) !== nextM + '월').slice(-1)[0].w + ' 옆으로 추가했습니다 (합계/누계/당월은 오른쪽으로 이동).');
+    }
+    return { hr, c0, weeks, target };
+  }
+
   function updateVisitTable(ws, W) {
     const warn = [];
-    const h = findRowWith(ws, (t) => norm(t) === '4월이전');
-    if (!h) { warn.push('방문실적 표(4월 이전)를 찾지 못해 주차 열 갱신을 건너뜀'); return warn; }
-    const hr = h.r, c0 = h.c;
-    const weeks = [];
-    for (let c = c0 + 1; c < c0 + 80; c++) { const t = text(ws.getCell(hr, c).value); if (isWeek(t)) weeks.push({ c, w: wk(t) }); else break; }
-    const target = weeks.find((x) => x.w === W);
+    const e = ensureWeekColumn(ws, W, warn);
+    if (!e) { warn.push('방문실적 표(4월 이전)를 찾지 못해 주차 열 갱신을 건너뜀'); return warn; }
+    const { hr, c0, weeks, target } = e;
     if (!target) {
-      warn.push('템플릿 방문실적 표에 "' + W + '" 열이 없습니다. (월이 바뀌면 템플릿에 새 달 주차 열을 먼저 추가해야 합니다) — 주차 열 수식 갱신을 건너뜀');
+      warn.push('방문실적 표에 "' + W + '" 열을 만들 수 없어 주차 열 수식 갱신을 건너뜀');
       return warn;
     }
     const lastWeekCol = weeks[weeks.length - 1].c;
@@ -504,14 +527,14 @@
   function setField(sn, cols, f, v) { const c = cols[f]; if (c) { sn.cells[c - 1].v = v; delete sn.cells[c - 1].f; } }
   function fieldVal(sn, cols, f) { const c = cols[f]; return c ? sn.cells[c - 1].v : null; }
 
-  // 텍스트 행 높이 추정 (병합 폭 기준)
+  // 텍스트 행 높이 추정 (병합 폭 기준, 잘리지 않게 넉넉히)
   function estHeight(v, widthChars, fontSize, min) {
     const s = text(v);
-    const units = (line) => { let u = 0; for (const ch of line) u += ch.charCodeAt(0) > 0x2E80 ? 1.75 : 0.95; return u; };
-    const w = Math.max(8, widthChars * 1.02);
+    const units = (line) => { let u = 0; for (const ch of line) u += ch.charCodeAt(0) > 0x2E80 ? 2.0 : 1.05; return u; };
+    const w = Math.max(8, widthChars * 0.95);
     const lines = s.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(units(line) / w)), 0);
-    const lh = (fontSize || 10) * 1.4;
-    return Math.min(409, Math.max(min || 18, Math.round((lines * lh + 6) * 4) / 4));
+    const lh = (fontSize || 10) * 1.45;
+    return Math.min(409, Math.max(min || 18, Math.round((lines * lh + 10) * 4) / 4));
   }
   function spanWidth(ws, sn, col) {
     const m = (sn.merges || []).find(([a, b]) => a <= col && col <= b) || [col, col];
@@ -519,8 +542,24 @@
     return w;
   }
 
+  // 1. / 2. / 3. 항목 사이에 빈 줄 한 칸
+  function spaceSections(v) {
+    const one = (t) => {
+      const lines = String(t).split('\n'); const out = [];
+      lines.forEach((ln, i) => {
+        if (i > 0 && /^\d+\s*\.(?!\d)/.test(ln) && +/^\d+/.exec(ln)[0] >= 2 && out.length && out[out.length - 1].trim() !== '') out.push('');
+        out.push(ln);
+      });
+      return out.join('\n');
+    };
+    if (typeof v === 'string') return one(v);
+    if (v && v.richText) return { richText: v.richText.map((r, i) => Object.assign({}, r, { text: i === 0 ? one(r.text) : r.text.replace(/\n(\d+\s*\.(?!\d))/g, (m, x) => (+/^\d+/.exec(x)[0] >= 2 ? '\n\n' + x : m)) })) };
+    return v;
+  }
+
   function makeRow(style, cols, f, ws) {
     const sn = clone(style);
+    sn.hidden = false; sn.outline = 0;
     sn.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; });
     const put = (k, v) => setField(sn, cols, k, v === '' ? null : v);
     ['k', 'region', 'mgr', 'grp', 'code', 'name', 'task', 'stage', 'amt', 'period', 'text', 'addWeek', 'addText'].forEach((k) => { if (k in f) put(k, f[k]); });
@@ -537,81 +576,84 @@
   function codeVal(f) { return f.codeRaw != null && f.codeRaw !== '' ? clone(f.codeRaw) : (/^\d+$/.test(f.code) ? Number(f.code) : f.code); }
   function amtVal(f) { return typeof f.amtRaw === 'number' ? f.amtRaw : (f.amt == null ? null : f.amt); }
 
-  // 금주 방문 업체 후보 (금주방문 = 방문실적 신규/재방문이 보고주차)
+  // 금주 방문 업체 후보. 자동 배치는 LE 동행방문뿐이고 나머지는 화면에서 고른다.
   function weekCandidates(rows, L, W, bonbuKeys) {
     return rows.map((sn, i) => ({ sn, i, f: fields(sn, L) })).filter((x) => x.f.newv === W || x.f.rev === W || x.f.le === W).map((x) => {
       const key = x.sn.key;
-      const visit = x.f.newv === W || x.f.rev === W;
       return {
-        key, idx: x.i, region: x.f.region, name: x.f.name, code: x.f.code, mgr: x.f.mgr, stage: x.f.stage, amt: x.f.amt,
-        isNew: x.f.newv === W, isRev: x.f.rev === W, isLE: x.f.le === W, visit,
-        place: !visit ? 'none' : (bonbuKeys.has(key) ? 'bonbu' : 'main'),
+        key, idx: x.i, region: x.f.region, name: x.f.name, code: x.f.code, mgr: x.f.mgr, stage: x.f.stage, amt: x.f.amt, task: x.f.task,
+        isNew: x.f.newv === W, isRev: x.f.rev === W, isLE: x.f.le === W, visit: x.f.newv === W || x.f.rev === W,
+        inBonbu: bonbuKeys.has(key), place: 'none',
       };
     }).sort((a, b) => (STAGE_RANK[b.stage] || 0) - (STAGE_RANK[a.stage] || 0) || (b.amt || 0) - (a.amt || 0) || a.idx - b.idx);
   }
 
+  const REGION_ORDER = { '경북권역': 0, '부산권역': 1, '경남권역': 2 };
+  const listKey = (sn, cols) => trim(text(fieldVal(sn, cols, 'code'))) + '|' + trim(text(fieldVal(sn, cols, 'name')));
+
+  // opts: { selection: {key: 'main'|'rev'|'none'}, bonbu: [key...], manual, addBonbu, fixText }
   function rebuildSections(ws, info, rows, L, W, opts) {
     const maxCol = info.maxCol;
     const byKey = {}; rows.forEach((sn) => { if (!byKey[sn.key]) byKey[sn.key] = sn; });
     const F = (sn) => fields(sn, L);
-    const secs = info.secs;
+    // ◎ 금주 주요 업체(본부) 섹션은 없앤다 — 본부 반영은 리스트의 추가진행 주차/현황으로
+    let secs = info.secs.filter((s) => s.kind !== 'bonbuWeek');
+    secs.forEach((s) => { if (/^▶본부주요업체/.test(s.title)) s.tail = []; });
     const mainSec = secs.find((s) => s.kind === 'main');
-    const log = { bonbuAdded: [], bonbuUpdated: [] };
+    const log = { bonbuAdded: [], bonbuUpdated: [], sheetFixes: 0 };
     const choose = opts.selection || {};
+    const bonbuSel = new Set(opts.bonbu || []);
 
-    // 본부 리스트 갱신
+    // 본부 니즈/견적 리스트
     const list = secs.find((s) => s.kind === 'bonbuList');
-    let bonbuWeekRows = [];
     if (list && list.cols) {
-      const keyOf = (sn) => trim(text(fieldVal(sn, list.cols, 'code'))) + '|' + trim(text(fieldVal(sn, list.cols, 'name')));
-      const have = new Set(list.data.map(keyOf));
-      // 금주 방문한 리스트 업체 → 추가진행 주차/현황
+      const have = new Set(list.data.map((sn) => listKey(sn, list.cols)));
+      // 화면에서 '본부'로 고른 업체 중 이미 리스트에 있는 업체 → 추가진행 주차/현황
       list.data.forEach((sn) => {
-        const p = byKey[keyOf(sn)]; if (!p) return;
+        const k = listKey(sn, list.cols); const p = byKey[k];
+        if (!p || !bonbuSel.has(k)) return;
         const f = F(p);
-        if (f.newv === W || f.rev === W) {
-          if (text(fieldVal(sn, list.cols, 'addWeek')) !== W || text(fieldVal(sn, list.cols, 'addText')) !== f.needsText) log.bonbuUpdated.push(f.name);
-          setField(sn, list.cols, 'addWeek', W);
-          setField(sn, list.cols, 'addText', clone(f.needs));
-          bonbuWeekRows.push(f);
-        }
+        setField(sn, list.cols, 'addWeek', W);
+        setField(sn, list.cols, 'addText', clone(f.needs));
+        log.bonbuUpdated.push(f.name);
       });
-      // 새로 니즈확인/견적/계약 단계가 된 업체 추가 (수주풀 순서 위치)
-      if (opts.addBonbu !== false) {
-        const style = list.data[list.data.length - 1] || list.header;
-        const order = {}; rows.forEach((sn, i) => { if (!(sn.key in order)) order[sn.key] = i; });
-        rows.forEach((sn) => {
-          const f = F(sn);
-          if (isOldRow(f) || !KEY_STAGES.includes(f.stage) || have.has(sn.key)) return;
-          const nr = clone(style);
-          nr.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; });
-          const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: clone(f.needs) };
-          Object.keys(vals).forEach((k) => setField(nr, list.cols, k, vals[k]));
-          const my = order[sn.key];
-          let at = list.data.findIndex((x) => (order[keyOf(x)] == null ? 1e9 : order[keyOf(x)]) > my);
-          if (at < 0) at = list.data.length;
-          list.data.splice(at, 0, nr);
-          have.add(sn.key);
-          log.bonbuAdded.push(f.name);
-        });
-      }
-      list.titleRow.cells[1].v = String(text(list.titleRow.cells[1].v)).replace(/\d+\s*업체/, list.data.length + '업체');
+      // 새로 추가: 니즈확인/견적/계약이 된 업체(자동) + 화면에서 '본부'로 고른 업체 → 맨 아래에 권역 순, 매출 상위 순
+      const style = list.data[list.data.length - 1] || list.header;
+      const adds = [];
+      rows.forEach((sn) => {
+        if (have.has(sn.key)) return;
+        const f = F(sn);
+        const auto = opts.addBonbu !== false && !isOldRow(f) && KEY_STAGES.includes(f.stage);
+        if (!auto && !bonbuSel.has(sn.key)) return;
+        have.add(sn.key);
+        adds.push({ f, picked: bonbuSel.has(sn.key) });
+      });
+      adds.sort((a, b) => (REGION_ORDER[a.f.region] ?? 9) - (REGION_ORDER[b.f.region] ?? 9) || (b.f.amt || 0) - (a.f.amt || 0));
+      adds.forEach(({ f, picked }) => {
+        const nr = clone(style);
+        nr.hidden = false; nr.outline = 0;
+        nr.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; });
+        const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: clone(f.needs) };
+        if (picked) { vals.addWeek = W; }
+        Object.keys(vals).forEach((k) => setField(nr, list.cols, k, vals[k]));
+        list.data.push(nr);
+        log.bonbuAdded.push(f.name);
+      });
     }
-    const bonbuKeys = new Set(list ? list.data.map((sn) => trim(text(fieldVal(sn, list.cols, 'code'))) + '|' + trim(text(fieldVal(sn, list.cols, 'name')))) : []);
+    const bonbuKeys = new Set(list ? list.data.map((sn) => listKey(sn, list.cols)) : []);
     const cands = weekCandidates(rows, L, W, bonbuKeys);
 
-    const coRow = (sec, f, k, txt) => {
+    const coRow = (sec, f, k) => {
       const style = sec.data[0] || (mainSec && mainSec.data[0]) || sec.tail[0] || sec.header;
       const cols = sec.data[0] || !mainSec ? sec.cols : mainSec.cols;
-      return makeRow(style, cols, { k, region: f.region, mgr: f.mgr, grp: f.grp, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: txt == null ? clone(f.needs) : txt }, ws);
+      return makeRow(style, cols, { k, region: f.region, mgr: f.mgr, grp: f.grp, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: spaceSections(clone(f.needs)) }, ws);
     };
-    const pick = (place) => cands.filter((c) => (choose[c.key] || c.place) === place).map((c) => F(rows[c.idx]));
+    const pick = (place) => cands.filter((c) => c.visit && (choose[c.key] || c.place) === place).map((c) => F(rows[c.idx]));
 
     secs.forEach((sec) => {
       if (sec.kind === 'main') sec.data = pick('main').map((f) => coRow(sec, f, f.newv === W ? '신규' : '기존'));
       else if (sec.kind === 'rev') sec.data = pick('rev').map((f) => coRow(sec, f, '기존'));
       else if (sec.kind === 'le') sec.data = cands.filter((c) => c.isLE && choose['LE:' + c.key] !== 'none').map((c) => F(rows[c.idx])).map((f) => coRow(sec, f, f.newv === W ? '신규' : '기존'));
-      else if (sec.kind === 'bonbuWeek') sec.data = bonbuWeekRows.map((f) => coRow(sec, f, W, clone(f.needs)));
       else if (opts.manual && opts.manual[sec.kind]) {
         const style = sec.data[0] || sec.tail[0] || sec.header;
         sec.data = opts.manual[sec.kind].map((vals) => {
@@ -619,13 +661,28 @@
           const hdrCols = sec.header.cells.map((c, i) => (text(c.v) ? i + 1 : null)).filter(Boolean);
           vals.forEach((v, j) => { const c = hdrCols[j]; if (c) sn.cells[c - 1].v = v === '' ? null : v; });
           const tc = hdrCols[hdrCols.length - 1];
-          sn.height = estHeight(vals[vals.length - 1], spanWidth(ws, sn, tc), (sn.cells[tc - 1].s.font && sn.cells[tc - 1].s.font.size) || 10, sn.height || 18);
+          sn.height = estHeight(vals[vals.length - 1], spanWidth(ws, sn, tc), (sn.cells[tc - 1].s.font && sn.cells[tc - 1].s.font.size) || 10, Math.min(sn.height || 18, 27));
           return sn;
         });
       }
+      // 앞시트의 옮겨 온 서술도 수주풀과 같은 규칙으로 오탈자·띄어쓰기 수정
+      if (opts.fixText !== false && ['leTarget', 'leNext', 'contract', 'bonbuList'].includes(sec.kind)) {
+        sec.data.forEach((sn) => sn.cells.forEach((c) => {
+          if (typeof c.v === 'string' && (c.v.length >= 15 || c.v.includes('\n')) || (c.v && c.v.richText)) {
+            const lg = []; c.v = fixValue(c.v, lg); if (lg.length) log.sheetFixes++;
+          }
+        }));
+      }
     });
 
-    writeSections(ws, info.start, info.end, secs, maxCol);
+    const pos = writeSections(ws, info.start, info.end, secs, maxCol);
+    // 본부 리스트 제목: 업체 수를 수식으로 (행을 더 넣어도 자동 갱신)
+    if (list && list.cols && pos.list) {
+      const { title, first, last } = pos.list;
+      const nameCol = colLetter(list.cols.name);
+      const label = String(text(list.titleRow.cells[1].v)).replace(/\s*\d+\s*업체\s*$/, '');
+      ws.getCell(title, 2).value = { formula: '"' + label.replace(/"/g, '""') + ' "&COUNTA(' + nameCol + first + ':' + nameCol + Math.max(first, last) + ')&"업체"', result: label + ' ' + list.data.length + '업체' };
+    }
     return { cands, log };
   }
 
@@ -633,7 +690,15 @@
   function writeSections(ws, start, oldEnd, secs, maxCol) {
     const dvCells = [];
     const seq = [];
-    secs.forEach((s) => { seq.push(s.titleRow); if (s.header) seq.push(s.header); s.data.forEach((d) => seq.push(d)); s.tail.forEach((t) => seq.push(t)); });
+    const pos = {};
+    secs.forEach((s) => {
+      const t = start + seq.length;
+      seq.push(s.titleRow); if (s.header) seq.push(s.header);
+      const first = start + seq.length;
+      s.data.forEach((d) => seq.push(d));
+      if (s.kind === 'bonbuList') pos.list = { title: t, first, last: start + seq.length - 1 };
+      s.tail.forEach((x) => seq.push(x));
+    });
     const newEnd = start + seq.length - 1;
     const end = Math.max(oldEnd, newEnd);
     unmergeRows(ws, start, end);
@@ -645,7 +710,8 @@
     for (let r = newEnd + 1; r <= end; r++) writeRow(ws, r, null, maxCol, null);
     seq.forEach((sn, i) => (sn.merges || []).forEach(([a, b]) => { if (b > a) ws.mergeCells(start + i, a, start + i, b); }));
     dvCells.forEach(([r, c, dv]) => { ws.getCell(r, c).dataValidation = dv; });
-    return newEnd;
+    pos.end = newEnd;
+    return pos;
   }
 
   // ---------- 붙여넣기로 지난주 제출본 복원 ----------
@@ -797,12 +863,185 @@
     const maxCol = sumMaxCol(sum);
     const kitInfo = readSections(sum, maxCol);
     const grid = parseTSV(p.summary);
-    const off = fillSummaryTop(sum, grid, kitInfo.start - 1, maxCol);
+    const hp = locate(grid, (t) => t === '4월이전');
+    if (hp) {
+      let lastLabel = null; const row = grid[hp.r];
+      for (let c = hp.c + 1; c < row.length; c++) { if (isWeek(row[c])) lastLabel = wk(row[c]); else break; }
+      if (lastLabel) ensureWeekColumn(sum, lastLabel, null);
+    }
+    const off = fillSummaryTop(sum, grid, kitInfo.start - 1, sumMaxCol(sum));
     fillSummarySections(sum, grid, off, kitInfo, maxCol);
     const third = wb.worksheets.find((s) => s.state === 'visible' && s !== pool && s !== sum);
     let thirdRows = 0;
     if (third) thirdRows = fillThird(third, trim(p.third) ? parseTSV(p.third) : null);
     return { wb, info: { poolRows: n, thirdRows, thirdName: third ? third.name : null, week: wk(text(sum.getCell('X1').value)) } };
+  }
+
+
+  // ---------- 오탈자·띄어쓰기 자동 수정 ----------
+  // 확실한 오탈자만 사전으로 고치고, 띄어쓰기는 기계적으로 안전한 규칙만 적용한다. 수정 내역은 기록해 화면에 보여준다.
+  const TYPO = [
+    [/현항/g, '현황'], [/형황/g, '현황'], [/무인지제차/g, '무인지게차'], [/없슴/g, '없음'], [/학인/g, '확인'],
+    [/효률/g, '효율'], [/셔틀렉/g, '셔틀랙'], [/(^|[^가-힣])렉(?=[가-힣\s,.)/(]|$)/gm, '$1랙'], [/(\d)단렉/g, '$1단랙'],
+    [/이였/g, '이었'], [/인플플렌자/g, '인플루엔자'], [/복음밥/g, '볶음밥'], [/따루/g, '따로'], [/(^|[^가-힣])부관(?=\s)/gm, '$1보관'],
+    [/주가 수요/g, '추가 수요'], [/대하 니즈/g, '대한 니즈'], [/증성/g, '증설'], [/(^|[^가-힣])청고(?=[\s,.)])/gm, '$1창고'],
+    [/(^|[^가-힣])내동(?=육|제품|창고|보관|,|\s*창고)/gm, '$1냉동'], [/내장육/g, '냉장육'], [/본시 및/g, '본사 및'], [/청북 청주/g, '충북 청주'],
+    [/로 인애/g, '로 인해'], [/지동상하차/g, '자동상하차'], [/예정이였/g, '예정이었'],
+  ];
+  const SPACE = [
+    [/([^\s\n])[ \t]{2,}(?=\S)/g, '$1 ', '공백'],                 // 줄 중간 중복 공백
+    [/[ \t]+$/gm, '', '~줄끝 공백'],
+    [/([가-힣A-Za-z)])\s+,(?=\s|[가-힣])/g, '$1,', '쉼표 앞 공백'],
+    [/([가-힣A-Za-z)]),(?=[가-힣A-Za-z(])/g, '$1, ', '쉼표 뒤 띄움'],
+    [/\(\s+(?=\S)/g, '(', '괄호 공백'], [/(\S)\s+\)/g, '$1)', '괄호 공백'],
+    [/\n{3,}/g, '\n\n', '~빈 줄'], [/^\n+/, '', '~앞 빈 줄'], [/\s+$/, '', '~끝 공백'],
+  ];
+  function fixText(t, log, noSpace) {
+    if (t == null) return t;
+    let s = String(t);
+    TYPO.forEach(([re, to]) => {
+      s = s.replace(re, (...m) => {
+        const from = m[0];
+        const res = from.replace(new RegExp(re.source, re.flags.replace('g', '')), to);
+        if (res !== from) log.push(trim(from) + '→' + trim(res));
+        return res;
+      });
+    });
+    if (!noSpace) SPACE.forEach(([re, to, label]) => { const before = s; s = s.replace(re, to); if (s !== before && label[0] !== '~') log.push('#' + label); });
+    return s;
+  }
+  function fixValue(v, log) {
+    if (v == null) return v;
+    if (typeof v === 'string') return fixText(v, log);
+    if (v.richText) return { richText: v.richText.map((r) => Object.assign({}, r, { text: fixText(r.text, log, true) })) };
+    return v;
+  }
+  const periodFix = (v, log) => { if (typeof v !== 'string') return v; const r = v.replace(/(\d{2})년\s*(\d)\s*Q/, '$1년 $2Q'); if (r !== v) log.push('#사업시기'); return r; };
+  function summarizeFix(log) {
+    const typos = [...new Set(log.filter((x) => x[0] !== '#'))];
+    const sp = log.filter((x) => x[0] === '#').length;
+    return (typos.length ? '오타 ' + typos.join(', ') : '') + (sp ? (typos.length ? ' · ' : '') + '띄어쓰기 ' + sp + '곳' : '');
+  }
+  // 수주풀 행 전체에 적용 (추진과제, Needs, 사업시기)
+  function fixRows(rows, L) {
+    const out = {};
+    rows.forEach((sn) => {
+      const log = [];
+      [L.task, L.needs].forEach((c) => { if (c && !sn.cells[c - 1].f) sn.cells[c - 1].v = fixValue(sn.cells[c - 1].v, log); });
+      if (L.period && !sn.cells[L.period - 1].f) sn.cells[L.period - 1].v = periodFix(sn.cells[L.period - 1].v, log);
+      if (log.length) out[sn.key] = summarizeFix(log);
+    });
+    return out;
+  }
+  // 비고(AF)·월구분(AG)이 비어 있으면 채움: 비고 ← 그룹/일반(없으면 '신규'), 월구분 ← 첫 방문월
+  function fillNoteMonth(rows, L, W) {
+    rows.forEach((sn) => {
+      const f = fields(sn, L);
+      if (L.note && !trim(text(sn.cells[L.note - 1].v))) sn.cells[L.note - 1].v = f.grp || '신규';
+      if (L.month && !trim(text(sn.cells[L.month - 1].v))) sn.cells[L.month - 1].v = monthOf(f.newv) || monthOf(f.rev) || monthOf(f.plan) || monthOf(W);
+    });
+  }
+
+  // ---------- 사업구분 ↔ 추진과제 일치 점검 ----------
+  const FLAG_KW = [
+    ['스태커크레인', /스태커/], ['멀티셔틀시스템', /셔틀|4\s*way|2\s*way/i], ['자동상하차', /상하차/], ['복합로봇자동화', /복합\s*로봇/],
+    ['AGVAMR', /AGV|AMR/i], ['무인지게차AGF', /무인\s*지게차|AGF/i], ['로봇파렛타이져', /파렛타이|팔레타이|파레타이/], ['모노레일', /모노레일/],
+    ['자동소터로봇소터', /소터/], ['기타설비', /기타\s*설비/],
+  ];
+  const WAREHOUSE = /자동화?\s*창고|자동\s*창고|자동화\s*랙|ASRS/i; // 스태커 또는 멀티셔틀 중 하나
+  const LABEL = { '스태커크레인': '스태커크레인', '멀티셔틀시스템': '멀티셔틀', '자동상하차': '자동상하차', '복합로봇자동화': '복합로봇', 'AGVAMR': 'AGV/AMR', '무인지게차AGF': '무인지게차', '로봇파렛타이져': '로봇파렛타이져', '모노레일': '모노레일', '자동소터로봇소터': '소터', '기타설비': '기타설비' };
+  function checkRow(sn, L) {
+    const task = trim(text(sn.cells[L.task - 1].v));
+    const on = {}; let any = false;
+    Object.keys(LABEL).forEach((k) => { const c = L.headers[k]; if (c && trim(text(sn.cells[c - 1].v)).toUpperCase() === 'O') { on[k] = true; any = true; } });
+    const issues = [];
+    if (!task) issues.push('추진과제 없음');
+    if (!any) issues.push('사업구분 O 표시 없음');
+    const need = [];
+    FLAG_KW.forEach(([k, re]) => { if (re.test(task)) need.push(k); });
+    need.forEach((k) => { if (!on[k]) issues.push('추진과제 「' + task + '」인데 ' + LABEL[k] + ' 표시 없음'); });
+    if (WAREHOUSE.test(task) && !on['스태커크레인'] && !on['멀티셔틀시스템'] && !need.includes('스태커크레인') && !need.includes('멀티셔틀시스템'))
+      issues.push('추진과제 「' + task + '」(자동화창고)인데 스태커/멀티셔틀 표시 없음');
+    // 추진과제가 구체적 설비만 적혀 있는데 다른 구분에 표시된 경우
+    const specific = need.length || WAREHOUSE.test(task);
+    if (specific && !/설비|자동화$|엔지니어링|WMS|WCS|TMS|랙/.test(task.replace(/자동화\s*창고/g, ''))) {
+      Object.keys(on).forEach((k) => {
+        const ok = need.includes(k) || (WAREHOUSE.test(task) && (k === '스태커크레인' || k === '멀티셔틀시스템'));
+        if (!ok) issues.push('확인: ' + LABEL[k] + ' 표시는 추진과제 「' + task + '」에 없음');
+      });
+    }
+    return issues;
+  }
+  function checkRows(rows, L, keys) {
+    const out = {};
+    rows.forEach((sn) => { if (keys && !keys.has(sn.key)) return; const i = checkRow(sn, L); if (i.length) out[sn.key] = i; });
+    return out;
+  }
+
+  // ---------- 월 전환: 방문실적 표에 새 달 주차 열 추가 ----------
+  // 9월 4주 다음(옆 열)에 새 달 주차 열을 넣고, 오른쪽 합계/누계/당월과 숨김 보조 열(AD~)은 그만큼 오른쪽으로 옮긴다.
+  function addMonthColumns(ws, hr, lastWeekCol, month, nWeeks, maxCol) {
+    const n = nWeeks;
+    const r0 = hr - 1, r1 = (() => { let r = hr + 1; while (trim(text(ws.getCell(r, 2).value))) r++; return r - 1; })();
+    const inBand = (r) => r >= r0 && r <= r1;
+    const hiddenStart = (() => { for (let c = lastWeekCol + 1; c <= maxCol + 10; c++) if (ws.getColumn(c).hidden) return c; return maxCol + 1; })();
+    const moves = (r, c) => (inBand(r) ? c > lastWeekCol : c >= hiddenStart);
+    // 1) 수식 참조 보정 (같은 시트 참조만)
+    const shiftRefs = (f) => {
+      let out = '', i = 0, inQ = false, inS = false;
+      while (i < f.length) {
+        const ch = f[i];
+        if (ch === '"') { inQ = !inQ; out += ch; i++; continue; }
+        if (!inQ && ch === "'") { inS = !inS; out += ch; i++; continue; }
+        if (inQ || inS) { out += ch; i++; continue; }
+        const m = /^(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\d(])/.exec(f.slice(i));
+        const prev = i ? f[i - 1] : '';
+        if (m && !/[A-Za-z0-9_.!]/.test(prev)) {
+          const c = colNum(m[2]), r = +m[4];
+          out += m[1] + (moves(r, c) ? colLetter(c + n) : m[2]) + m[3] + m[4]; i += m[0].length; continue;
+        }
+        out += ch; i++;
+      }
+      return out;
+    };
+    const last = ws.rowCount;
+    for (let r = 1; r <= last; r++) for (let c = 1; c <= maxCol + n + 4; c++) { const x = ws.getCell(r, c); if (x.type === 6 && !x.value.sharedFormula) { const nf = shiftRefs(x.formula); if (nf !== x.formula) x.value = { formula: nf }; } }
+    // 2) 병합 목록 보관 후 해제
+    const merges = Object.values(ws._merges || {}).map((rg) => Object.assign({}, rg.model || rg));
+    merges.forEach((m) => ws.unMergeCells(m.top, m.left, m.bottom, m.right));
+    // 3) 셀 이동 (오른쪽부터)
+    for (let r = 1; r <= last; r++) {
+      const cmax = maxCol + 4;
+      for (let c = cmax; c >= 1; c--) {
+        if (!moves(r, c)) continue;
+        const src = ws.getCell(r, c), dst = ws.getCell(r, c + n);
+        dst.value = src.type === 6 ? { formula: src.formula } : clone(src.value); dst.style = clone(src.style || {});
+        if (src.note) dst.note = clone(src.note);
+        src.value = null; src.style = {};
+      }
+    }
+    // 4) 새 주차 열: 마지막 주 열 서식 복제
+    for (let k = 1; k <= n; k++) {
+      const c = lastWeekCol + k;
+      for (let r = r0; r <= r1; r++) { const tpl = ws.getCell(r, lastWeekCol); const x = ws.getCell(r, c); x.style = clone(tpl.style || {}); x.value = r === hr ? month + ' ' + k + '주' : null; }
+    }
+    // 5) 병합 복원 (방문계획/방문실적 머리글은 확장)
+    merges.forEach((m) => {
+      let { top, left, bottom, right } = m;
+      if (inBand(top) && left <= lastWeekCol && right === lastWeekCol) right += n;
+      else if (moves(top, left)) { left += n; right += n; }
+      ws.mergeCells(top, left, bottom, right);
+    });
+    // 6) 열 숨김/너비: 숨김 보조 열 묶음도 오른쪽으로
+    const hid = []; for (let c = hiddenStart; c <= maxCol + 4; c++) if (ws.getColumn(c).hidden) hid.push([c, ws.getColumn(c).width, ws.getColumn(c).outlineLevel]);
+    hid.forEach(([c]) => { ws.getColumn(c).hidden = false; ws.getColumn(c).outlineLevel = 0; });
+    hid.forEach(([c, w, o]) => { const col = ws.getColumn(c + n); col.width = w; col.hidden = true; col.outlineLevel = o; });
+    for (let k = 1; k <= n; k++) { const col = ws.getColumn(lastWeekCol + k); if (!col.width || col.width < 8.75) col.width = ws.getColumn(lastWeekCol).width; }
+  }
+  function monthWeeks(month, refWeek) {
+    const t = new Date(); let y = t.getFullYear();
+    if (month > t.getMonth() + 3) y -= 1;
+    return thursdays(y, month);
   }
 
   // 과거 양식에서 넘어온 숨김 정의된 이름(수천 개, #REF! 등)을 제거하고 연다 — ExcelJS 로딩이 수십 초 → 1초 미만
@@ -837,6 +1076,9 @@
       else if (inp.type === 'paste' && trim(inp.text)) { const r = readRegionPaste(inp.text, region, TL); inputs[region] = { mode: 'paste', rows: r.rows }; }
     });
     const { rows, log } = mergeRows(tpl.rows, inputs, TL);
+    const fixes = opts.fixText === false ? {} : fixRows(rows, TL);
+    const checks = checkRows(rows, TL);
+    const changedKeys = new Set(); log.forEach((l) => { l.updated.forEach((u) => changedKeys.add(u.code + '|' + u.name)); l.added.forEach((u) => changedKeys.add(u.code + '|' + u.name)); });
     // 보고주차 추정: 입력 권역 행의 최신 방문주차, 없으면 템플릿 X1 다음 주
     const tplWeek = wk(text(sum.getCell('X1').value));
     let latest = null;
@@ -844,7 +1086,7 @@
       const f = fields(sn, TL); [f.newv, f.rev, f.le].forEach((w) => { if (isWeek(w) && (!latest || weekOrder(w) > weekOrder(latest))) latest = w; });
     }));
     const suggested = latest && weekOrder(latest) > weekOrder(tplWeek) ? latest : nextWeek(tplWeek);
-    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected };
+    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs) };
   }
 
   function preview(ctx, W) {
@@ -861,6 +1103,7 @@
     const warn = [];
     // 1) 수주풀
     const pats = formulaPatterns(tpl.rows, TL);
+    fillNoteMonth(ctx.rows, TL, W);
     writePool(pool, TL, ctx.rows, tpl.lastRow, pats);
     // 2) 요약 시트 주차
     const x1 = sum.getCell('X1');
@@ -888,7 +1131,7 @@
       if (c.type === 6) {
         const v = c.value;
         if (v.sharedFormula) c.value = { formula: c.formula };
-        else if ('result' in v) c.value = { formula: v.formula };
+        else if ('result' in v && !/^"/.test(v.formula)) c.value = { formula: v.formula };
       }
     }));
   }

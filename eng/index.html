@@ -54,6 +54,13 @@
   .kv { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; margin-top: 8px; } .kv b { color: var(--navy); }
   .how { background: var(--soft); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: #394256; margin: 0 0 10px; }
   .how b { color: var(--navy); }
+  .box h3 .tools { display: inline-flex; gap: 4px; align-items: center; }
+  button.mini, label.mini { padding: 2px 8px; font-size: 11.5px; border-radius: 6px; }
+  .chk { font-size: 12px; } .chk.bad { color: var(--warn); } .chk.warn { color: #8a5a00; } .chk.ok { color: var(--ok); }
+  .fix { font-size: 12px; color: #394256; }
+  #candBody td, #checkWrap td { white-space: nowrap; }
+  td.wrap, #candBody td.wrap, #checkWrap td.wrap { white-space: normal; min-width: 180px; max-width: 320px; }
+  #candBody td:nth-child(2) { white-space: normal; min-width: 130px; }
   footer { color: var(--sub); font-size: 12px; text-align: center; padding: 8px 16px 28px; }
 </style>
 </head>
@@ -67,9 +74,9 @@
     <h2><span class="step">1</span>지난주 제출본 붙여넣기</h2>
     <p class="how">지난주 제출본에서 시트마다 <b>시트 왼쪽 위 모서리 클릭(또는 Ctrl+A) → Ctrl+C</b> 후 아래 칸에 <b>Ctrl+V</b>. 필터가 걸려 있으면 먼저 해제하세요.</p>
     <div class="grid3">
-      <div class="box" id="box_sum"><h3>영남영업본부</h3><textarea id="p_sum" placeholder="영남영업본부 시트 전체 붙여넣기"></textarea><div class="st" id="s_sum"></div></div>
-      <div class="box" id="box_pool"><h3>영남대상업체(수주풀)</h3><textarea id="p_pool" placeholder="수주풀 시트 전체 붙여넣기"></textarea><div class="st" id="s_pool"></div></div>
-      <div class="box" id="box_third"><h3>3번째 시트 <span class="opt">재영업 등 · 선택</span></h3><textarea id="p_third" placeholder="재영업 시트 전체 붙여넣기 (비우면 머리글만)"></textarea><div class="st" id="s_third"></div></div>
+      <div class="box" id="box_sum"><h3><span>영남영업본부 </span><span class="tools"><button class="mini" data-reset="p_sum">초기화</button></span></h3><textarea id="p_sum" placeholder="영남영업본부 시트 전체 붙여넣기"></textarea><div class="st" id="s_sum"></div></div>
+      <div class="box" id="box_pool"><h3><span>영남대상업체(수주풀) </span><span class="tools"><button class="mini" data-reset="p_pool">초기화</button></span></h3><textarea id="p_pool" placeholder="수주풀 시트 전체 붙여넣기"></textarea><div class="st" id="s_pool"></div></div>
+      <div class="box" id="box_third"><h3><span>3번째 시트 <span class="opt">재영업 등 · 선택</span></span><span class="tools"><button class="mini" data-reset="p_third">초기화</button></span></h3><textarea id="p_third" placeholder="재영업 시트 전체 붙여넣기 (비우면 머리글만)"></textarea><div class="st" id="s_third"></div></div>
     </div>
     <div class="row" style="margin-top:10px">
       <button id="useLast" hidden></button>
@@ -94,10 +101,11 @@
       <button id="previewBtn" disabled>병합 미리보기</button>
     </div>
     <div id="mergeLog" class="log" style="margin-top:10px"></div>
+    <div id="checkWrap" hidden style="margin-top:12px"></div>
     <div id="candWrap" hidden style="margin-top:12px">
-      <p class="hint">이번 주 방문 업체입니다. ‘배치’로 <b>▶ 금주 주요 업체</b>에 넣을 업체를 고르세요. 서술(주요 이슈 및 고객사 Needs)은 수주풀 원문 그대로 옮겨집니다. 본부 니즈/견적 리스트 업체는 <b>◎ 금주 주요 업체</b>와 리스트의 추가진행 주차/현황에 자동 반영됩니다.</p>
+      <p class="hint">이번 주 방문 업체입니다. 자동 배치는 <b>LE 동행방문 → ▶ 전주 LE 동행방문 업체</b>뿐이고, 나머지는 직접 고르세요. <b>배치</b>: ▶ 금주 주요 업체 / ▶ 전주 재방문 업체. <b>본부</b>: 체크하면 ◎ 본부 니즈/견적 리스트에 반영(리스트에 있으면 추가진행 주차·현황 갱신, 없으면 맨 아래 추가). <b>점검</b>: 사업구분 O 표시 ↔ 추진과제 일치 여부.</p>
       <div class="tablewrap"><table>
-        <thead><tr><th>권역</th><th>업체명</th><th>담당자</th><th>단계</th><th class="num">예상매출</th><th>방문</th><th>배치</th></tr></thead>
+        <thead><tr><th>권역</th><th>업체명</th><th>담당자</th><th>단계</th><th class="num">예상매출</th><th>방문</th><th>배치</th><th>본부</th><th>점검(이상유무)</th><th>수정이력</th></tr></thead>
         <tbody id="candBody"></tbody>
       </table></div>
     </div>
@@ -115,7 +123,8 @@
     <h2><span class="step">5</span>제출본 만들기</h2>
     <div class="row">
       <button class="primary" id="buildBtn" disabled>엑셀 제출본 만들기</button>
-      <label style="font-size:13px"><input type="checkbox" id="addBonbu" checked> 새로 니즈확인/견적/계약이 된 업체를 본부 리스트에 추가</label>
+      <label style="font-size:13px"><input type="checkbox" id="addBonbu" checked> 새로 니즈확인/견적/계약이 된 업체를 본부 리스트 맨 아래에 추가(권역·매출순)</label>
+      <label style="font-size:13px"><input type="checkbox" id="fixText" checked> 오탈자·띄어쓰기 자동 수정</label>
     </div>
     <div id="buildMsg"></div>
   </section>
@@ -134,7 +143,7 @@
   const REG = E.REGIONS;
   const LS_KEY = 'eng-weekly-last-output';
   // tpl: {type:'paste'} | {type:'file', bytes, name}
-  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {} };
+  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, ctx: null };
 
   const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
   const readFile = (f) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(new Uint8Array(r.result)); r.onerror = no; r.readAsArrayBuffer(f); });
@@ -189,9 +198,12 @@
   // ---- 권역 ----
   function renderRegions() {
     $('regions').innerHTML = REG.map((r) =>
-      '<div class="box" id="rbox_' + r + '"><h3>' + r + ' <label class="btn" style="padding:2px 8px;font-size:11.5px">엑셀<input type="file" accept=".xlsx" data-reg="' + r + '"></label></h3>' +
+      '<div class="box" id="rbox_' + r + '"><h3><span>' + r + '</span><span class="tools"><label class="btn mini">엑셀<input type="file" accept=".xlsx" data-reg="' + r + '"></label><button class="mini" data-rreset="' + r + '">초기화</button></span></h3>' +
       '<textarea data-reg="' + r + '" placeholder="' + r + ' 담당 파일의 수주풀 시트 전체 붙여넣기"></textarea><div class="st" id="rs_' + r + '"></div></div>').join('');
     $('regions').querySelectorAll('textarea').forEach((el) => el.addEventListener('input', debounce(() => setRegionText(el.dataset.reg, el.value), 300)));
+    $('regions').querySelectorAll('[data-rreset]').forEach((el) => el.addEventListener('click', () => {
+      const r = el.dataset.rreset; $('regions').querySelector('textarea[data-reg="' + r + '"]').value = ''; setRegionText(r, '');
+    }));
     $('regions').querySelectorAll('input[type=file]').forEach((el) => el.addEventListener('change', async (e) => {
       const f = e.target.files[0]; if (!f) return;
       state.regions[el.dataset.reg] = { type: 'file', name: f.name, bytes: await readFile(f) };
@@ -213,7 +225,7 @@
     const ready = !!state.tplRows;
     $('previewBtn').disabled = !ready;
     $('buildBtn').disabled = !ready;
-    $('candWrap').hidden = true; $('mergeLog').innerHTML = '';
+    $('candWrap').hidden = true; $('checkWrap').hidden = true; $('mergeLog').innerHTML = '';
     state.cands = [];
   }
 
@@ -246,18 +258,39 @@
     }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>';
   }
 
+  function checkCell(issues) {
+    if (!issues || !issues.length) return '<span class="chk ok">✓ 정상</span>';
+    const bad = issues.filter((x) => !/^확인:/.test(x));
+    return '<span class="chk ' + (bad.length ? 'bad' : 'warn') + '">' + (bad.length ? '⚠ 이상 ' : '확인 ') + issues.length + '</span><br><span class="muted" style="font-size:11.5px">' + esc(issues.join(' / ')) + '</span>';
+  }
   function renderCands() {
-    const opts = [['main', '▶ 금주 주요 업체'], ['rev', '▶ 전주 재방문 업체'], ['none', '제외']];
+    const ctx = state.ctx;
+    const opts = [['none', '선택 안 함'], ['main', '▶ 금주 주요 업체'], ['rev', '▶ 전주 재방문 업체']];
     $('candBody').innerHTML = state.cands.map((c, i) => {
       const tags = (c.isNew ? '<span class="badge new">신규</span> ' : '') + (c.isRev ? '<span class="badge rev">재방문</span> ' : '') + (c.isLE ? '<span class="badge le">LE동행</span>' : '');
-      let sel;
-      if (!c.visit) sel = '<span class="muted">▶ 전주 LE 동행방문 업체</span>';
-      else if (c.place === 'bonbu') sel = '<span class="muted">◎ 본부 금주 주요 업체 (자동)</span>';
-      else sel = '<select data-i="' + i + '">' + opts.map(([v, t]) => '<option value="' + v + '"' + ((state.placement[c.key] || c.place) === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>';
-      return '<tr><td>' + esc(c.region.slice(0, 2)) + '</td><td>' + esc(c.name) + '</td><td>' + esc(c.mgr) + '</td><td>' + esc(c.stage) + '</td><td class="num">' + (c.amt == null ? '-' : c.amt) + '</td><td>' + tags + '</td><td>' + sel + '</td></tr>';
-    }).join('') || '<tr><td colspan="7" class="muted">보고 주차에 방문한 업체가 없습니다.</td></tr>';
+      const sel = !c.visit ? '<span class="muted">▶ 전주 LE 동행방문 (자동)</span>'
+        : '<select data-i="' + i + '">' + opts.map(([v, t]) => '<option value="' + v + '"' + ((state.placement[c.key] || 'none') === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>' + (c.isLE ? '<div class="muted" style="font-size:11.5px">+ ▶ 전주 LE 동행방문 (자동)</div>' : '');
+      const bon = '<label class="chk"><input type="checkbox" data-b="' + i + '"' + (state.bonbu[c.key] ? ' checked' : '') + '> ' + (c.inBonbu ? '리스트 업체' : '추가') + '</label>';
+      return '<tr><td>' + esc(c.region.slice(0, 2)) + '</td><td>' + esc(c.name) + '<div class="muted" style="font-size:11.5px">' + esc(c.task || '') + '</div></td><td>' + esc(c.mgr) + '</td><td>' + esc(c.stage) + '</td><td class="num">' + (c.amt == null ? '-' : c.amt) + '</td><td>' + tags + '</td><td>' + sel + '</td><td>' + bon + '</td><td class="wrap">' + checkCell(ctx.checks[c.key]) + '</td><td class="wrap fix">' + esc(ctx.fixes[c.key] || '-') + '</td></tr>';
+    }).join('') || '<tr><td colspan="10" class="muted">보고 주차에 방문한 업체가 없습니다.</td></tr>';
     $('candBody').querySelectorAll('select').forEach((el) => el.addEventListener('change', () => { state.placement[state.cands[+el.dataset.i].key] = el.value; }));
+    $('candBody').querySelectorAll('input[data-b]').forEach((el) => el.addEventListener('change', () => { state.bonbu[state.cands[+el.dataset.b].key] = el.checked; }));
     $('candWrap').hidden = false;
+    renderCheckList();
+  }
+  // 이번에 붙여넣은 권역에서 바뀌거나 새로 들어온 행의 점검·수정 내역
+  function renderCheckList() {
+    const ctx = state.ctx; const W = week();
+    const inCand = new Set(state.cands.map((c) => c.key));
+    const rows = ctx.rows.filter((sn) => ctx.inputRegions.includes(sn.region) && ctx.changedKeys.has(sn.key) && !inCand.has(sn.key));
+    const allBad = Object.keys(ctx.checks).filter((k) => ctx.checks[k].some((x) => !/^확인:/.test(x))).length;
+    const allFix = Object.keys(ctx.fixes).length;
+    const body = rows.map((sn) => '<tr><td>' + esc(sn.region.slice(0, 2)) + '</td><td>' + esc(sn.name) + '</td><td class="wrap">' + checkCell(ctx.checks[sn.key]) + '</td><td class="wrap fix">' + esc(ctx.fixes[sn.key] || '-') + '</td></tr>').join('');
+    $('checkWrap').innerHTML = '<div class="kv"><span>수주풀 전체: 사업구분↔추진과제 <b>이상 ' + allBad + '</b>행 · 오탈자/띄어쓰기 수정 <b>' + allFix + '</b>행</span></div>' +
+      (rows.length ? '<details open><summary>이번 권역 자료에서 바뀐 행(금주 방문 외) ' + rows.length + '개 — 점검·수정 내역</summary><div class="tablewrap" style="max-height:260px;margin-top:6px"><table><thead><tr><th>권역</th><th>업체명</th><th>점검(이상유무)</th><th>수정이력</th></tr></thead><tbody>' + body + '</tbody></table></div></details>' : '') +
+      '<details><summary>수주풀 전체 이상 목록 보기</summary><div class="tablewrap" style="max-height:260px;margin-top:6px"><table><thead><tr><th>권역</th><th>업체명</th><th>점검</th></tr></thead><tbody>' +
+      ctx.rows.filter((sn) => ctx.checks[sn.key]).map((sn) => '<tr><td>' + esc(sn.region.slice(0, 2)) + '</td><td>' + esc(sn.name) + '</td><td class="wrap">' + checkCell(ctx.checks[sn.key]) + '</td></tr>').join('') + '</tbody></table></div></details>';
+    $('checkWrap').hidden = false;
   }
 
   async function doPreview() {
@@ -265,7 +298,8 @@
     if (!E.isWeek($('week').value)) { msg($('buildMsg'), 'err', '보고 주차를 "9월 4주" 형식으로 입력하세요.'); return false; }
     try {
       const tpl = await templateWorkbook();
-      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs() });
+      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs(), fixText: $('fixText').checked });
+      state.ctx = ctx;
       renderLog(ctx.log);
       state.cands = E.preview(ctx, week());
       renderCands();
@@ -280,8 +314,9 @@
       if (!state.cands.length && !(await doPreview())) return;
       const W = week();
       const tpl = await templateWorkbook();
-      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs() });
-      const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, manual: manualInputs(), addBonbu: $('addBonbu').checked });
+      const ctx = E.prepare(ExcelJS, tpl, { inputs: await engineInputs(), fixText: $('fixText').checked });
+      const bonbu = Object.keys(state.bonbu).filter((k) => state.bonbu[k]);
+      const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, bonbu, manual: manualInputs(), addBonbu: $('addBonbu').checked, fixText: $('fixText').checked });
       const buf = new Uint8Array(await tpl.xlsx.writeBuffer());
       const base = state.tpl.type === 'file' && /\d{1,2}월\s*\d주/.test(state.tpl.name) ? state.tpl.name : '엔지니어링 영업추진현황_0월 0주.xlsx';
       const name = base.replace(/\d{1,2}월\s*\d주/, W);
@@ -291,7 +326,8 @@
       try { localStorage.setItem(LS_KEY, JSON.stringify({ name, data: b64(buf), at: new Date().toISOString() })); } catch (e) { /* 저장 공간 부족 시 무시 */ }
       const out = ['완료: ' + name];
       if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) out.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
-      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('본부 리스트 신규 추가: ' + res.bonbu.bonbuAdded.join(', '));
+      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('본부 리스트 맨 아래 추가: ' + res.bonbu.bonbuAdded.join(', '));
+      const nfix = Object.keys(ctx.fixes).length; if (nfix) out.push('오탈자·띄어쓰기 수정: 수주풀 ' + nfix + '행' + (res.bonbu.sheetFixes ? ', 앞시트 ' + res.bonbu.sheetFixes + '칸' : ''));
       res.warn.forEach((w) => out.push('⚠ ' + w));
       msg($('buildMsg'), res.warn.length ? 'warn' : 'ok', out.join('\n'));
     } catch (e) { console.error(e); msg($('buildMsg'), 'err', '생성 오류: ' + e.message); }
@@ -302,6 +338,8 @@
 
   // ---- 이벤트 ----
   ['p_sum', 'p_pool', 'p_third'].forEach((id) => $(id).addEventListener('input', debounce(refreshTemplate, 400)));
+  document.querySelectorAll('[data-reset]').forEach((el) => el.addEventListener('click', () => { $(el.dataset.reset).value = ''; refreshTemplate(); }));
+  $('fixText').addEventListener('change', () => { state.cands = []; $('candWrap').hidden = true; $('checkWrap').hidden = true; });
   $('tplFile').addEventListener('change', async (e) => {
     const f = e.target.files[0]; if (!f) return;
     ['p_sum', 'p_pool', 'p_third'].forEach((id) => { $(id).value = ''; });
