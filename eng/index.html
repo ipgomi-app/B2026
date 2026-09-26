@@ -393,7 +393,7 @@
       const ctx = E.prepare(ExcelJS, tpl, await engineOpts());
       const bonbu = Object.keys(state.bonbu).filter((k) => state.bonbu[k]);
       const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, bonbu, manual: manualInputs(), addBonbu: $('addBonbu').checked, fixText: $('fixText').checked });
-      const buf = new Uint8Array(await tpl.xlsx.writeBuffer());
+      const buf = await E.saveWorkbook(JSZip, tpl);
       const base = state.tpl.type === 'file' && /\d{1,2}월\s*\d주/.test(state.tpl.name) ? state.tpl.name : '엔지니어링 영업추진현황_0월 0주.xlsx';
       const name = base.replace(/\d{1,2}월\s*\d주/, W);
       const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));

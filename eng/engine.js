@@ -186,14 +186,9 @@
     if (h < 0) throw new Error('붙여넣은 내용에서 헤더(코드/업체명) 행을 찾지 못했습니다. 헤더 행까지 함께 복사해 주세요.');
     const map = {}; // src idx -> template col
     grid[h].forEach((t, j) => { const k = norm(t); const c = TL.headers[k]; if (c && !Object.values(map).includes(c)) map[j] = c; });
-    // 머리글이 비어 있는 열(보조 열 등)은 업체명 열 기준 같은 위치로
-    const hn = grid[h].findIndex((t) => norm(t) === '업체명');
-    const labeled = new Set(Object.values(TL.headers));
-    grid[h].forEach((t, j) => {
-      if (j in map || norm(t)) return;
-      const c = j + 1 + (TL.name - 1 - hn);
-      if (c >= 1 && c <= TL.maxCol && !labeled.has(c) && !Object.values(map).includes(c)) map[j] = c;
-    });
+    // 머리글이 비어 있는 열(보조 열 등)은 바로 앞 머리글 열 기준 같은 위치로
+    const um = unlabeledMap(grid[h].map((t) => norm(t)), TL);
+    Object.keys(um).forEach((j) => { if (!(j in map) && !Object.values(map).includes(um[j])) map[j] = um[j]; });
     const nameIdx = Object.keys(map).find((j) => map[j] === TL.name);
     const rows = [];
     for (let i = h + 1; i < grid.length; i++) {
@@ -283,11 +278,36 @@
   }
 
   // 다른 레이아웃(열 위치)의 행을 템플릿 열 위치로 옮김 (보통 동일)
+  // 머리글 없는 열: 원본에서 바로 앞 머리글 열로부터 k칸 → 템플릿에서도 같은 머리글 열로부터 k칸 (사이에 다른 머리글 열이 끼면 버림)
+  // srcHdr: 0-based 배열(열 idx → 정규화 머리글), 반환 {srcIdx: tplCol}
+  function unlabeledMap(srcHdr, TL) {
+    const labeled = new Set(Object.values(TL.headers));
+    const out = {};
+    let anchor = null, k = 0;
+    srcHdr.forEach((t, j) => {
+      if (t) { anchor = TL.headers[t] || null; k = 0; return; }
+      k++;
+      if (!anchor) return;
+      let c = anchor, bad = false;
+      for (let x = 1; x <= k; x++) { c++; if (labeled.has(c)) bad = true; }
+      if (!bad && c <= TL.maxCol) out[j] = c;
+    });
+    return out;
+  }
   function adaptRow(r, L, TL) {
     if (L === TL || sameLayout(L, TL)) return r;
     const cells = new Array(TL.maxCol).fill(null).map(() => ({ v: null, s: {} }));
     Object.keys(TL.headers).forEach((k) => { const a = L.headers[k], b = TL.headers[k]; if (a && b) cells[b - 1] = clone(r.cells[a - 1]); });
-    const merges = (r.merges || []).map(([a, b]) => { const k = Object.keys(L.headers).find((h) => L.headers[h] === a); const nb = k && TL.headers[k]; return nb ? [nb, nb + (b - a)] : null; }).filter(Boolean);
+    const srcHdr = []; Object.keys(L.headers).forEach((k) => { srcHdr[L.headers[k] - 1] = k; });
+    for (let j = 0; j < L.maxCol; j++) if (!srcHdr[j]) srcHdr[j] = '';
+    const um = unlabeledMap(srcHdr, TL);
+    Object.keys(um).forEach((j) => { if (r.cells[j] && cells[um[j] - 1].v == null) cells[um[j] - 1] = clone(r.cells[j]); });
+    const labeled = new Set(Object.values(TL.headers));
+    const merges = (r.merges || []).map(([a, b]) => {
+      const k = Object.keys(L.headers).find((h) => L.headers[h] === a); const nb = k && TL.headers[k]; if (!nb) return null;
+      let e = nb; while (e < nb + (b - a) && !labeled.has(e + 1)) e++; // 다음 머리글 열을 덮지 않게
+      return e > nb ? [nb, e] : null;
+    }).filter(Boolean);
     return decorate({ cells, height: r.height, merges }, TL);
   }
   function sameLayout(a, b) { return Object.keys(b.headers).every((k) => a.headers[k] === b.headers[k]); }
@@ -316,7 +336,11 @@
     for (let c = 1; c <= L.maxCol; c++) {
       const x = a.cells[c - 1], y = b.cells[c - 1];
       if (!x || !y || x.f || y.f) continue;
-      if (text(x.v) !== text(y.v)) out.push(names[c] || colLetter(c));
+      if (text(x.v) === text(y.v)) continue;
+      // 지난주 이 도구가 고친 오탈자·띄어쓰기, 채운 비고/월구분(권역 파일엔 빈칸)은 변경으로 치지 않음
+      if (fixText(text(x.v), []) === fixText(text(y.v), [])) continue;
+      if ((c === L.note || c === L.month) && !trim(text(y.v))) continue;
+      out.push(names[c] || colLetter(c));
     }
     return out;
   }
@@ -378,6 +402,113 @@
       if (af) ws.autoFilter = af.replace(/(\d+)$/, (m) => String(Math.max(+m, end)));
     }
     return { first, last: newLast };
+  }
+
+  // 수식의 열 참조 옮기기: f 안의 참조 중 onSheet(시트명|null)에 해당하는 것만 map(열번호)으로
+  function remapFormulaCols(f, map, selfSheet, target) {
+    const esc = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pre = new RegExp("^(?:'" + esc + "'|" + esc + ')!', '');
+    let out = '', i = 0, inQ = false;
+    const ref = (s, needRow) => {
+      const m = (needRow ? /^(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\d(A-Za-z_])/ : /^(\$?)([A-Z]{1,3})(\$?)(\d*)(?![\d(A-Za-z_])/).exec(s);
+      return m;
+    };
+    const put = (m) => m[1] + colLetter(map(colNum(m[2]))) + m[3] + m[4];
+    while (i < f.length) {
+      const ch = f[i];
+      if (ch === '"') { inQ = !inQ; out += ch; i++; continue; }
+      if (inQ) { out += ch; i++; continue; }
+      const prev = i ? f[i - 1] : '';
+      const pm = pre.exec(f.slice(i));
+      if (pm && !/[A-Za-z0-9_.]/.test(prev)) {
+        out += pm[0]; i += pm[0].length;
+        const a = ref(f.slice(i), false);
+        if (a && (a[4] || f[i + a[0].length] === ':')) {
+          out += put(a); i += a[0].length;
+          if (f[i] === ':') { const b = ref(f.slice(i + 1), false); if (b) { out += ':' + put(b); i += 1 + b[0].length; } }
+        }
+        continue;
+      }
+      if (ch === "'") { const j = f.indexOf("'", i + 1); const k = j < 0 ? f.length : j + 1; out += f.slice(i, k); i = k; continue; } // 다른 시트 이름
+      if (selfSheet && !/[A-Za-z0-9_.!$]/.test(prev)) {
+        const a = ref(f.slice(i), true);
+        if (a) { out += put(a); i += a[0].length; continue; }
+      }
+      out += ch; i++;
+    }
+    return out;
+  }
+
+  // 수주풀 마무리: Needs 뒤 머리글 없는 빈 열(AB~AE) 삭제, 솔루션 사업구분(G~P) 열 그룹(펼침), 필터 해제, 화면 85%
+  function finishPool(wb, ws, L) {
+    const hdr = ws.getRow(L.hdr);
+    let start = 0, n = 0;
+    if (L.needs && L.note && L.note > L.needs + 1) {
+      let ok = true;
+      for (let c = L.needs + 1; c < L.note; c++) { const x = hdr.getCell(c); const slave = x.isMerged && x.master && x.master.address !== x.address; if (!slave && trim(text(x.value))) ok = false; }
+      if (ok) { start = L.needs + 1; n = L.note - start; }
+    }
+    if (n) {
+      const end = start + n - 1;
+      const map = (c) => (c < start ? c : c > end ? c - n : start);
+      const maxC = Math.max(L.maxCol, ws.columnCount || 0);
+      // 다른 시트에서 수주풀을 가리키는 참조, 수주풀 안의 참조
+      wb.worksheets.forEach((s) => {
+        const self = s === ws;
+        s.eachRow((row) => row.eachCell((c) => {
+          if (c.type !== 6) return;
+          const f0 = c.formula; if (!f0) return;
+          if (!self && f0.indexOf(ws.name) < 0) return;
+          const nf = remapFormulaCols(f0, map, self, ws.name);
+          if (nf !== f0 || c.value.sharedFormula || c.value.shareType) c.value = { formula: nf };
+        }));
+      });
+      const merges = Object.values(ws._merges || {}).map((rg) => Object.assign({}, rg.model || rg));
+      merges.forEach((m) => { if (m.right >= start) ws.unMergeCells(m.top, m.left, m.bottom, m.right); });
+      const last = ws.rowCount;
+      for (let r = 1; r <= last; r++) {
+        const row = ws.getRow(r);
+        for (let c = start; c <= maxC; c++) {
+          const dst = row.getCell(c);
+          if (c + n > maxC) { dst.value = null; dst.style = {}; if (dst.note) dst.note = undefined; continue; }
+          const src = row.getCell(c + n);
+          dst.value = src.type === 6 ? { formula: src.formula } : clone(src.value);
+          dst.style = clone(src.style || {});
+          if (src.note) dst.note = clone(src.note); else if (dst.note) dst.note = undefined;
+        }
+      }
+      for (let c = start; c <= maxC; c++) {
+        const d = ws.getColumn(c);
+        if (c + n > maxC) { d.width = undefined; d.hidden = false; d.outlineLevel = 0; continue; }
+        const s = ws.getColumn(c + n);
+        d.width = s.width; d.hidden = !!s.hidden; d.outlineLevel = s.outlineLevel || 0;
+      }
+      merges.forEach((m) => {
+        if (m.right < start) return;
+        const l = m.left > end ? m.left - n : Math.min(m.left, start), r = m.right > end ? m.right - n : Math.min(m.right, start - 1);
+        if (r > l || m.bottom > m.top) ws.mergeCells(m.top, l, m.bottom, Math.max(l, r));
+      });
+      // 데이터 유효성 (셀 주소별로 보관됨)
+      const dv = ws.dataValidations && ws.dataValidations.model;
+      if (dv) {
+        const moved = {};
+        Object.keys(dv).forEach((addr) => {
+          const m = /^([A-Z]+)(\d+)$/.exec(addr); if (!m) { moved[addr] = dv[addr]; return; }
+          const c = colNum(m[1]); if (c >= start && c <= end) return;
+          moved[colLetter(c > end ? c - n : c) + m[2]] = dv[addr];
+        });
+        ws.dataValidations.model = moved;
+      }
+    }
+    // 솔루션 사업구분 열 그룹(펼친 상태), 숨김 없음
+    if (L.flags.length) {
+      const a = Math.min(...L.flags), b = Math.max(...L.flags);
+      for (let c = a; c <= b; c++) { const col = ws.getColumn(c); col.outlineLevel = 1; col.hidden = false; }
+      ws.properties.outlineLevelCol = 1;
+    }
+    ws.autoFilter = null;
+    ws.views = [Object.assign({}, (ws.views && ws.views[0]) || {}, { zoomScale: 85, zoomScaleNormal: 85 })];
+    return n;
   }
 
   // ---------- 영업진행종합(영남영업본부) ----------
@@ -573,6 +704,55 @@
     return sn;
   }
 
+  // 금주 주요 업체 위 목록(LE 동행방문 대상·LE 차주 방문요청·계약성사 가능성): 맑은 고딕 10, 줄바꿈 켜고 행 높이를 글자에 맞춤
+  const UPPER_KINDS = ['leTarget', 'leNext', 'contract'];
+  const FIT_FONT = { name: '맑은 고딕', size: 10 };
+  function charUnits(line) {
+    let u = 0;
+    for (const ch of line) {
+      const k = ch.charCodeAt(0);
+      u += k > 0x2E80 ? 1.9 : /[ .,:;'!|()\[\]\-·]/.test(ch) ? 0.6 : /[A-Z%@&#W]/.test(ch) ? 1.3 : 1.0;
+    }
+    return u;
+  }
+  function fitHeight(ws, sn, min) {
+    let lines = 1;
+    sn.cells.forEach((c, i) => {
+      const s = text(c.v); if (!trim(s)) return;
+      const w = Math.max(4, spanWidth(ws, sn, i + 1) - 1.2);
+      const n = s.replace(/\n+$/, '').split('\n').reduce((a, ln) => a + Math.max(1, Math.ceil(charUnits(ln) / w)), 0);
+      lines = Math.max(lines, n);
+    });
+    return Math.min(409, Math.max(min, lines * FIT_FONT.size * 1.5 + 6));
+  }
+  function fitUpperSections(ws, secs) {
+    const setFont = (c) => {
+      c.s = c.s || {};
+      c.s.font = Object.assign({}, c.s.font, FIT_FONT);
+      if (c.v && c.v.richText) c.v = { richText: c.v.richText.map((r) => Object.assign({}, r, { font: Object.assign({}, r.font, FIT_FONT) })) };
+    };
+    const ref = secs.find((s) => s.kind === 'leTarget');
+    secs.filter((s) => UPPER_KINDS.includes(s.kind)).forEach((sec) => {
+      [sec.titleRow, sec.header].filter(Boolean).forEach((sn) => sn.cells.forEach(setFont));
+      if (sec.header) {
+        sec.header.cells.forEach((c) => { if (trim(text(c.v))) c.s.alignment = Object.assign({ vertical: 'middle' }, c.s.alignment, { wrapText: true }); });
+        sec.header.height = Math.max(sec.header.height || 18, fitHeight(ws, sec.header, 18));
+      }
+      // 서술 칸 병합이 빠진 행(원본 LE 차주 방문요청 등)은 같은 목록/LE 동행방문 대상의 병합 폭을 따른다
+      let tc = 0; if (sec.header) sec.header.cells.forEach((c, i) => { if (trim(text(c.v))) tc = i + 1; });
+      const pool = [].concat(sec.data, sec.tail, ref ? ref.data : []);
+      const span = tc && (pool.map((sn) => (sn.merges || []).find(([a]) => a === tc)).find(Boolean));
+      sec.data.forEach((sn) => {
+        if (span && !(sn.merges || []).some(([a, b]) => a <= tc && tc <= b)) {
+          sn.merges = (sn.merges || []).filter(([a, b]) => b < span[0] || a > span[1]).concat([clone(span)]);
+          for (let c = span[0] + 1; c <= span[1]; c++) sn.cells[c - 1].v = null;
+        }
+        sn.cells.forEach((c) => { setFont(c); c.s.alignment = Object.assign({ vertical: 'middle' }, c.s.alignment, { wrapText: true }); });
+        sn.height = fitHeight(ws, sn, 26.25);
+      });
+    });
+  }
+
   function codeVal(f) { return f.codeRaw != null && f.codeRaw !== '' ? clone(f.codeRaw) : (/^\d+$/.test(f.code) ? Number(f.code) : f.code); }
   function amtVal(f) { return typeof f.amtRaw === 'number' ? f.amtRaw : (f.amt == null ? null : f.amt); }
 
@@ -687,6 +867,7 @@
         }));
       }
     });
+    fitUpperSections(ws, secs);
 
     const pos = writeSections(ws, info.start, info.end, secs, maxCol);
     // 본부 리스트 제목: 업체 수를 수식으로 (행을 더 넣어도 자동 갱신)
@@ -946,7 +1127,7 @@
     });
     return out;
   }
-  // 비고(AF)·월구분(AG)이 비어 있으면 채움: 비고 ← 그룹/일반(없으면 '신규'), 월구분 ← 첫 방문월
+  // 비고·월구분이 비어 있으면 채움: 비고 ← 그룹/일반(없으면 '신규'), 월구분 ← 첫 방문월
   function fillNoteMonth(rows, L, W) {
     rows.forEach((sn) => {
       const f = fields(sn, L);
@@ -1141,6 +1322,18 @@
     return wb;
   }
 
+  // 저장: ExcelJS는 그룹 열에 collapsed="1"을 붙이므로, 펼친(숨기지 않은) 그룹 열에서는 뗀다
+  async function saveWorkbook(JSZip, wb) {
+    const zip = await JSZip.loadAsync(await wb.xlsx.writeBuffer());
+    const files = Object.keys(zip.files).filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+    for (const n of files) {
+      const x = await zip.file(n).async('string');
+      const y = x.replace(/<col\b[^>]*\/>/g, (m) => (/hidden="1"/.test(m) ? m : m.replace(/\s+collapsed="1"/, '')));
+      if (y !== x) zip.file(n, y);
+    }
+    return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+  }
+
   // ---------- 메인 ----------
   // opts: { week, inputs: {region: {type:'file', wb} | {type:'paste', text}}, selection, manual, addBonbu }
   function prepare(ExcelJS, tplWb, opts) {
@@ -1203,6 +1396,8 @@
     // 4) 열 때 재계산
     tplWb.calcProperties = Object.assign({}, tplWb.calcProperties, { fullCalcOnLoad: true });
     stripResults(sum); stripResults(pool);
+    // 5) 수주풀 정리: 빈 열(AB~AE) 삭제, 솔루션 사업구분 그룹, 필터 해제, 85%
+    finishPool(tplWb, pool, TL);
     return { warn, cands: res.cands, bonbu: res.log };
   }
 
@@ -1220,7 +1415,7 @@
   }
 
   return {
-    REGIONS, loadWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
+    REGIONS, loadWorkbook, saveWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
     templateFromPaste, rowForm, readLists, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
     // 틀(kit) 생성 도구용
     _i: { readSections, snapRow, writeRow, unmergeRows, rowMergeMap, writePool, formulaPatterns, writeSections, sumMaxCol, stripResults },
