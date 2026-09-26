@@ -576,14 +576,14 @@
   function codeVal(f) { return f.codeRaw != null && f.codeRaw !== '' ? clone(f.codeRaw) : (/^\d+$/.test(f.code) ? Number(f.code) : f.code); }
   function amtVal(f) { return typeof f.amtRaw === 'number' ? f.amtRaw : (f.amt == null ? null : f.amt); }
 
-  // 금주 방문 업체 후보. 자동 배치는 LE 동행방문뿐이고 나머지는 화면에서 고른다.
+  // 금주 방문 업체 후보. 기본 배치: 신규방문→금주 주요, 재방문→전주 재방문, LE 동행→전주 LE (화면에서 바꿀 수 있음)
   function weekCandidates(rows, L, W, bonbuKeys) {
     return rows.map((sn, i) => ({ sn, i, f: fields(sn, L) })).filter((x) => x.f.newv === W || x.f.rev === W || x.f.le === W).map((x) => {
       const key = x.sn.key;
       return {
         key, idx: x.i, region: x.f.region, name: x.f.name, code: x.f.code, mgr: x.f.mgr, stage: x.f.stage, amt: x.f.amt, task: x.f.task,
         isNew: x.f.newv === W, isRev: x.f.rev === W, isLE: x.f.le === W, visit: x.f.newv === W || x.f.rev === W,
-        inBonbu: bonbuKeys.has(key), place: 'none',
+        inBonbu: bonbuKeys.has(key), place: x.f.newv === W ? 'main' : x.f.rev === W ? 'rev' : 'none', // 기본: 신규방문→금주 주요, 재방문→전주 재방문
       };
     }).sort((a, b) => (STAGE_RANK[b.stage] || 0) - (STAGE_RANK[a.stage] || 0) || (b.amt || 0) - (a.amt || 0) || a.idx - b.idx);
   }
