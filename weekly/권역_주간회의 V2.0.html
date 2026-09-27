@@ -750,7 +750,7 @@ function v2Metrics(L,E,P,IX){const has=e=>E.has(e)||E.has(String(e||'').replace(
   const A=L.filter(u=>u.cat!=='X'),S=A.filter(u=>u.cat==='1'||u.cat==='2');
   const firms={};S.forEach(u=>{const c=u.code||u.name;(firms[c]=firms[c]||[]).push(u)});/* 업체별 영업활동 목록 */
   const hit=u=>v2Find(IX.Q,u).some(q=>{const d=v2Days(u.key,v2Dk(q));return d>=0&&d<=30})||v2Find(IX.K,u).some(c=>{const d=v2Days(u.key,v2Dk(c));return d>=-7&&d<=30});
-  const linked=Object.values(firms).filter(L=>L.some(hit)).length;/* 어느 활동이든 45일 안에 견적·계약이 있으면 연결 */
+  const linked=Object.values(firms).filter(L=>L.some(hit)).length;/* 어느 활동이든 30일 안에 견적·계약이 있으면 연결 */
   const Qp=IX.quotes.filter(q=>has(q.emp)&&inP(q)),Cp=IX.contracts.filter(c=>has(c.emp)&&inP(c));
   const qf={};Qp.forEach(q=>{const c=q.code||q.name;if(!qf[c]||v2Dk(q)<v2Dk(qf[c]))qf[c]=q});
   const q2c=Object.values(qf).filter(q=>v2Find(IX.K,q).some(c=>c.kind==='계약'&&v2Dk(c)>=v2Dk(q))).length;
