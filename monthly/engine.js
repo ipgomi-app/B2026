@@ -187,12 +187,15 @@
   function fixText(t, log) {
     if (t == null) return '';
     let s = String(t).replace(/\r?\n/g, ' ');
-    TYPO.forEach(([re, to]) => { s = s.replace(re, (...m) => { const res = m[0].replace(new RegExp(re.source, re.flags.replace('g', '')), to); if (res !== m[0]) log.push(trim(m[0]) + '→' + trim(res)); return res; }); });
+    TYPO.forEach(([re, to]) => { s = s.replace(re, (...m) => { const res = m[0].replace(new RegExp(re.source, re.flags.replace('g', '')), to); if (res !== m[0]) log.push(res.replace(/\s/g, '') === m[0].replace(/\s/g, '') ? '#띄어쓰기' : trim(m[0]) + '→' + trim(res)); return res; }); });
     SPACE.forEach(([re, to, label]) => { const b = s; s = s.replace(re, to); if (s !== b && label[0] !== '~') log.push('#' + label); });
     return s;
   }
-  // 금액 표기: 5,000천원 이하 → N,NNN천원, 초과 → X억
-  const fmtAmt = (k) => (k <= 5000 ? fmtK(k) + '천원' : fmtEok(k) + '억');
+  // 서술 금액 표기: 1,000천원(100만원) 이하 → N,NNN천원, 초과 → 억(fmtEok3)
+  // 손익개선(old=true)은 예전 규칙: 5,000천원 이하 천원, 초과 억
+  // 1억 이상 소수 1자리, 1천만원 이상 2자리(10,800 → 0.11), 그 아래 3자리(1,500 → 0.015). 끝 0 없음.
+  const fmtEok3 = (k) => (k >= 100000 ? fmtEok(k) : String(+(k / 100000).toFixed(k >= 10000 ? 2 : 3)));
+  const fmtAmt = (k, old) => (old ? (k <= 5000 ? fmtK(k) + '천원' : fmtEok(k) + '억') : k <= 1000 ? fmtK(k) + '천원' : fmtEok3(k) + '억');
   const AMT_RE = /(연\s*)?(예상\s*매출(?:액)?|효과\s*금액)\s*[:：]?\s*(?:약\s*)?(\d[\d,]*(?:\.\d+)?)\s*(억\s*원?|천\s*원|백\s*만\s*원|만\s*원|원)?\s*(\(년\)|\/\s*년|\/\s*건|\/\s*월|\.\s*년|원\/년)?/g;
   function amtToK(n, unit) {
     const u = norm(unit || '');
@@ -204,23 +207,24 @@
     return n < 100 ? n * 100000 : n; // 단위 없음: 작은 수는 억, 큰 수는 천원
   }
   // 서술의 금액 표기 바꾸기. 반환: { text, amounts: [{label, k}] }
-  function fixAmounts(s, log) {
+  function fixAmounts(s, log, old) {
     const amounts = [];
     const out = s.replace(AMT_RE, (m, yr, label, num, unit, per) => {
       const k = amtToK(+num.replace(/,/g, ''), unit);
       const lab = /효과/.test(label) ? '효과금액' : '예상매출';
       amounts.push({ label: lab, k });
       const p = per && /건/.test(per) ? '/건' : per && /월/.test(per) ? '/월' : '/년';
-      const res = lab + ' ' + fmtAmt(k) + p;
+      const res = lab + ' ' + fmtAmt(k, old) + p;
       if (norm(res) !== norm(m)) log.push('금액표기');
       return res;
     });
     return { text: out, amounts };
   }
-  function summarizeFix(log) {
+  // log: '#…' 띄어쓰기, '금액표기', 그 밖은 오타. major=true면 작은 수정(띄어쓰기·금액표기)은 뺀다.
+  function summarizeFix(log, major) {
     const typos = [...new Set(log.filter((x) => x[0] !== '#' && x !== '금액표기'))];
     const sp = log.filter((x) => x[0] === '#').length, am = log.filter((x) => x === '금액표기').length;
-    return [typos.length ? '오타 ' + typos.join(', ') : '', sp ? '띄어쓰기 ' + sp + '곳' : '', am ? '금액표기 ' + am + '곳' : ''].filter(Boolean).join(' · ');
+    return [typos.length ? '오타 ' + typos.join(', ') : '', !major && sp ? '띄어쓰기 ' + sp + '곳' : '', !major && am ? '금액표기 ' + am + '곳' : ''].filter(Boolean).join(' · ');
   }
 
   // ---------- 영남영업본부 양식 붙여넣기 ----------
@@ -247,7 +251,7 @@
       const r0 = findRow((row) => norm(row[0]) === norm(label) && norm(row[2]) === '매출목표');
       if (r0 < 0) throw new Error('양식에서 ' + label + ' 사업부문 표를 찾지 못했습니다.');
       biz[key] = {};
-      REG4.forEach(([reg, off]) => { biz[key][reg] = { tgt: r0 + off, act: r0 + off + 1 }; });
+      REG4.forEach(([reg, off]) => { biz[key][reg] = { tgt: r0 + off, act: r0 + off + 1, dif: r0 + off + 2 }; });
     });
     // 전월 머리글 건수·금액
     const hdr = {};
@@ -271,19 +275,39 @@
     let sonik = null;
     const rs = findRow((row) => /손익개선\(단가인상\)/.test(norm(row[0])), rPPS);
     if (rs >= 0) { const r = findRow((row) => norm(row[0]) === '영남영업본부', [rs, rs + 12]); if (r >= 0) sonik = { n: numOr0(cell(r, 1)), k: numOr0(cell(r, 2)) }; }
-    return { grid: g, month, biz, hdr, sonik, val };
+    // 맨 위 권역 합계표(매출 목표·실적, 월별 + 1~기준월 누계 열)
+    const top = {};
+    const TOP_REG = { 경북권역: '경북', 부산권역: '부산', 경남권역: '경남', 영남영업본부: '영남' };
+    for (let r = 0; r < Math.min(g.length, 40); r++) { const reg = TOP_REG[norm(cell(r, 1))]; if (reg && norm(cell(r, 2)) === '매출목표' && !top[reg]) top[reg] = { tgt: r, act: r + 1, dif: r + 2 }; }
+    const cumCol = mcol(12) + 2; // 년도계 다음 열 = 1~기준월 누계
+    return { grid: g, month, biz, hdr, sonik, val, top: Object.keys(top).length === 4 ? top : null, cumOf: (r) => numOr0(cell(r, cumCol)) };
   }
-  // 전월/당월 실적 표 값: {F..J (5사업), M..Q (누계)} × 권역 × (목표, 실적, 차이)
+  // 실적 표 합계와 맨 위 권역 합계표 대조: 합계 칸은 상단표 값을 쓰므로, 5사업 합과 차이가 크면 알리기만 한다.
+  function checkPerf(P, m, checks, title) {
+    const big = [];
+    REG4.forEach(([reg]) => {
+      const p = P[reg]; if (!p.tot) return;
+      [['tgt', '목표'], ['act', '실적'], ['ctgt', '누계 목표'], ['cact', '누계 실적']].forEach(([f, lab]) => {
+        const sum = p[f].reduce((x, y) => x + y, 0), want = p.tot[f];
+        if (Math.abs(want - sum) > Math.max(1000, Math.abs(want) * 0.001)) big.push(reg + ' ' + lab + ': 사업 합 ' + fmtK(sum) + ' / 상단표 ' + fmtK(want));
+      });
+    });
+    big.forEach((x) => checks.push({ kind: '실적표 ↔ 상단표', text: title + ' 차이 큼 ' + x }));
+  }
+  // 전월/당월 실적 표 값: 양식에 보이는 숫자 그대로. 5사업 × 권역 × (목표, 실적, 차이) 당월·누계.
+  // 누계는 양식의 1~기준월 누계 열(당월 계획은 거기에 기준월+1 값을 더함). 합계 칸은 맨 위 권역 합계표 값.
   function perfValues(form, m) {
     const out = {};
+    const cum = (r) => form.cumOf(r) + (m === form.month ? 0 : form.val(r, m));
     REG4.forEach(([reg]) => {
-      out[reg] = { tgt: [], act: [], ctgt: [], cact: [] };
+      const o = out[reg] = { tgt: [], act: [], dif: [], ctgt: [], cact: [], cdif: [] };
       BIZ5.forEach(([key]) => {
         const rr = form.biz[key][reg];
-        out[reg].tgt.push(form.val(rr.tgt, m)); out[reg].act.push(form.val(rr.act, m));
-        let ct = 0, ca = 0; for (let k = 1; k <= m; k++) { ct += form.val(rr.tgt, k); ca += form.val(rr.act, k); }
-        out[reg].ctgt.push(ct); out[reg].cact.push(ca);
+        o.tgt.push(form.val(rr.tgt, m)); o.act.push(form.val(rr.act, m)); o.dif.push(form.val(rr.dif, m));
+        o.ctgt.push(cum(rr.tgt)); o.cact.push(cum(rr.act)); o.cdif.push(cum(rr.dif));
       });
+      const t = form.top && form.top[reg];
+      if (t) o.tot = { tgt: form.val(t.tgt, m), act: form.val(t.act, m), dif: form.val(t.dif, m), ctgt: cum(t.tgt), cact: cum(t.act), cdif: cum(t.dif) };
     });
     return out;
   }
@@ -294,6 +318,7 @@
   const BIZ_OF_CTYPE = { PALLET: 'PPS', SCM: 'SCM', 산업자재유통: 'MRO', 글로벌비즈: 'GLB', RRPP: 'GLB', ULS: 'GLB' };
   const BIZ_NAME = { PPS: 'PPS', SCM: 'SCM', MRO: '산업자재유통', GLB: '글로벌비즈', MHE: '지게차' };
   const isCode = (s) => /^\d{6}$/.test(trim(s));
+  const STATUS_RE = /^(결재완료|반려|결재반려|반려됨|결재중|결재진행|결재진행중|상신|상신중|임시저장|회수|기안|기안중|결재대기|취소)$/;
   const monthOfCell = (s) => {
     const t = trim(s); if (!t) return null;
     let m = /^(\d{4})[-.](\d{1,2})[-.]\d{1,2}/.exec(t); if (m) return +m[2];
@@ -361,6 +386,13 @@
       r.code = ci >= 0 ? at(ci) : get(['코드']);
       r.name = get(NAME_KEYS) || (ci >= 0 ? at(ci + 1) : '');
       if (!r.name) return;
+      r.mgr = get(['담당자', '(실적)담당자', '담당', '담당프로', '영업담당']);
+      // 결재상태: 결재완료가 아니면(반려·결재중 등) 표시해 두고 기본은 뺀다(상태 칸이 없으면 그대로 둠)
+      if (src.kind === 'biz') {
+        const hs = get(['결재상태', '결재']);
+        const st = STATUS_RE.test(hs) ? hs : row.map(trim).find((c) => STATUS_RE.test(c));
+        if (st && st !== '결재완료') r.status = st;
+      }
       // 부서·권역
       r.dept = get(['부서', '팀/지점', '(실적)팀/지점', '소속']);
       let region = get(['팀/권역', '(실적)팀/권역', '권역']);
@@ -382,7 +414,7 @@
         r.stage = src.stage;
         if (r.biz === 'MHE') {
           const mon = toNum(get(src.stage === '계약' ? ['확정금액'] : ['견적금액']));
-          r.amount = mon == null ? 0 : mon * 12 / 1000;
+          r.amount = mon == null ? 0 : Math.round(mon * 12 / 1000 / 100) * 100; // 연 금액, 백 단위 반올림(7,777 → 7,800)
           r.units = toNum(get(src.stage === '계약' ? ['계약대수'] : ['견적대수'])) || 0;
           r.gubun = '지게차';
           const place = (r.dept || '').replace(/지점$/, '');
@@ -401,7 +433,6 @@
           r.exp = exp == null ? 0 : exp / 1000; r.eff = eff == null ? null : eff / 1000;
           const usesEff = r.biz === 'PPS' && src.stage === '계약' && r.eff != null;
           r.amount = usesEff ? r.eff : r.exp;
-          if (r.eff != null && Math.round(r.eff) !== Math.round(r.exp)) r.flags.push('예상 ' + fmtK(r.exp) + ' / 효과 ' + fmtK(r.eff) + ' → ' + (usesEff ? '효과' : '예상') + '금액 사용');
           // 구분
           // 구분: 계약구분/영업구분(0N-신규…) 칸 바로 앞의 분류 칸(소분류, 그 앞 중분류)
           const ctI = row.findIndex((c) => CTYPE_RE.test(trim(c)));
@@ -464,11 +495,16 @@
   function finishDesc(r, kind) {
     const log = [];
     let t = fixText(r.rawDesc, log);
-    const fa = fixAmounts(t, log); t = fa.text;
-    if (kind === 'biz' && !fa.amounts.some((a) => a.label === '예상매출') && r.amount) { t = (t ? t + ', ' : '') + '예상매출 ' + fmtAmt(r.amount) + '/년'; log.push('금액표기'); }
-    const first = fa.amounts.find((a) => a.label === '예상매출') || fa.amounts[0];
-    if (first && r.amount && kind !== 'sonik' && Math.abs(first.k - r.amount) > Math.max(1, r.amount * 0.1) && !(r.exp && Math.abs(first.k - r.exp) <= Math.max(1, r.exp * 0.1))) r.flags.push('서술 금액 ' + fmtK(first.k) + ' ≠ ' + fmtK(r.amount));
-    r.desc = t; r.fix = summarizeFix(log);
+    const fa = fixAmounts(t, log, kind === 'sonik'); t = fa.text;
+    // 서술의 예상매출은 금액 열 값으로 맞춤. 사업 데이터는 예상매출액 열(PPS 계약은 금액 열이 효과금액이라 따로 둠), 타겟·농산은 목록 금액.
+    const expK = kind === 'biz' && r.exp > 0 ? r.exp : r.amount;
+    if (kind === 'biz' && !fa.amounts.some((a) => a.label === '예상매출') && expK) { t = (t ? t + ', ' : '') + '예상매출 ' + fmtAmt(expK) + '/년'; log.push('금액표기'); }
+    const first = fa.amounts.find((a) => a.label === '예상매출');
+    if (first && expK && kind !== 'sonik' && fmtAmt(first.k) !== fmtAmt(expK)) {
+      t = t.replace('예상매출 ' + fmtAmt(first.k), '예상매출 ' + fmtAmt(expK));
+      r.flags.push('서술 금액 ' + fmtAmt(first.k) + ' → ' + fmtAmt(expK) + ' 자동수정');
+    }
+    r.desc = t; r.fix = summarizeFix(log); r.fixMajor = summarizeFix(log, true);
     return r;
   }
 
@@ -563,6 +599,17 @@
     });
     Object.keys(dropBy).forEach((k) => checks.push({ kind: '영남 외·부서 없음 제외', text: k + ' ' + dropBy[k].length + '건 (' + dropBy[k].slice(0, 4).join(', ') + (dropBy[k].length > 4 ? ' 外' : '') + ')' }));
     recs.forEach((r) => finishDesc(r, r.biz === 'SONIK' ? 'sonik' : r.src === 'tgt' || r.src === 'ag' ? 'other' : 'biz'));
+    // 결재완료 아님(반려·미결재): 기본은 빼고 목록으로 보여줌. 넣기를 고른 행만 넣음.
+    const approve = opts.approve || {}, ndSeen = {};
+    const notDone = [];
+    for (let i = recs.length - 1; i >= 0; i--) {
+      const r = recs[i]; if (!r.status) continue;
+      const base = r.src + '|' + (r.code || normName(r.name)) + '|' + (r.month || '') + '|' + Math.round(r.amount || 0);
+      ndSeen[base] = (ndSeen[base] || 0) + 1; r.ndId = base + (ndSeen[base] > 1 ? '#' + ndSeen[base] : '');
+      const on = !!approve[r.ndId];
+      notDone.unshift({ ndId: r.ndId, region: r.region, mgr: r.mgr || '', code: r.code || '', name: r.name, status: r.status, amount: r.amount, label: [BIZ_NAME[r.biz], r.stage, r.month ? r.month + '월' : ''].filter(Boolean).join(' '), on });
+      if (on) r.flags.push('결재상태 ' + r.status + ' (넣음)'); else recs.splice(i, 1);
+    }
     // 편집 적용
     const edits = opts.edits || {};
     // 목록 나누기
@@ -588,18 +635,29 @@
       const e = edits[r.id]; if (e) { if (e.desc != null) r.desc = e.desc; if (e.gubun != null) r.gubun = e.gubun; if (e.name != null) r.name = e.name; }
     }));
     // 중복 업체
+    // PPS 업체만 사업·타겟·농산 목록 사이에서 본다(전월·당월 목록끼리도 비교). 손익개선·다른 사업은 보지 않음.
+    // 기본 배치: 타겟·농산에 함께 있으면 타겟·농산에만 넣고 사업 목록에서는 뺌. 머리글 건수·금액은 배치와 무관(업체 행만 빠짐).
+    const DUP_LISTS = ['prev', 'tgtPrev', 'agPrev', 'cur', 'tgtCur', 'agCur'];
+    const isBizList = (l) => l === 'prev' || l === 'cur';
     const occ = {};
-    Object.keys(L).forEach((list) => L[list].forEach((r) => { (occ[r.key] = occ[r.key] || []).push(r); }));
+    DUP_LISTS.forEach((list) => L[list].forEach((r) => { if (r.biz === 'PPS' || r.biz === 'AG') (occ[r.key] = occ[r.key] || []).push(r); }));
     const placement = opts.placement || {};
-    const dups = Object.keys(occ).filter((k) => new Set(occ[k].map((r) => r.list)).size > 1).map((k) => ({
-      key: k, name: occ[k][0].name, region: occ[k][0].region,
-      where: occ[k].map((r) => ({ list: r.list, label: [LISTS[r.list], BIZ_NAME[r.biz] || '', r.stageOut].filter(Boolean).join(' '), amount: r.amount })),
-      lists: [...new Set(occ[k].map((r) => r.list))],
-    }));
+    const dupRow = new Set(), defOff = new Set();
+    const placeOf = (key, list) => { const p = placement[key] && placement[key][list]; return p != null ? p : !defOff.has(key + '|' + list); };
+    const dups = Object.keys(occ).filter((k) => new Set(occ[k].map((r) => r.list)).size > 1).map((k) => {
+      const rs = occ[k]; rs.forEach((r) => dupRow.add(r));
+      const key = rs[0].key, lists = DUP_LISTS.filter((l) => rs.some((r) => r.list === l));
+      if (lists.some((l) => !isBizList(l))) lists.filter(isBizList).forEach((l) => defOff.add(key + '|' + l));
+      return {
+        key, name: rs[0].name, region: rs[0].region, mgr: rs.map((r) => r.mgr).find(Boolean) || '', code: rs[0].code || '',
+        where: rs.map((r) => ({ list: r.list, label: [LISTS[r.list], BIZ_NAME[r.biz] || '', r.stageOut].filter(Boolean).join(' '), amount: r.amount })),
+        lists, on: Object.fromEntries(lists.map((l) => [l, placeOf(key, l)])),
+      };
+    });
     const exclude = opts.exclude || {};
-    // 머리글 건수·금액은 중복 배치와 무관(업체 행만 빠짐). 목록 수정의 넣기 해제만 머리글에도 반영.
+    // 목록 수정의 넣기 해제만 머리글에도 반영.
     const kept = (r) => !exclude[r.id];
-    const placed = (r) => !(placement[r.key] && placement[r.key][r.list] === false);
+    const placed = (r) => !dupRow.has(r) || placeOf(r.key, r.list);
     const sortAmt = (a, b) => b.amount - a.amount;
     const pick = (rs, lim) => rs.filter((r) => placed(r) && r.amount >= lim.min).slice(0, lim.max > 0 ? lim.max : undefined);
     const head = (rs) => ({ n: rs.length, k: rs.reduce((s, r) => s + r.amount, 0), units: rs.reduce((s, r) => s + (r.units || 0), 0) });
@@ -640,18 +698,21 @@
     const tgtPrev = tgt('tgtPrev'), tgtCur = tgt('tgtCur');
     const agPrev = stageBlocks(L.agPrev, 'AG'), agCur = stageBlocks(L.agCur, 'AG');
     // 점검 모음
-    recs.forEach((r) => { if (r.list && r.flags.length) checks.push({ kind: '행 점검', text: (LISTS[r.list] || '') + ' ' + (BIZ_NAME[r.biz] || '') + ' · ' + r.name + ': ' + r.flags.join(', ') }); });
+    recs.forEach((r) => { if (r.list && r.flags.length) checks.push({ kind: '행 점검', text: (LISTS[r.list] || '') + ' ' + (BIZ_NAME[r.biz] || '') + ' · ' + [r.mgr, r.code].filter(Boolean).join(' ') + (r.mgr || r.code ? ' · ' : '') + r.name + ': ' + r.flags.join(', ') }); });
+    const perfPrev = perfValues(form, M), perfCur = perfValues(form, M1);
+    checkPerf(perfPrev, M, checks, M + '월 실적 현황');
+    checkPerf(perfCur, M1, checks, M1 + '월 영업추진 계획');
     const texts = Object.assign({}, opts.texts || {});
     const drafts = {
       tgt: {}, ag: planDraft(L.agCur.filter(kept), 'ag'),
     };
     TGT_ORDER.forEach((b) => { drafts.tgt[b] = planDraft(L.tgtCur.filter((r) => r.biz === b && kept(r)), b === 'PPS' ? 'pps' : 'item'); });
     return {
-      M, M1, form, perfPrev: perfValues(form, M), perfCur: perfValues(form, M1),
+      M, M1, form, perfPrev, perfCur,
       prev, sonikNote, cur, tgtPrev, tgtCur, agPrev, agCur,
       tgtSum: trim(inputs.tgtSum) ? parseTargetSum(inputs.tgtSum) : null,
       agSum: trim(inputs.agSum) ? parseAgSum(inputs.agSum) : null,
-      texts, drafts, checks, dups, lists: L, recs,
+      texts, drafts, checks, dups, notDone, lists: L, recs,
     };
   }
 
@@ -671,7 +732,7 @@
     const place = trim(parts[0] || '').replace(/\s+/g, ' ');
     const biz = trim(parts[1] || '');
     const vol = /물동량\s*([\d,.]+\s*(?:만)?(?:매|박스|BOX|box|대|장|개|롤|PLT)\s*\/\s*년)/.exec(r.desc || '');
-    return r.name.replace(/\((주|농|KCP|Z|거래중지|종료)\)|\[|\]|㈜|주식회사|농업회사법인|영농조합법인/g, '').trim() + '(' + [place, [biz, vol ? vol[1].replace(/\s+/g, '') : ''].filter(Boolean).join(' '), fmtEok(r.amount) + '억'].filter(Boolean).join(', ') + ')';
+    return r.name.replace(/\((주|농|KCP|Z|거래중지|종료)\)|\[|\]|㈜|주식회사|농업회사법인|영농조합법인/g, '').trim() + '(' + [place, [biz, vol ? vol[1].replace(/\s+/g, '') : ''].filter(Boolean).join(' '), fmtAmt(r.amount)].filter(Boolean).join(', ') + ')';
   }
   function planDraft(rs, mode) {
     if (!rs.length) return '';
@@ -759,8 +820,11 @@
       v(0)[4] = heading; v(2)[11] = m + '월 당월'; v(2)[18] = m + '월 누계';
       REG4.forEach(([reg], ri) => {
         const p = P[reg];
-        [[p.tgt, p.ctgt], [p.act, p.cact]].forEach(([cur, cum], t) => { const row = v(3 + ri * 3 + t); cur.forEach((x, bi) => { row[6 + bi] = x; }); cum.forEach((x, bi) => { row[13 + bi] = x; }); });
-        const d = v(3 + ri * 3 + 2); p.act.forEach((x, bi) => { d[6 + bi] = x - p.tgt[bi]; }); p.cact.forEach((x, bi) => { d[13 + bi] = x - p.ctgt[bi]; });
+        [['tgt', 'ctgt'], ['act', 'cact'], ['dif', 'cdif']].forEach(([f, cf], t) => {
+          const row = v(3 + ri * 3 + t);
+          p[f].forEach((x, bi) => { row[6 + bi] = x; }); p[cf].forEach((x, bi) => { row[13 + bi] = x; });
+          if (p.tot) { row[11] = { $over: p.tot[f] }; row[18] = { $over: p.tot[cf] }; } // 합계: 상단표 값(없으면 틀 수식)
+        });
       });
     };
     const sections = [];
@@ -838,7 +902,8 @@
       sn.cells.forEach((c, ci) => {
         if (c.f) c.f = shiftRows(c.f, 1, r - o.kitRow);
         const v = o.vals[ci + 1];
-        if (v !== undefined && !c.f) c.v = v;
+        if (v && v.$over !== undefined) { c.f = null; c.v = v.$over; } // 수식 칸을 값으로 바꿈
+        else if (v !== undefined && !c.f) c.v = v;
       });
       if (o.h) sn.height = o.h;
       writeRow(ws, r, sn, MAXCOL);
@@ -873,6 +938,7 @@
     MG.forEach(([a, c1, b, c2]) => { if (b > a || c2 > c1) ws.mergeCells(26 + a, c1, 26 + b, c2); });
     sections.forEach(([a, b]) => ws.mergeCells(26 + a, 2, 26 + b, 3));
     // 마무리: 열 때 재계산
+    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2', showGridLines: false, zoomScale: 95, zoomScaleNormal: 95 }];
     [ws].forEach((sh) => stripResults(sh));
     wb.calcProperties = Object.assign({}, wb.calcProperties, { fullCalcOnLoad: true });
     return { wb, rows: { report: R.length, dataStart: newData } };

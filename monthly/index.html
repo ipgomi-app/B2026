@@ -22,6 +22,13 @@
   .tab .cnt { font-weight: 400; font-size: 12px; color: var(--sub); }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 4px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+  .card.fold > h2 { cursor: pointer; user-select: none; }
+  .card.fold > h2::after { content: "접기 ▲"; margin-left: auto; color: var(--sub); font-size: 12px; font-weight: 400; white-space: nowrap; }
+  .card.fold.closed > h2::after { content: "펼치기 ▼"; color: var(--blue); }
+  .card.fold.closed > h2 { margin-bottom: 0; }
+  .card.fold.closed > :not(h2) { display: none !important; }
+  .fsum { font-weight: 400; font-size: 12.5px; color: var(--sub); }
+  .card.fold:not(.closed) .fsum { display: none; }
   .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 12px; flex: none; }
   .hint { color: var(--sub); font-size: 12.5px; margin: 2px 0 10px; }
   .how { background: var(--soft); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: #394256; margin: 0 0 10px; }
@@ -43,6 +50,10 @@
   .st.ok { color: var(--ok); } .st.err { color: var(--warn); }
   textarea { width: 100%; height: 64px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; background: #fff; }
   textarea.prose { height: 150px; font: 13.5px/1.6 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; }
+  td.desc { width: 100%; min-width: 420px; }
+  input.d1 { width: 100%; font-size: 12.5px; padding: 4px 7px; }
+  .fix1 { font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 900px; min-height: 0; margin-top: 2px; }
+  .fix1:empty { display: none; }
   textarea.cell { height: 54px; font: 12.5px/1.45 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; min-width: 280px; }
   label.btn, button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8c2d3; background: #fff; color: var(--ink); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
   label.btn:hover, button:hover { background: var(--soft); }
@@ -55,10 +66,10 @@
   input.g { width: 96px; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   th, td { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: middle; }
-  th { background: #f2f4f8; font-weight: 600; color: #394256; position: sticky; top: 0; z-index: 1; }
+  th { white-space: nowrap; background: #f2f4f8; font-weight: 600; color: #394256; position: sticky; top: 0; z-index: 1; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tr.off td { color: #9aa3b2; text-decoration: line-through; }
-  #listBody td:nth-child(2), #listBody td:nth-child(4) { white-space: nowrap; }
+  #listBody td:nth-child(2), #listBody td:nth-child(3), #listBody td:nth-child(5), #listBody td:nth-child(6) { white-space: nowrap; }
   tr.grp td { background: #e9edf5; font-weight: 700; color: var(--navy); }
   .tablewrap { max-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
   .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
@@ -83,21 +94,21 @@
   </nav>
 
   <div id="p1">
-  <section class="card">
-    <h2><span class="step">1</span>이번 달 영남영업본부 양식</h2>
+  <section class="card fold" data-fold="f1">
+    <h2><span class="step">1</span>이번 달 영남영업본부 양식 <span class="fsum" id="fs_f1"></span></h2>
     <p class="how">받은 양식 파일의 <b>영남영업본부 시트</b>에서 <b>B1 셀부터 끝까지</b>(시트 전체도 됨) 복사해 붙여넣으세요. 전월 실적 현황·당월 계획 합계표와 전월 머리글 건수·금액을 여기서 가져옵니다.</p>
     <div class="box" id="box_form"><h3><span>영남영업본부 양식</span><button class="mini" data-reset="form">초기화</button></h3><textarea id="in_form" placeholder="[2026년 N월 영업현황 보고 - 영남영업본부] 로 시작하는 시트 붙여넣기"></textarea><div class="st" id="st_form"></div></div>
   </section>
 
-  <section class="card">
-    <h2><span class="step">2</span>사업별 계약 · 견적 데이터 <span class="muted" style="font-weight:400;font-size:12.5px">전월·당월을 한꺼번에 붙여도 됩니다</span></h2>
+  <section class="card fold" data-fold="f2">
+    <h2><span class="step">2</span>사업별 계약 · 견적 데이터 <span class="muted" style="font-weight:400;font-size:12.5px">전월·당월을 한꺼번에 붙여도 됩니다</span> <span class="fsum" id="fs_f2"></span></h2>
     <p class="how">시스템에서 뽑은 <b>계약</b>·<b>견적</b> 목록을 머리글 포함해 붙여넣으세요. 영남 12개 지점만 남기고, <b>월</b>로 전월(실적)·당월(계획)을 나눕니다. 계약형태가 다른 사업이면 알맞은 사업으로 옮깁니다.</p>
     <div class="grid5" id="bizGrid"></div>
     <div class="box" id="box_sonik" style="margin-top:10px"><h3><span>손익개선 (진행중 · 완료) <span class="opt">당월 PPS 추진계획 아래 손익개선 블록</span></span><button class="mini" data-reset="sonik">초기화</button></h3><textarea id="in_sonik" placeholder="단가인상 실적 표 (머리글 2줄 포함) 붙여넣기"></textarea><div class="st" id="st_sonik"></div></div>
   </section>
 
-  <section class="card">
-    <h2><span class="step">3</span>타겟업체 · 농산업종</h2>
+  <section class="card fold" data-fold="f3">
+    <h2><span class="step">3</span>타겟업체 · 농산업종 <span class="fsum" id="fs_f3"></span></h2>
     <div class="grid2">
       <div class="box" id="box_tgtSum"><h3><span>타겟업체 요약표 <span class="opt">전체 진행내역 · 금주 진행내역</span></span><button class="mini" data-reset="tgtSum">초기화</button></h3><textarea id="in_tgtSum"></textarea><div class="st" id="st_tgtSum"></div></div>
       <div class="box" id="box_tgtList"><h3><span>타겟업체 목록 <span class="opt">전월·당월 함께</span></span><button class="mini" data-reset="tgtList">초기화</button></h3><textarea id="in_tgtList"></textarea><div class="st" id="st_tgtList"></div></div>
@@ -107,8 +118,8 @@
     <p class="hint" style="margin-top:8px">경쟁사(BIGS)는 다음에 추가합니다.</p>
   </section>
 
-  <section class="card">
-    <h2><span class="step">4</span>출력 건수 · 최소 금액</h2>
+  <section class="card fold" data-fold="f4">
+    <h2><span class="step">4</span>출력 건수 · 최소 금액 <span class="fsum" id="fs_f4"></span></h2>
     <p class="hint">블록마다 금액 큰 순으로 <b>최소 금액(천원) 이상</b>만, <b>최대 건수</b>까지 넣습니다. 최대 건수 0 = 전 건. 머리글 "(N업체 X억)"은 거르기 전 전체 기준입니다.</p>
     <div class="tablewrap" style="max-height:none"><table id="limTable"></table></div>
     <div class="row" style="margin-top:8px"><button class="mini" id="limReset">기본값으로</button></div>
@@ -118,8 +129,12 @@
     <h2><span class="step">5</span>점검 요약 · 중복 업체 배치</h2>
     <div id="checks" class="muted">데이터를 붙여넣으면 점검 결과가 여기에 나옵니다.</div>
     <div id="dupWrap" hidden style="margin-top:12px">
-      <p class="hint">여러 목록에 함께 들어온 업체입니다. 넣을 목록만 체크하세요(기본: 모두). 체크를 풀면 그 목록에서 업체 행만 빠지고, 머리글 건수·금액은 그대로 둡니다.</p>
-      <div class="tablewrap"><table><thead><tr><th>권역</th><th>업체명</th><th>배치 (목록 · 단계 · 금액)</th></tr></thead><tbody id="dupBody"></tbody></table></div>
+      <p class="hint">PPS 사업·타겟·농산 목록에 함께 들어온 업체입니다(전월·당월끼리도 비교). 타겟·농산에도 있으면 기본은 타겟·농산에만 넣고 사업 목록에서는 뺍니다. 넣을 목록만 체크하세요. 체크를 풀어도 업체 행만 빠지고 머리글 건수·금액은 그대로입니다.</p>
+      <div class="tablewrap"><table><thead><tr><th>권역</th><th>담당자</th><th>코드</th><th>업체명</th><th>전월</th><th>당월</th></tr></thead><tbody id="dupBody"></tbody></table></div>
+    </div>
+    <div id="ndWrap" hidden style="margin-top:12px">
+      <p class="hint"><b>결재완료 아님(반려·미결재)</b> 행입니다. 기본은 빼고, 넣을 행만 체크하세요.</p>
+      <div class="tablewrap"><table><thead><tr><th>넣기</th><th>권역</th><th>담당자</th><th>코드</th><th>업체명</th><th>사업 · 단계 · 월</th><th>결재상태</th><th class="num">금액</th></tr></thead><tbody id="ndBody"></tbody></table></div>
     </div>
   </section>
   </div>
@@ -128,8 +143,8 @@
   <section class="card">
     <h2>목록 수정</h2>
     <p class="hint">엑셀에 들어갈 목록입니다. <b>넣기</b> 체크를 풀면 빠지고, 구분·세부내용을 고치면 그대로 들어갑니다. 세부내용은 쉼표·띄어쓰기·오탈자·금액 표기를 자동으로 다듬은 결과입니다(수정이력 참고).</p>
-    <div class="row" style="margin-bottom:8px"><input type="text" id="listSearch" placeholder="업체명 검색" style="width:220px"><label style="font-size:12.5px"><input type="checkbox" id="listAll"> 거른 행(건수·금액 기준 밖)도 보기</label></div>
-    <div class="tablewrap" style="max-height:640px"><table><thead><tr><th>넣기</th><th>부서명</th><th>구분</th><th>업체명</th><th class="num">예상매출</th><th>세부내용</th><th>수정이력 · 점검</th></tr></thead><tbody id="listBody"></tbody></table></div>
+    <div class="row" style="margin-bottom:8px"><input type="text" id="listSearch" placeholder="업체명 검색" style="width:220px"><label style="font-size:12.5px"><input type="checkbox" id="listAll"> 거른 행(건수·금액 기준 밖)과 작은 수정(띄어쓰기·금액표기)도 보기</label></div>
+    <div class="tablewrap" style="max-height:640px"><table><thead><tr><th>넣기</th><th>부서명</th><th>담당자</th><th>구분</th><th>코드</th><th>업체명</th><th class="num">예상매출</th><th>세부내용 <span class="fix">(아래: 수정이력 · 점검)</span></th></tr></thead><tbody id="listBody"></tbody></table></div>
   </section>
   </div>
 
@@ -179,7 +194,7 @@
   const fmt = (n) => Math.round(n || 0).toLocaleString('en-US');
 
   // ---------- 상태 ----------
-  let S = { inputs: { biz: {} }, limits: {}, placement: {}, exclude: {}, edits: {}, texts: {} };
+  let S = { inputs: { biz: {} }, limits: {}, placement: {}, approve: {}, exclude: {}, edits: {}, texts: {} };
   try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j) S = Object.assign(S, j); } catch (e) { /* 저장소 없음 */ }
   S.inputs.biz = S.inputs.biz || {};
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 용량 초과 등 */ } };
@@ -189,6 +204,27 @@
     document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t));
     ['p1', 'p2', 'p3'].forEach((id) => { $(id).hidden = id !== t.dataset.tab; });
   }));
+
+  // ---------- 접기 (1~4) ----------
+  const FOLD_DEF = { f1: false, f2: false, f3: false, f4: true };
+  S.fold = S.fold || {};
+  document.querySelectorAll('.card.fold').forEach((sec) => {
+    const k = sec.dataset.fold;
+    sec.classList.toggle('closed', S.fold[k] != null ? S.fold[k] : FOLD_DEF[k]);
+    sec.querySelector('h2').addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      S.fold[k] = sec.classList.toggle('closed'); save();
+    });
+  });
+  function updateFold() {
+    const filled = (ks) => ks.filter((k) => getIn(k).trim()).length;
+    const k2 = BIZ.flatMap((b) => [b + '계약', b + '견적']).concat('sonik'), k3 = ['tgtSum', 'tgtList', 'agSum', 'agList'];
+    $('fs_f1').textContent = getIn('form').trim() ? ($('st_form').textContent || '붙여넣음') : '비어 있음';
+    $('fs_f2').textContent = filled(k2) + ' / ' + k2.length + '칸 붙여넣음';
+    $('fs_f3').textContent = filled(k3) + ' / ' + k3.length + '칸 붙여넣음';
+    const changed = LIM_ROWS.some(([key, , sts]) => sts.some((st) => ['max', 'min'].some((f) => +limVal(key, st, f) !== +E.DEFAULT_LIMITS[key][f])));
+    $('fs_f4').textContent = changed ? '기본값에서 바꿈' : '기본값';
+  }
 
   // ---------- 붙여넣기 칸 ----------
   const grid = $('bizGrid');
@@ -246,7 +282,7 @@
   // ---------- 모델 갱신 ----------
   let model = null, timer = null;
   const schedule = () => { clearTimeout(timer); timer = setTimeout(() => refresh(), 350); };
-  function opts() { return { limits: toEngineLimits(), placement: S.placement, exclude: S.exclude, edits: S.edits, texts: Object.assign({}, S.texts) }; }
+  function opts() { return { limits: toEngineLimits(), placement: S.placement, approve: S.approve || {}, exclude: S.exclude, edits: S.edits, texts: Object.assign({}, S.texts) }; }
   function toEngineLimits() {
     const out = {};
     Object.keys(S.limits).forEach((k) => { out[k] = {}; Object.keys(S.limits[k]).forEach((st) => { out[k][st === '계약확정' ? '계약확정' : st] = S.limits[k][st]; }); });
@@ -257,7 +293,8 @@
     box.classList.toggle('filled', !!getIn(k).trim());
     st.className = 'st' + (ok === true ? ' ok' : ok === false ? ' err' : ''); st.textContent = text || '';
   }
-  function refresh(redraft) {
+  function refresh(redraft) { try { return refresh0(redraft); } finally { updateFold(); } }
+  function refresh0(redraft) {
     ALL.forEach((k) => boxState(k, null, getIn(k).trim() ? E.parseTSV(getIn(k)).filter((r) => r.some((c) => c.trim())).length + '줄' : ''));
     if (!S.inputs.form || !S.inputs.form.trim()) { model = null; $('buildBtn').disabled = true; $('summary').textContent = '먼저 1번 양식을 붙여넣으세요.'; return; }
     try {
@@ -272,7 +309,7 @@
     if (S.inputs.agList) boxState('agList', true, '영남 ' + (cnt.ag || 0) + '건');
     if (model.tgtSum) boxState('tgtSum', model.tgtSum.t1.length ? true : false, '전체 ' + model.tgtSum.t1.length + '줄 · 권역 ' + model.tgtSum.t2.length + '줄');
     if (model.agSum) boxState('agSum', model.agSum.a.length ? true : false, '권역 ' + model.agSum.a.length + '줄 · 2차 타겟 ' + model.agSum.b.length + '줄');
-    renderChecks(); renderDups(); renderList(); renderTexts(redraft); renderSummary();
+    renderChecks(); renderDups(); renderNotDone(); renderList(); renderTexts(redraft); renderSummary();
     $('buildBtn').disabled = false;
   }
   function renderChecks() {
@@ -283,12 +320,18 @@
   }
   function renderDups() {
     const d = model.dups; $('dupWrap').hidden = !d.length;
-    $('dupBody').innerHTML = d.map((x) => '<tr><td>' + esc(x.region) + '</td><td>' + esc(x.name) + '</td><td>' +
-      x.lists.map((l) => { const w = x.where.filter((y) => y.list === l); const on = !(S.placement[x.key] && S.placement[x.key][l] === false);
-        return '<label style="margin-right:14px;white-space:nowrap"><input type="checkbox" data-dup="' + esc(x.key) + '|' + l + '"' + (on ? ' checked' : '') + '> ' + esc(w.map((y) => y.label + ' ' + fmt(y.amount)).join(', ')) + '</label>'; }).join('') + '</td></tr>').join('');
+    const cellOf = (x, ls) => x.lists.filter((l) => ls.includes(l)).map((l) => { const w = x.where.filter((y) => y.list === l);
+      return '<label style="display:block;white-space:nowrap"><input type="checkbox" data-dup="' + esc(x.key) + '|' + l + '"' + (x.on[l] ? ' checked' : '') + '> ' + esc(w.map((y) => y.label.replace(/(전월|당월) ?/, '') + ' ' + fmt(y.amount)).join(', ')) + '</label>'; }).join('');
+    $('dupBody').innerHTML = d.map((x) => '<tr><td>' + esc(x.region) + '</td><td>' + esc(x.mgr) + '</td><td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td>' +
+      cellOf(x, ['prev', 'tgtPrev', 'agPrev']) + '</td><td>' + cellOf(x, ['cur', 'tgtCur', 'agCur']) + '</td></tr>').join('');
     $('dupBody').querySelectorAll('input').forEach((inp) => inp.addEventListener('change', () => {
       const [k, l] = inp.dataset.dup.split('|'); S.placement[k] = S.placement[k] || {}; S.placement[k][l] = inp.checked; save(); refresh();
     }));
+  }
+  function renderNotDone() {
+    const d = model.notDone || []; $('ndWrap').hidden = !d.length;
+    $('ndBody').innerHTML = d.map((x) => '<tr class="' + (x.on ? '' : 'off') + '"><td><input type="checkbox" data-nd="' + esc(x.ndId) + '"' + (x.on ? ' checked' : '') + '></td><td>' + esc(x.region) + '</td><td>' + esc(x.mgr) + '</td><td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td>' + esc(x.label) + '</td><td>' + esc(x.status) + '</td><td class="num">' + fmt(x.amount) + '</td></tr>').join('');
+    $('ndBody').querySelectorAll('input').forEach((inp) => inp.addEventListener('change', () => { S.approve = S.approve || {}; if (inp.checked) S.approve[inp.dataset.nd] = true; else delete S.approve[inp.dataset.nd]; save(); refresh(); }));
   }
   // 목록 수정 탭
   function listGroups() {
@@ -312,15 +355,15 @@
       let rows = showAll ? blockAll : blockAll.filter((r) => shown.has(r.id) || S.exclude[r.id]);
       if (q) rows = rows.filter((r) => r.name.includes(q));
       if (!rows.length) return;
-      h += '<tr class="grp"><td colspan="7">' + esc(gr.title) + '</td></tr>';
+      h += '<tr class="grp"><td colspan="8">' + esc(gr.title) + '</td></tr>';
       rows.forEach((r) => {
         const inList = shown.has(r.id), ex = !!S.exclude[r.id]; n += inList ? 1 : 0;
-        h += '<tr class="' + (inList ? '' : 'off') + '"><td><input type="checkbox" data-ex="' + esc(r.id) + '"' + (ex ? '' : ' checked') + '></td><td>' + esc(r.region) + '</td>' +
-          '<td><input class="g" type="text" data-gu="' + esc(r.id) + '" value="' + esc(r.gubun) + '"></td><td>' + esc(r.name) + '</td><td class="num">' + fmt(r.amount) + '</td>' +
-          '<td><textarea class="cell" data-de="' + esc(r.id) + '">' + esc(r.desc) + '</textarea></td><td class="fix">' + esc([r.fix, r.flags.join(', ')].filter(Boolean).join(' · ')) + '</td></tr>';
+        h += '<tr class="' + (inList ? '' : 'off') + '"><td><input type="checkbox" data-ex="' + esc(r.id) + '"' + (ex ? '' : ' checked') + '></td><td>' + esc(r.region) + '</td><td>' + esc(r.mgr || '') + '</td>' +
+          '<td><input class="g" type="text" data-gu="' + esc(r.id) + '" value="' + esc(r.gubun) + '"></td><td>' + esc(r.code || '') + '</td><td>' + esc(r.name) + '</td><td class="num">' + fmt(r.amount) + '</td>' +
+          '<td class="desc"><input type="text" class="d1" data-de="' + esc(r.id) + '" value="' + esc(r.desc) + '"><div class="fix1" title="' + esc([r.fix, r.flags.join(', ')].filter(Boolean).join(' · ')) + '">' + esc([showAll ? r.fix : r.fixMajor, r.flags.join(', ')].filter(Boolean).join(' · ')) + '</div></td></tr>';
       });
     });
-    $('listBody').innerHTML = h || '<tr><td colspan="7" class="muted">목록이 없습니다.</td></tr>';
+    $('listBody').innerHTML = h || '<tr><td colspan="8" class="muted">목록이 없습니다.</td></tr>';
     $('listCnt').textContent = n ? '(' + n + '건)' : '';
     $('listBody').querySelectorAll('[data-ex]').forEach((el) => el.addEventListener('change', () => { if (el.checked) delete S.exclude[el.dataset.ex]; else S.exclude[el.dataset.ex] = true; save(); refresh(); }));
     const ed = (el, f) => el.addEventListener('change', () => { const id = el.dataset[f === 'desc' ? 'de' : 'gu']; S.edits[id] = S.edits[id] || {}; S.edits[id][f] = el.value; save(); schedule(); });
