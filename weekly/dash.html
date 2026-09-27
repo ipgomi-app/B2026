@@ -933,7 +933,7 @@ async function mtExcel(){if(!MT){alert('먼저 "주간회의 작성시트"를 �
     for(let rr=p0;rr<r;rr++)for(let c=2;c<=17;c++){const x=C(rr,c);x.fill=F(PL);x.font={...font,bold:c<=3};x.border=BD;x.alignment={vertical:'middle',horizontal:c<=3?'center':'left',wrapText:true}}
     ws.getCell(top,2).font={...font,bold:true,size:11};r+=2});
   const buf=await wb.xlsx.writeBuffer();const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='주간회의_운영관리_'+(MT.label||MT.ym).replace(/\s+/g,'')+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='권역_주간회의_'+(MT.label||MT.ym).replace(/\s+/g,'')+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 $('mt-make').onclick=mtMake;$('mt-xlsx').onclick=mtExcel;
 /* ===== 3. 목표 진척도 ===== */
 const cntOfG=(list,c)=>list.filter(r=>r.cats.includes(c)).length,amtOfG=(list,c)=>list.filter(r=>r.cats.includes(c)).reduce((s,r)=>s+(r.camt[c]||0),0);
