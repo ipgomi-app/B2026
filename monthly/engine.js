@@ -597,9 +597,11 @@
       lists: [...new Set(occ[k].map((r) => r.list))],
     }));
     const exclude = opts.exclude || {};
-    const kept = (r) => !(placement[r.key] && placement[r.key][r.list] === false) && !exclude[r.id];
+    // 머리글 건수·금액은 중복 배치와 무관(업체 행만 빠짐). 목록 수정의 넣기 해제만 머리글에도 반영.
+    const kept = (r) => !exclude[r.id];
+    const placed = (r) => !(placement[r.key] && placement[r.key][r.list] === false);
     const sortAmt = (a, b) => b.amount - a.amount;
-    const pick = (rs, lim) => rs.filter((r) => r.amount >= lim.min).slice(0, lim.max > 0 ? lim.max : undefined);
+    const pick = (rs, lim) => rs.filter((r) => placed(r) && r.amount >= lim.min).slice(0, lim.max > 0 ? lim.max : undefined);
     const head = (rs) => ({ n: rs.length, k: rs.reduce((s, r) => s + r.amount, 0), units: rs.reduce((s, r) => s + (r.units || 0), 0) });
     // 전월 사업
     const prev = BIZ_ORDER.map((b) => {
