@@ -816,7 +816,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
   const S3=rowsOf(st3);const W3=[...keyH.map(()=>72),56,56,56,56,56,80,96,80,92,88,92,56,56,56];
   const head3='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('영업활동',2,1,';background:#dbe8fb')+hg('견적(결재완료)',2,1)+hg('신규계약',2,1,';background:#dbe8fb')+hg('단가인상',2,1)+hg('연결률',3,1,';background:#e2f0d9')+hg('기록 품질',3,1,';background:#fdebd0')+'</tr><tr>'+['건수','업체','건수','업체','건수','예상매출(천원)','건수','효과금액(천원)','영업→견적·계약(30일)','견적→계약','계약 근거일지(30일)','반복문구','수량기재','결과기재'].map(h=>hg(h)).join('')+'</tr>';
   const srcNote=(IX.contracts.length||IX.quotes.length)?'계약 '+IX.contracts.length+'건 · 견적 '+IX.quotes.length+'건(결재완료, 3번 칸 기준)':'3번 칸에 계약·견적 데이터를 붙여넣으면 성과 연결이 계산됩니다';
-  const sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 성과 연결 · 기록 품질 · '+esc(P.label)+' <span class="hint" style="margin:0">(카드 필터와 무관하게 기간 전체 기준 · '+srcNote+' · 연결은 붙여넣은 자료 전체에서 찾음)</span></div><table class="xl sumt"'+tws(W3)+'>'+cgw(W3)+head3+body(S3.T,S3.flags)+'</table>';
+  const sec3='<details><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:4px 0">③ 성과 연결 · 기록 품질 · '+esc(P.label)+' <span class="hint" style="margin:0">(카드 필터와 무관하게 기간 전체 기준 · '+srcNote+' · 연결은 붙여넣은 자료 전체에서 찾음)</span></summary><table class="xl sumt"'+tws(W3)+'>'+cgw(W3)+head3+body(S3.T,S3.flags)+'</table></details>';
   /* 신호: 사실만 표시 */
   const sig=[];const emps=[...new Set(all.map(u=>u.emp))].sort((a,b)=>empIdx(a)-empIdx(b)||String(a).localeCompare(String(b)));
   emps.forEach(e=>{const L=all.filter(u=>u.emp===e);const M=v2Metrics(L,new Set([e]),P,IX);const s=[];
