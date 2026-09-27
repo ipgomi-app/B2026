@@ -166,7 +166,9 @@
       month: trim(text(g(L.month))), needs: g(L.needs), needsText: text(g(L.needs)),
     };
   }
-  const isOldRow = (f) => !/^\d{1,2}월$/.test(f.month);
+  // 과거분(25 3Q, 2510 …) 행: 월구분이 있고 'N월'이 아닌 행. 비어 있으면 과거분 아님
+  const isOldMonth = (m) => !!trim(text(m)) && !/^\d{1,2}월$/.test(trim(text(m)));
+  const isOldRow = (f) => isOldMonth(f.month);
 
   // ---------- 권역 자료 ----------
   // xlsx 워크북 → 수주풀 스냅샷 (서식 포함)
@@ -234,7 +236,7 @@
       const L = inp.L || TL;
       const src = inp.rows;
       const mine = src.filter((r) => r.region === region);
-      const res = { region, mode: inp.mode, source: mine.length, updated: [], added: [], removed: [], same: 0 };
+      const res = { region, mode: inp.mode, source: mine.length, updated: [], added: [], removed: [], same: 0, skipped: inp.skipped || 0, week: inp.week || '' };
       // 템플릿의 해당 권역 행과 키+순번으로 매칭
       const occ = {}; const tplIdx = {};
       out.forEach((r, i) => { if (r.region === region) { const n = (occ[r.key] = (occ[r.key] || 0) + 1); tplIdx[r.key + '#' + n] = i; } });
@@ -255,7 +257,7 @@
         out[i] = merged;
       });
       // 삭제 (파일 모드에서 권역 파일에 없는 템플릿 행)
-      if (inp.mode === 'file') {
+      if (inp.mode === 'file' && !inp.partial) {
         const del = new Set();
         out.forEach((r, i) => { if (r.region === region && !matched.has(i)) { del.add(r); res.removed.push({ name: r.name, code: r.code }); } });
         if (del.size) out = out.filter((r) => !del.has(r));
@@ -264,7 +266,7 @@
       newRows.forEach((r) => {
         let row;
         if (inp.mode === 'paste') {
-          const base = [...out].reverse().find((x) => x.region === region) || out[out.length - 1];
+          const base = [...out].reverse().find((x) => x.region === region && !isOldRow(fields(x, TL))) || [...out].reverse().find((x) => !isOldRow(fields(x, TL))) || out[out.length - 1];
           row = applyPaste(base, r, TL, true);
         } else row = adaptRow(r, L, TL);
         let at = -1;
@@ -309,6 +311,11 @@
       return e > nb ? [nb, e] : null;
     }).filter(Boolean);
     return decorate({ cells, height: r.height, merges }, TL);
+  }
+  // 권역 행(붙여넣기 값 또는 파일 스냅샷)의 방문 주차들
+  function visitWeeks(r, L) {
+    const g = (c) => (!c ? '' : r.vals ? text(r.vals[c]) : text(r.cells[c - 1] && r.cells[c - 1].v));
+    return [L.newv, L.rev, L.le].map((c) => wk(g(c))).filter(Boolean);
   }
   function sameLayout(a, b) { return Object.keys(b.headers).every((k) => a.headers[k] === b.headers[k]); }
 
@@ -1034,7 +1041,7 @@
     if (!base) throw new Error('틀(kit) 수주풀에 서식 행이 없습니다.');
     const oldBase = kit.rows[1] || base; // 과거분(25 3Q, 2510 …) 행 서식
     const p = readRegionPaste(str, null, L);
-    const rows = p.rows.map((r) => applyPaste(L.month && !/^\d{1,2}월$/.test(trim(text(r.vals[L.month]))) ? oldBase : base, r, L, true));
+    const rows = p.rows.map((r) => applyPaste(L.month && isOldMonth(r.vals[L.month]) ? oldBase : base, r, L, true));
     if (!rows.length) throw new Error('수주풀 붙여넣기에서 업체 행을 찾지 못했습니다.');
     writePool(ws, L, rows, kit.lastRow, formulaPatterns(kit.rows, L));
     return rows.length;
@@ -1381,6 +1388,14 @@
       const inp = opts.inputs[region]; if (!inp) return;
       if (inp.type === 'file') { const r = readRegionWorkbook(inp.wb); inputs[region] = { mode: 'file', rows: r.rows, L: r.L }; }
       else if (inp.type === 'paste' && trim(inp.text)) { const r = readRegionPaste(inp.text, region, TL); inputs[region] = { mode: 'paste', rows: r.rows }; }
+    });
+    // 권역 자료는 보고 주차(금주)에 방문(신규/재방문/LE동행)한 행만 반영 — 나머지는 지난주 제출본 그대로
+    const W0 = opts.week && isWeek(wk(opts.week)) ? wk(opts.week) : null;
+    if (W0) Object.keys(inputs).forEach((region) => {
+      const inp = inputs[region]; const L = inp.L || TL;
+      const keep = []; let skipped = 0;
+      inp.rows.forEach((r) => { if (r.region !== region) return; if (visitWeeks(r, L).includes(W0)) keep.push(r); else skipped++; });
+      inp.rows = keep; inp.partial = true; inp.skipped = skipped; inp.week = W0;
     });
     const merged = mergeRows(tpl.rows, inputs, TL);
     const log = merged.log;

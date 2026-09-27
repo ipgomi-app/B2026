@@ -277,7 +277,8 @@
 
   function renderLog(log) {
     $('mergeLog').innerHTML = log.map((l) => {
-      const parts = ['<b>' + l.region + '</b> (' + (l.mode === 'file' ? '엑셀' : '붙여넣기') + ' ' + l.source + '행)', '변경 ' + l.updated.length, '그대로 ' + l.same];
+      const parts = ['<b>' + l.region + '</b> (' + (l.week ? l.week + ' 방문 ' : '') + l.source + '행 반영)', '변경 ' + l.updated.length, '그대로 ' + l.same];
+      if (l.skipped) parts.push('<span class="muted">' + (l.week || '금주') + ' 외 ' + l.skipped + '행은 지난주 제출본 그대로</span>');
       if (l.added.length) parts.push('<span class="badge new">신규 ' + l.added.length + '</span> ' + esc(l.added.map((a) => a.name).join(', ')));
       if (l.removed.length) parts.push('<span class="badge le">삭제 ' + l.removed.length + '</span> ' + esc(l.removed.map((a) => a.name).join(', ')));
       if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.slice(0, 8).map((u) => u.name).join(', ') + (l.updated.length > 8 ? ' …' : '')) + '</span>');
@@ -320,7 +321,7 @@
     $('checkWrap').hidden = false;
   }
 
-  const engineOpts = async () => ({ inputs: await engineInputs(), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
+  const engineOpts = async () => ({ week: week(), inputs: await engineInputs(), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
   const keyOfForm = (f) => String(f.code == null ? '' : f.code).trim() + '|' + String(f.name || '').trim();
 
   async function refreshCtx() {
