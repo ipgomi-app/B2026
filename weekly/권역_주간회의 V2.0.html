@@ -786,22 +786,23 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     if(activeRegs.length>1){T.push(['영남영업본부','',...(emp?['']:[]),...stats(units,all,[])]);flags.push('tot')}return {T,flags}};
   const pct=(a,b)=>b?Math.round(100*a/b)+'%':'',rt=(a,b)=>b?a+'/'+b+' ('+Math.round(100*a/b)+'%)':'';
   /* 표② 활동분류 건수 */
+  const showPct=!f||isG(f);/* 세부 분류 하나를 고르면 비중 열은 뺀다 */
   const st2=L=>{const c={};V2K.concat(['X','?']).forEach(k=>c[k]=0);L.forEach(u=>c[u.cat]++);const n=L.length-c['X'];const s=c['1']+c['2'],o=c['3']+c['4']+c['5']+c['6']+c['7'],m=c['8']+c['9'];
-    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...V2K.map(k=>c[k]),c['X'],c['?'],pct(s,n),pct(o,n),pct(m,n)]};
+    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...V2K.map(k=>c[k]),c['X'],c['?'],...(showPct?[pct(s,n),pct(o,n),pct(m,n)]:[])]};
   const S2=rowsOf(st2);const nk=keyH.length;
   const cgw=ws=>'<colgroup>'+ws.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup>',tws=ws=>' style="width:'+ws.reduce((a,b)=>a+b,0)+'px"';
-  const W2=[...keyH.map(()=>72),56,56,...V2K.map(()=>68),48,56,52,52,52];
-  const head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('활동수',1,2)+hg('업체수',1,2)+hg('영업',2,1,';background:#dbe8fb')+hg('운영',5,1,';background:#e2f0d9')+hg('관리',2,1,';background:#fdebd0')+hg('제외',1,2)+hg('확인필요',1,2)+hg('비중',3,1)+'</tr><tr>'+V2K.map(k=>hg(V2N[k])).join('')+hg('영업')+hg('운영')+hg('관리')+'</tr>';
+  const W2=[...keyH.map(()=>72),56,56,...V2K.map(()=>68),48,56,...(showPct?[52,52,52]:[])];
+  const head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('활동수',1,2)+hg('업체수',1,2)+hg('영업',2,1,';background:#dbe8fb')+hg('운영',5,1,';background:#e2f0d9')+hg('관리',2,1,';background:#fdebd0')+hg('제외',1,2)+hg('확인필요',1,2)+(showPct?hg('비중',3,1):'')+'</tr><tr>'+V2K.map(k=>hg(V2N[k])).join('')+(showPct?hg('영업')+hg('운영')+hg('관리'):'')+'</tr>';
   const campNote=Object.keys(camp.set).filter(w=>{const k=v2Date(w);const s=ymd(k),e=ymd(new Date(k.getFullYear(),k.getMonth(),k.getDate()+6));return e>=P.from&&s<=P.to}).sort();
   const sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 활동분류 건수 · '+esc(P.label)+ft+' <span class="hint" style="margin:0">(활동 1건 = 주 분류 1개, 활동수는 제외를 뺀 분석 대상)</span></div>'+
     (campNote.length?'<div class="hint" style="margin:0 0 4px">지시 활동 주: '+campNote.map(w=>fmtMD(v2Date(w))+'주'+(camp.auto[w]?'('+V2N[camp.auto[w].cat]+' '+camp.auto[w].n+'/'+camp.auto[w].of+'명)':'(수동)')).join(', ')+' — 개인 쏠림 신호에서 제외</div>':'')+
     '<table class="xl sumt"'+tws(W2)+'>'+cgw(W2)+head2+body(S2.T,S2.flags)+'</table>';
   /* 표③ 성과 연결 · 기록 품질 */
-  const st3=(L,gAll,k)=>{const M=v2Metrics(L,empsOf(k,gAll),P,IX);return [M.S.length,M.firms,M.Qp.length,M.qf,M.N.length,M.amtN,M.Uq.length?(M.camps<M.Uq.length?M.Uq.length+' (일괄 '+M.camps+')':M.Uq.length):0,M.amtU,rt(M.linked,M.firms),rt(M.q2c,M.qf),rt(M.N.length-M.noDiary.length,M.N.length),pct(M.boiler,M.n),pct(M.qty,M.n),pct(M.res,M.n)]};
+  const st3=(L,gAll,k)=>{const M=v2Metrics(gAll,empsOf(k,gAll),P,IX);/* 카드 필터와 무관: 기간 안 전체 활동 기준 */return [M.S.length,M.firms,M.Qp.length,M.qf,M.N.length,M.amtN,M.Uq.length?(M.camps<M.Uq.length?M.Uq.length+' (일괄 '+M.camps+')':M.Uq.length):0,M.amtU,rt(M.linked,M.firms),rt(M.q2c,M.qf),rt(M.N.length-M.noDiary.length,M.N.length),pct(M.boiler,M.n),pct(M.qty,M.n),pct(M.res,M.n)]};
   const S3=rowsOf(st3);const W3=[...keyH.map(()=>72),56,56,56,56,56,80,96,80,92,88,92,56,56,56];
   const head3='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('영업활동',2,1,';background:#dbe8fb')+hg('견적(결재완료)',2,1)+hg('신규계약',2,1,';background:#dbe8fb')+hg('단가인상',2,1)+hg('연결률',3,1,';background:#e2f0d9')+hg('기록 품질',3,1,';background:#fdebd0')+'</tr><tr>'+['건수','업체','건수','업체','건수','예상매출(천원)','건수','효과금액(천원)','영업→견적·계약(45일)','견적→계약','계약 근거일지(60일)','반복문구','수량기재','결과기재'].map(h=>hg(h)).join('')+'</tr>';
   const srcNote=(IX.contracts.length||IX.quotes.length)?'계약 '+IX.contracts.length+'건 · 견적 '+IX.quotes.length+'건(결재완료, 3번 칸 기준)':'3번 칸에 계약·견적 데이터를 붙여넣으면 성과 연결이 계산됩니다';
-  const sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 성과 연결 · 기록 품질 · '+esc(P.label)+' <span class="hint" style="margin:0">('+srcNote+' · 연결은 붙여넣은 자료 전체에서 찾음)</span></div><table class="xl sumt"'+tws(W3)+'>'+cgw(W3)+head3+body(S3.T,S3.flags)+'</table>';
+  const sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 성과 연결 · 기록 품질 · '+esc(P.label)+' <span class="hint" style="margin:0">(카드 필터와 무관하게 기간 전체 기준 · '+srcNote+' · 연결은 붙여넣은 자료 전체에서 찾음)</span></div><table class="xl sumt"'+tws(W3)+'>'+cgw(W3)+head3+body(S3.T,S3.flags)+'</table>';
   /* 신호: 사실만 표시 */
   const sig=[];const emps=[...new Set(all.map(u=>u.emp))].sort((a,b)=>empIdx(a)-empIdx(b)||String(a).localeCompare(String(b)));
   emps.forEach(e=>{const L=all.filter(u=>u.emp===e);const M=v2Metrics(L,new Set([e]),P,IX);const s=[];
