@@ -513,14 +513,16 @@ function amtKindOf(cats,sel){const c=sel||'';if(c==='손익개선'||!c&&cats.inc
 function lineAmtK(ln,kind){let won=0;if(kind==='예상매출')won=ln.P.won||0;else{const m=ln.text.match(kind==='효과금액'?EFF_RE:RECV_RE);if(m)won=wonOf(m[1]+(m[2]||''),'원')}return won?Math.round(won/1000).toLocaleString('en-US'):''}
 const CONTRACT_ACT_RE=/계약\s*(완료|진행|체결|성사)|계약서\s*(작성|체결|날인)/;
 function salesAct(ln){return CONTRACT_ACT_RE.test(ln.text)?'계약':ln.P.form==='품의'?'견적':'방문'}
-function lineSummary(P,lead){const a=(P.form==='경쟁사'?[lead,P.comp,P.use,P.type,P.vol?'물동량 '+P.vol:'',...P.body,P.plan]:[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan]).map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
+function lineSummary(P,lead){const a=[P.pre].concat(P.form==='경쟁사'?[lead,P.comp,P.use,P.type,P.vol?'물동량 '+P.vol:'',...P.body,P.plan]:[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan]).map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
   return a.filter((x,i)=>a.indexOf(x)===i).map(x=>x.length>80?x.slice(0,80)+'…':x).join(', ')}
 /* 상세 줄: 업체 묶음의 상세 한 줄마다 분류를 다시 판정해 해당 항목 줄만 남긴다 */
 function detailLines(r,cats){const out=[],seen=new Set();const day=dt=>dt?String(dt.m).padStart(2,'0')+'월 '+String(dt.d).padStart(2,'0')+'일':'';
-  const mk=(x,dt,c,etc)=>{const P=parseForm(etc?x.text.replace(/^\s*\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}(:\d{2})?\s*/,'').replace(/^\[?직출\]?\s*/,''):x.text);if(etc)P.act=etc;else if(!P.act)P.act=actOf(x.text,x.typ);return {day:day(dt),cats:c,text:x.text,P,etc}};
+  /* 직출·직퇴는 내용 앞에 구분과 시각을 적는다 (예: 직출 07:25:59, 계약처 수불 확인) */
+  const outPre=(x,g)=>{const k=/직퇴/.test(x.text)||!/직출/.test(x.text)&&/^직퇴/.test(String(g||'').trim())?'직퇴':'직출';const tm=(x.text.match(/^\s*\d{4}-\d{2}-\d{2}\s*(\d{1,2}:\d{2}(?::\d{2})?)/)||[])[1]||'';return {k,pre:(k+' '+tm).trim()}};
+  const mk=(x,dt,c,etc,g)=>{const P=parseForm(etc?x.text.replace(/^\s*\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}(:\d{2})?\s*/,'').replace(/^[\[(]?(직출|직퇴)[\])]?\s*/,''):x.text);if(etc==='직출'){const o=outPre(x,g);P.act=o.k;P.pre=o.pre}else if(etc)P.act=etc;else if(!P.act)P.act=actOf(x.text,x.typ);return {day:day(dt),cats:c,text:x.text,P,etc}};
   if(r.q){const x=r.d.dtl[0]||{text:''};const c=cats.find(k=>r.cats.includes(k));const L=mk(x,r.d.date,r.cats.filter(k=>cats.includes(k)));if(!r.d.date)L.day=r.d.days.join(',');if(r.camt[c]){L.P.won=r.camt[c]*1000;L.P.sales=eokOf(L.P.won)}if(r.items[c])L.P.type=L.P.type||r.items[c];L.P.act=/ 계약$/.test(c)?'계약':'견적';return [L]}
   (r.d.parts||[r.d]).forEach(pt=>pt.dtl.forEach(x=>{const one={...pt,dtl:[x]};let c=classify({...one,parts:[one]});if(!c.some(k=>cats.includes(k)))c=classify({...pt,parts:[pt]});c=c.filter(k=>cats.includes(k));
-    const key=(pt._etc&&pt.date?pt.date.key:'')+x.text.replace(/\s+/g,'');if(!c.length||!key||seen.has(key))return;seen.add(key);out.push(mk(x,pt.date,c,pt._etc))}));
+    const key=(pt._etc&&pt.date?pt.date.key:'')+x.text.replace(/\s+/g,'');if(!c.length||!key||seen.has(key))return;seen.add(key);out.push(mk(x,pt.date,c,pt._etc,pt.group))}));
   if(!out.length&&r.cats.some(k=>cats.includes(k)))r.d.dtl.forEach(x=>{const key=x.text.replace(/\s+/g,'');if(key&&!seen.has(key)){seen.add(key);out.push(mk(x,r.d.date,r.cats.filter(k=>cats.includes(k))))}});
   return out}
 /* 같은 업체(코드)의 일지를 한 행으로 합침 */
@@ -622,7 +624,8 @@ function build(){const wk=curWeek();
   /* 운영관리 기타: 휴무(휴가만 적힌 일지) · DRS작성(상세 없는 DRS일괄작성) · 직출(업무일지기타(40)의 직출 기록)은 각각 따로 표시 */
   const etcRows=[];
   inWk.forEach(d=>{if(isLeave(d))etcRows.push({...d,_etc:'휴무'});else if(!d.dtl.length&&/DRS\s*일괄\s*작성/i.test(d.group))etcRows.push({...d,dtl:[{code:'',typ:'DRS일괄작성',text:'DRS 일괄작성'}],_etc:'DRS작성'})});
-  const isOut=(d,x)=>OTHER_DIARY_RE.test(String(x.typ||'').trim())&&(/직출/.test(x.text)||/^직출/.test(String(d.group||'').trim()));
+  /* 직출·직퇴: 업무일지기타(40)의 직출/직퇴 기록 → 기타·직출 한 칸에 함께 표시 */
+  const isOut=(d,x)=>OTHER_DIARY_RE.test(String(x.typ||'').trim())&&(/직출|직퇴/.test(x.text)||/^(직출|직퇴)/.test(String(d.group||'').trim()));
   const diaryRows=inWk.filter(d=>d.dtl.length&&!isLeave(d)).map(d=>{const keep=d.dtl.filter(x=>!AUTO_QUOTE_RE.test(x.text));if(keep.length<d.dtl.length){autoQ++;if(!keep.length)return null;d={...d,dtl:keep}}
     const out=d.dtl.filter(x=>isOut(d,x));if(out.length){etcRows.push({...d,dtl:out,_etc:'직출'});d={...d,dtl:d.dtl.filter(x=>!isOut(d,x))};if(!d.dtl.length)return null}
     const q=isQuoteOnlyDiary(d),o=OTHER_DIARY_RE.test(String(d.group||'').trim());
