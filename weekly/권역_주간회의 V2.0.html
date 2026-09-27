@@ -802,8 +802,10 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
   const pct=(a,b)=>b?Math.round(100*a/b)+'%':'',rt=(a,b)=>b?a+'/'+b+' ('+Math.round(100*a/b)+'%)':'';
   /* 표② 활동분류 건수 */
   const showPct=!f||isG(f);/* 세부 분류 하나를 고르면 비중 열은 뺀다 */
-  const st2=L=>{const c={};V2K.concat(['X','?']).forEach(k=>c[k]=0);L.forEach(u=>c[u.cat]++);const n=L.length-c['X'];const s=c['1']+c['2'],o=c['3']+c['M']+c['4']+c['5']+c['6']+c['7'],m=c['8']+c['9'];
-    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...V2K.map(k=>c[k]),c['X'],c['?'],...(showPct?[pct(s,n),pct(o,n),pct(m,n)]:[])]};
+  /* 비중은 카드 필터와 무관하게 그 담당자의 기간 전체 활동 기준 */
+  const st2=(L,gAll)=>{const c={};V2K.concat(['X','?']).forEach(k=>c[k]=0);L.forEach(u=>c[u.cat]++);const n=L.length-c['X'];
+    const a={};V2K.forEach(k=>a[k]=0);(gAll||L).forEach(u=>{if(a[u.cat]!==undefined)a[u.cat]++});const na=Object.values(a).reduce((x,y)=>x+y,0),s=a['1']+a['2'],o=a['3']+a['M']+a['4']+a['5']+a['6']+a['7'],m=a['8']+a['9'];
+    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...V2K.map(k=>c[k]),c['X'],c['?'],...(showPct?[pct(s,na),pct(o,na),pct(m,na)]:[])]};
   const S2=rowsOf(st2);const nk=keyH.length;
   const cgw=ws=>'<colgroup>'+ws.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup>',tws=ws=>' style="width:'+ws.reduce((a,b)=>a+b,0)+'px"';
   const W2=[...keyH.map(()=>72),56,56,...V2K.map(()=>68),48,56,...(showPct?[52,52,52]:[])];
