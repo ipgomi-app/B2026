@@ -27,6 +27,10 @@
   .card.fold.closed > h2::after { content: "펼치기 ▼"; color: var(--blue); }
   .card.fold.closed > h2 { margin-bottom: 0; }
   .card.fold.closed > :not(h2) { display: none !important; }
+  .genrow { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button.gen { padding: 7px 22px; font-size: 13.5px; }
+  button.gen.dirty { background: #b3261e; border-color: #b3261e; }
+  .gst { font-size: 12.5px; color: var(--sub); } .gst.dirty { color: var(--warn); font-weight: 600; } .gst.ok { color: var(--ok); }
   .fsum { font-weight: 400; font-size: 12.5px; color: var(--sub); }
   .card.fold:not(.closed) .fsum { display: none; }
   .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 12px; flex: none; }
@@ -110,6 +114,7 @@
     <p class="how">시스템에서 뽑은 <b>계약</b>·<b>견적</b> 목록을 머리글 포함해 붙여넣으세요. 영남 12개 지점만 남기고, <b>월</b>로 전월(실적)·당월(계획)을 나눕니다. 계약형태가 다른 사업이면 알맞은 사업으로 옮깁니다.</p>
     <div class="grid5" id="bizGrid"></div>
     <div class="box" id="box_sonik" style="margin-top:10px"><h3><span>손익개선 (진행중 · 완료) <span class="opt">당월 PPS 추진계획 아래 손익개선 블록</span></span><button class="mini" data-reset="sonik">초기화</button></h3><textarea id="in_sonik" placeholder="단가인상 실적 표 (머리글 2줄 포함) 붙여넣기"></textarea><div class="st" id="st_sonik"></div></div>
+    <div class="genrow"><button class="primary gen" data-gen="g2">생성</button><span class="gst" id="gst_g2">사업별 데이터·손익개선을 붙여넣고 생성을 누르세요.</span></div>
   </section>
 
   <section class="card fold" data-fold="f3">
@@ -120,6 +125,7 @@
       <div class="box" id="box_agSum"><h3><span>농산업종 요약표 <span class="opt">영남본부 전체 현황 · 2차 타겟 현황</span></span><button class="mini" data-reset="agSum">초기화</button></h3><textarea id="in_agSum"></textarea><div class="st" id="st_agSum"></div></div>
       <div class="box" id="box_agList"><h3><span>농산업종 목록 <span class="opt">전월·당월 함께</span></span><button class="mini" data-reset="agList">초기화</button></h3><textarea id="in_agList"></textarea><div class="st" id="st_agList"></div></div>
     </div>
+    <div class="genrow"><button class="primary gen" data-gen="g3">생성</button><span class="gst" id="gst_g3">타겟·농산 데이터를 붙여넣고 생성을 누르세요.</span></div>
     <p class="hint" style="margin-top:8px">경쟁사(BIGS)는 다음에 추가합니다.</p>
   </section>
 
@@ -247,6 +253,24 @@
       '<textarea id="in_' + b + st + '" placeholder="' + st + ' 데이터"></textarea><div class="st" id="st_' + b + st + '"></div></div>').join('');
     grid.appendChild(d);
   });
+  // 2번(사업·손익개선)·3번(타겟·농산) 칸은 붙여넣어도 바로 반영하지 않고 생성 버튼으로 반영
+  const GEN = { g2: (k) => /^(PPS|SCM|MRO|GLB|MHE)(계약|견적)$/.test(k) || k === 'sonik', g3: (k) => ['tgtSum', 'tgtList', 'agSum', 'agList'].includes(k) };
+  const genOf = (k) => Object.keys(GEN).find((g) => GEN[g](k));
+  const dirty = {};
+  function markDirty(g) {
+    dirty[g] = true;
+    document.querySelector('[data-gen="' + g + '"]').classList.add('dirty');
+    const st = $('gst_' + g); st.className = 'gst dirty'; st.textContent = '바뀐 내용이 있습니다. 생성을 눌러 반영하세요.';
+  }
+  function genSummary(g) {
+    const st = $('gst_' + g); document.querySelector('[data-gen="' + g + '"]').classList.remove('dirty'); dirty[g] = false;
+    if (!model) { st.className = 'gst'; st.textContent = '먼저 1번 영남영업본부 양식을 붙여넣으세요.'; return; }
+    const L = model.lists, n = (a) => a.length;
+    st.className = 'gst ok';
+    st.textContent = g === 'g2'
+      ? '반영됨 · 전월 사업 ' + n(L.prev) + '건 · 당월 사업 ' + n(L.cur) + '건 · 손익개선 ' + n(L.sonik) + '건 · 결재완료 아님 ' + n(model.notDone) + '건'
+      : '반영됨 · 타겟 전월 ' + n(L.tgtPrev) + '건 · 당월 ' + n(L.tgtCur) + '건 · 농산 전월 ' + n(L.agPrev) + '건 · 당월 ' + n(L.agCur) + '건';
+  }
   const SIMPLE = ['form', 'form2', 'form3', 'sonik', 'tgtSum', 'tgtList', 'agSum', 'agList'];
   const getIn = (k) => { const m = /^(PPS|SCM|MRO|GLB|MHE)(계약|견적)$/.exec(k); return m ? ((S.inputs.biz[m[1]] || {})[m[2]] || '') : (S.inputs[k] || ''); };
   const setIn = (k, v) => { const m = /^(PPS|SCM|MRO|GLB|MHE)(계약|견적)$/.exec(k); if (m) { S.inputs.biz[m[1]] = S.inputs.biz[m[1]] || {}; S.inputs.biz[m[1]][m[2]] = v; } else S.inputs[k] = v; };
@@ -254,8 +278,12 @@
   ALL.forEach((k) => {
     const ta = $('in_' + k); if (!ta) return;
     ta.value = getIn(k);
-    ta.addEventListener('input', () => { setIn(k, ta.value); save(); schedule(); });
+    ta.addEventListener('input', () => { setIn(k, ta.value); save(); const g = genOf(k); if (g) markDirty(g); else schedule(); });
   });
+  document.querySelectorAll('[data-gen]').forEach((b) => b.addEventListener('click', () => {
+    const g = b.dataset.gen; b.disabled = true; const t = b.textContent; b.textContent = '생성 중…';
+    setTimeout(() => { try { dirty[g] = true; refresh(); } finally { b.disabled = false; b.textContent = t; } }, 20);
+  }));
   document.querySelectorAll('[data-reset]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.reset; $('in_' + k).value = ''; setIn(k, ''); save(); refresh(); }));
 
   $('detailKeep').checked = !!S.detailKeep;
@@ -308,7 +336,8 @@
     box.classList.toggle('filled', !!getIn(k).trim());
     st.className = 'st' + (ok === true ? ' ok' : ok === false ? ' err' : ''); st.textContent = text || '';
   }
-  function refresh(redraft) { try { return refresh0(redraft); } finally { updateFold(); } }
+  // 어떤 경로로든 다시 계산하면 2·3번 칸의 붙여넣기도 함께 반영되므로 생성 상태를 맞춘다
+  function refresh(redraft) { try { return refresh0(redraft); } finally { updateFold(); Object.keys(GEN).forEach((g) => { if (dirty[g] || ALL.some((k) => GEN[g](k) && getIn(k).trim())) genSummary(g); }); } }
   function refresh0(redraft) {
     ALL.forEach((k) => boxState(k, null, getIn(k).trim() ? E.parseTSV(getIn(k)).filter((r) => r.some((c) => c.trim())).length + '줄' : ''));
     if (!S.inputs.form || !S.inputs.form.trim()) { model = null; $('buildBtn').disabled = true; $('summary').textContent = '먼저 1번 양식을 붙여넣으세요.'; return; }
