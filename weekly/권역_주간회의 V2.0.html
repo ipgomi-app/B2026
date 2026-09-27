@@ -735,6 +735,16 @@ function v2Units(diaries){const U=[];diaries.forEach(d=>{if(!d.date||EXCLUDE_EMP
       U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:ymd(weekOf(new Date(d.date.y,d.date.m-1,d.date.d)).fri),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:v2Label(tc),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
   const seen=new Set(),out=U.filter(u=>{const k1='n|'+u.num+'|'+v2Norm(u.text),k2='e|'+u.emp+'|'+u.key+'|'+u.code+'|'+u.cat;if(seen.has(k1)||seen.has(k2))return false;seen.add(k1);seen.add(k2);return true});
   V2TC={};out.forEach(u=>{const k=u.emp+'|'+v2Norm(u.text);V2TC[k]=(V2TC[k]||0)+1});return out}
+/* 활동명 세분화: 담당자가 쓴 활동명이 없으면 내용 키워드로 분류별 세부 활동명을 붙인다 */
+const V2_ACT={'4':[['타용도 확인',/타용도/],['건설현장 회수',/현장.*(회수|공파렛트)|(회수|공파렛트).*현장/],['회수 완료',/회수\s*(완료|진행함)|전량\s*회수/],['재입고 협의',/재입고/],['공파렛트 회수',/공\s*파렛트/],['회수 요청·지시',/회수\s*(요청|지시|배차)|기사/],['회수 협의',/회수\s*(협의|협조|가능|예정)/],['재고증가 확인',/재고\s*증가|재고\s*확인|적재/],['입고미회수 확인',/입고\s*미회수|입고\s*확인|입고분/],['회수',/./]],
+ '6':[['자료수정 작성',/자료\s*수정/],['DRS 작성',/DRS/],['실착지 정리',/실착/],['출고 정리',/출고\s*(정리|누락|등록|입력|내역)/],['마감자료 수령',/마감/],['전표 수령',/전표/],['코드 정리',/코드|중복\s*업체|동일\s*업체/],['청구재고 확인',/청구/],['재고 증감 확인',/재고\s*(증감|부족|확인|차이)/],['수불 확인',/./]],
+ '5':[['신규업체 재고실사',/신규/],['재고실사',/./]],'3':[['신규현장 확인',/현장|공사|건설/],['신규업체 확인',/./]],
+ '1':[['엔지니어링 방문',/엔지니어링|자동화/],['경쟁사 전환 영업',/경쟁사|전환/],['견적 제출·전달',/견적\s*(제출|전달|발송|진행|안내)/],['견적 요청 대응',/견적/],['신규계약 협의',/신규\s*계약|계약\s*(협의|진행|체결|서)/],['샘플·제안',/샘플|제안|소개|카달로그/],['니즈 확인',/니즈|현황\s*(확인|점검)|동향/],['영업 방문',/./]],
+ '2':[['단가인상 협의',/단가\s*(인상|협의)|인상/],['단가인하 협의',/인하/],['재계약 협의',/재계약|연장/],['계약종료 협의',/종료|해지|이탈/],['추가·증차 협의',/증차|추가/],['계약조건 협의',/./]],
+ '8':[['법적대응',/법적|지급명령|가처분|강제\s*집행|내용증명|법무|압류/],['변제약정',/변제|약정/],['보증 확인',/보증/],['입금 확인',/입금\s*(완료|확인)/],['미수금 독촉',/독촉|입금\s*요청|미수/],['채권 관리',/./]],
+ '7':[['배차·결차 대응',/배차|결차/],['품질 클레임',/품질|파손|불량|오염/],['클레임 대응',/./]],
+ '9':[['회의·교육',/회의|교육|미팅/],['임대문의 응대',/임대|렌탈/],['자료 전달',/자료|서류/],['검수',/검수/],['기타업무',/./]]};
+function v2ActName(cat,lab,t){if(lab&&lab.length>=2)return lab;const L=V2_ACT[cat];if(!L)return '';for(const [n,re] of L)if(re.test(t))return n;return ''}
 /* 기간: 주간(선택 주) / 4주 누적 / 월간 / 전체 */
 function v2Period(){const sel=$('v2period');let p=sel?sel.value:'week';const wk=curWeek();if(p==='week'&&$('allweeks').checked)p='all';
   if(p==='all'||!wk)return {p:'all',from:'00000000',to:'99999999',label:'전체 기간'};
@@ -833,7 +843,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     Object.keys(bg).forEach(k=>{const L=bg[k];det+='<details open class="det-br"><summary>'+esc(k.replace('|',' · '))+' <span class="hint" style="margin:0">'+L.length+'건 · '+new Set(L.map(u=>u.emp)).size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
       L.map(u=>{const tags=[u.biz!=='PPS'||u.cat==='1'||u.cat==='2'?u.biz:'',u.tgt,u.res,u.multi?'복합':'',u.remote?'비대면':''].filter(Boolean);
         /* 내용은 V1 작성 규칙(parseForm·lineSummary): 일자·업체코드·면담자·전화번호 제거, 경쟁사 등록형은 경쟁사 구분·단가·물동량·비고, 번호형은 지역·업종·내용만. 원문은 마우스 올리면 표시 */
-        const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text,act=(u.lab||PF.act||'').replace(/^\[경쟁사\]$/,'경쟁사 등록');
+        const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text,act=(u.lab||(PF.act&&PF.form!=='일반'?PF.act:'')||'').replace(/^\[경쟁사\]$/,'경쟁사 등록')||v2ActName(u.cat,'',V2_OUT.test(u.text)?v2Clean(u.text):u.text);
         return '<tr><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c">'+esc(u.emp)+'</td><td class="c"><span class="tag" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt">'+esc(u.name)+'</td><td class="txt">'+esc(act)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
   /* 신호·주차별 표는 기간이 '전체'일 때만 표시 */
   return {sum:(P.p==='all'?[sec2,sec3,secSig,secTr]:[sec2,sec3]).join('<div style="height:12px"></div>'),detail:det}}
