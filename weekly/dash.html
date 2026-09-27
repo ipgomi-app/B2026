@@ -636,6 +636,9 @@ function build(){const wk=curWeek();
     const out=d.dtl.filter(x=>isOut(d,x));if(out.length){etcRows.push({...d,dtl:out,_etc:'직출'});d={...d,dtl:d.dtl.filter(x=>!isOut(d,x))};if(!d.dtl.length)return null}
     const slip=d.dtl.filter(isSlip);if(slip.length){etcRows.push({...d,dtl:slip,_etc:'전표수령'});d={...d,dtl:d.dtl.filter(x=>!isSlip(x))};if(!d.dtl.length)return null}
     const rent=d.dtl.filter(isRent);if(rent.length){etcRows.push({...d,dtl:rent,_etc:'임대문의'});d={...d,dtl:d.dtl.filter(x=>!isRent(x))};if(!d.dtl.length)return null}
+    /* 업무일지(코드 600000)의 업무일지기타 기록 → 기타·업무일지 (직출·휴무 등 위에서 나뉜 기록은 그대로) */
+    const isWork=x=>d.code==='600000'&&OTHER_DIARY_RE.test(String(x.typ||'').trim());
+    const work=d.dtl.filter(isWork);if(work.length){etcRows.push({...d,dtl:work,_etc:'업무일지'});d={...d,dtl:d.dtl.filter(x=>!isWork(x))};if(!d.dtl.length)return null}
     const q=isQuoteOnlyDiary(d),o=OTHER_DIARY_RE.test(String(d.group||'').trim());
     if(q||o)return {...d,_q:q,_other:o&&!q};const dtl=d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()));return dtl.length?{...d,dtl}:null}).filter(Boolean).concat(etcRows);
   const mergedDiary=mergeByCode(diaryRows),unclassified=mergedDiary.filter(d=>!classify(d).length);
@@ -692,13 +695,13 @@ function render(){if(!OUT)return;const rows=visible();
   const stats1=list=>{return [...BIZ1.flatMap(b=>[cntOf(list,b+' 계약'),amtOf(list,b+' 계약'),cntOf(list,b+' 견적'),amtOf(list,b+' 견적')]),...['계약','견적'].flatMap(k=>[BIZ.reduce((s,b)=>s+cntOf(list,b+' '+k),0),BIZ.reduce((s,b)=>s+amtOf(list,b+' '+k),0)])]};
   /* 표2: 기타 분류 건수 */
   const CATS2=SALES_CATS,CATS3=OPS_CATS;
-  /* 표③ 기타는 직출·휴무·DRS작성·임대문의·전표수령·기타로 나눠 표시 */
-  const OPS_MAIN=OPS_CATS.filter(c=>c!=='기타'),ETC_SUB=['직출','휴무','DRS작성','임대문의','전표수령','기타'],CATS3H=[...OPS_MAIN,...ETC_SUB.map(k=>k==='기타'?'기타':'기타·'+k)];
-  /* 직출·휴무·DRS작성·임대문의·전표수령은 날짜·업체별 건수(같은 담당자의 휴무 3일 → 3), 기타는 업체 수 */
+  /* 표③ 기타는 직출·휴무·DRS작성·임대문의·전표수령·업무일지·기타로 나눠 표시 */
+  const OPS_MAIN=OPS_CATS.filter(c=>c!=='기타'),ETC_SUB=['직출','휴무','DRS작성','임대문의','전표수령','업무일지','기타'],CATS3H=[...OPS_MAIN,...ETC_SUB.map(k=>k==='기타'?'기타':'기타·'+k)];
+  /* 직출·휴무·DRS작성·임대문의·전표수령·업무일지는 날짜·업체별 건수(같은 담당자의 휴무 3일 → 3), 기타는 업체 수 */
   const etcCnt=(list,k)=>k==='기타'?list.filter(r=>r.cats.includes('기타')&&(r.d.parts||[r.d]).some(p=>p._other)).length:
     list.reduce((n,r)=>n+new Set((r.d.parts||[r.d]).filter(p=>p._etc===k).map(p=>(p.date?p.date.key:'')+'|'+p.code)).size,0);
   /* 업체수는 영업관리/운영관리 각각: 해당 항목으로 분류된 업체 수 (카드 필터와 무관하게 전체 기준) */
-  const visitFirm=(list,cats)=>[uniqueFirmCount((list.__all||list).filter(r=>!r.q&&r.cats.some(c=>cats.includes(c))&&!(r.d.parts||[r.d]).every(p=>p._etc&&!/^(임대문의|전표수령)$/.test(p._etc))))];/* 휴무·직출·DRS작성만 있는 행은 업체수에서 제외 (임대문의·전표수령은 포함) */
+  const visitFirm=(list,cats)=>[uniqueFirmCount((list.__all||list).filter(r=>!r.q&&r.cats.some(c=>cats.includes(c))&&!(r.d.parts||[r.d]).every(p=>p._etc&&!/^(임대문의|전표수령)$/.test(p._etc))))];/* 휴무·직출·DRS작성·업무일지만 있는 행은 업체수에서 제외 (임대문의·전표수령은 포함) */
   const stats2=list=>[...visitFirm(list,CATS2),...CATS2.map(c=>cntOf(list,c))];const stats3=list=>[...visitFirm(list,CATS3),...OPS_MAIN.map(c=>cntOf(list,c)),...ETC_SUB.map(k=>etcCnt(list,k))];
   const activeRegs=REG_ORDER.filter(reg=>OUT.some(r=>r.reg===reg));/* 데이터가 있는 권역만 표시 */
   const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length||!activeRegs.includes(reg))return;gs.forEach(g=>{const L=g.rows.slice();L.__all=OUT.filter(r=>key(r).join('|')===g.k.join('|'));T.push([...g.k,...stats(L)]);flags.push('')});
