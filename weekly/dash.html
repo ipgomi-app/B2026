@@ -65,6 +65,8 @@ header{display:flex;align-items:center;flex-wrap:wrap}
 .metric-card.active{border-color:var(--navy);background:#eef3fb}
 .metric-card span{display:block;font-size:11px;color:var(--mut)}
 .metric-card strong{display:block;font-size:17px;color:var(--navy)}
+.metric-card.sm{width:78px;padding:2px 3px;border-width:1px}.metric-card.sm span{font-size:10.5px}.metric-card.sm strong{font-size:14px}
+.gubun-box{margin-top:6px;border:1px solid var(--line);border-radius:7px;background:#fff;padding:4px 8px}.gubun-box summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--navy)}
 .activity-cards{display:flex;flex-wrap:wrap;gap:6px}
 .sales-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.sales-row>.activity-cards{margin-bottom:7px}
 .det-h{margin:14px 0 6px;font-size:15px;color:var(--navy)}
@@ -548,10 +550,11 @@ function findCols(r){const c=r.map(x=>String(x||'').trim());const idx=re=>c.find
 function contractRow(r,opt){const F=findCols(r);if(!F||F.date<0||F.name<0)return null;const c=i=>i>=0?F.c[i]||'':'';
   if(F.docType>=0)return null;/* 견적서 행은 견적 칸에서 처리 */
   const form=c(F.form).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const gubun=c(F.gubun).replace(/^\d{2}-/,'');const memo=c(F.memo);const status=c(F.status);
-  let kind='';if(CONTRACT_KINDS.test(gubun))kind='계약';else if(/단가인상/.test(gubun))kind='단가인상';else if(opt&&opt.all&&/계약종료/.test(gubun))kind='계약종료';else return {skip:gubun||'구분없음',name:c(F.name)};
+  let kind='';if(CONTRACT_KINDS.test(gubun))kind='계약';else if(/단가인상/.test(gubun))kind='단가인상';else if(opt&&opt.all&&/계약종료/.test(gubun))kind='계약종료';
+  else if(opt&&opt.all&&gubun&&!/관리계약/.test(gubun))kind='기타계약';/* 단가인하·재계약 등: 계약구분 카드에만 표시(주간영업현황 계약 건수에는 넣지 않음) */else return {skip:gubun||'구분없음',name:c(F.name)};
   const comp=/재전환|전환/.test(c(F.comp))||F.compName>=0||/경쟁사\s*전환|경쟁사\s*(이탈|사용)/.test(memo);
   const item=kind==='단가인상'?c(F.priceKind).replace(/^\d{2}-/,''):biz==='PPS'?(comp?'경쟁사':'신규'):biz==='지게차'?((memo.match(/C\/B|전동|디젤|리치|LPG/i)||[''])[0]+' 지게차').trim():itemOf(biz+' 계약',{dtl:[{text:memo}]});
-  const amt=Math.round((kind==='단가인상'?numv(c(F.eff)):numv(c(F.amt)))/1000);const br=(c(F.br).match(/[가-힣]+지점/)||[''])[0];
+  const amt=Math.round((kind==='단가인상'||/단가|재출고개선/.test(gubun)?numv(c(F.eff)):numv(c(F.amt)))/1000);const br=(c(F.br).match(/[가-힣]+지점/)||[''])[0];
   return {date:parseDate(c(F.date)),emp:c(F.emp).replace(/\s+/g,''),code:c(F.code),name:c(F.name),biz,kind,item,amt,memo:(kind==='단가인상'?c(F.priceKind).replace(/^\d{2}-/,'')+' / ':'')+memo,raw:memo,gubunRaw:c(F.gubun),form,notes:F.notes.join(' / '),status,gubun,br,wkTxt:c(F.date),fixed:true}}
 function quoteFixedRow(r){const F=findCols(r);if(!F||F.date<0||F.name<0)return null;const c=i=>i>=0?F.c[i]||'':'';
   const status=c(F.status);const form=c(F.form).replace(/^\d{2}-/,'');const biz=CFORM_BIZ[form]||'PPS';const memo=c(F.memo);
@@ -593,8 +596,8 @@ function stdMemo(q){let m=String(q.memo||'').replace(/\s+/g,' ').trim();
   if(sales){if(/예상매출/.test(m))m=m.replace(/예상매출\s*:?\s*[\d,\.]+\s*(억|천원|만원|원)?(\s*\/\s*년)?/,sales);else m+=', '+sales}
   m=m.replace(/(?<![,:]\s?)\s(?=(물동량|예상매출|효과금액))/g,', ').replace(/(?<![,:]\s?)\s(?=(N1\d|P1\d|IN1\d|R\d{2}|EL\d{2})\s*\d{2,3}\/)/g,', ');
   return shortName(q.name)+' : '+m.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim()}
-function quoteRow(q){const cat=q.kind==='단가인상'?'손익개선':q.biz+' '+q.kind;const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};const sum=stdMemo(q);
-  return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[cat],items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum,n:0,qd:q}}
+function quoteRow(q){const cat=q.kind==='단가인상'?'손익개선':q.biz+' '+q.kind;const gc=q.kind!=='견적'&&q.gubun&&GUBUN.includes(q.gubun)?'G:'+q.gubun:'';const d={emp:q.emp,code:q.code,name:q.name,date:q.date,days:[q.date?q.date.m+'/'+q.date.d:q.wkTxt],dtl:[{typ:'품의/견적',text:q.memo}],parts:[],addr:''};const sum=stdMemo(q);
+  return {d,q:true,br:q.br||'미지정',reg:q.reg||'기타',cats:[q.kind==='기타계약'?'':cat,gc].filter(Boolean),items:{[cat]:q.item},camt:{[cat]:q.amt||null},stage:q.kind,amt:q.amt||null,sum,n:0,qd:q}}
 /* 데이터 붙여넣기 칸: id, 표시명, contract/quote, 파싱 옵션(unit k=천원 w=원 m12=월임대료×12, biz 기본 사업, kind 강제) */
 const MHE_PREF=k=>({amt:k==='q'?/견적\s*금액/:/확정\s*금액|계약\s*금액/,date:k==='q'?/견적일자|견적\s*주차/:/확정일자|계약\s*주차/,emp:/영업담당/,name:/계약업체|업체명/});
 const DBOX=[{id:'dPpsQ',label:'PPS 견적',mode:'quote',opt:{unit:'k',biz:'PPS',forceBiz:1}},{id:'dPpsC',label:'PPS 계약',mode:'contract',opt:{unit:'w',biz:'PPS',forceBiz:1}},{id:'dProfit',label:'손익개선(단가인상)',mode:'contract',opt:{unit:'k',biz:'PPS',kind:'단가인상'}},
@@ -636,23 +639,28 @@ function build(){const wk=curWeek();
   const review=$('review');review.style.display=unclassified.length?'':'none';review.innerHTML=unclassified.length?'<summary style="cursor:pointer">분류 보류 '+unclassified.length+'업체 · 원문 확인</summary><div class="prev"><table class="xl"><tr><td class="hg">담당자</td><td class="hg">업체</td><td class="hg">원문 분류</td><td class="hg">내용</td></tr>'+unclassified.map(d=>'<tr><td>'+esc(d.emp)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.dtl.map(x=>x.code+' '+x.typ).join(' / '))+'</td><td class="txt">'+esc(d.dtl.map(x=>x.text).join(' / '))+'</td></tr>').join('')+'</table></div>':'';
   const sel=$('catf');const cur=sel.value;
   const opts=cs=>cs.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
-  sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['주간 전체',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="영업관리">'+opts(['영업관리 전체',...SALES_CATS])+'</optgroup><optgroup label="운영관리">'+opts(['운영관리 전체',...OPS_CATS])+'</optgroup>';
+  sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['주간 전체',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="영업관리">'+opts(['영업관리 전체',...SALES_CATS])+'</optgroup><optgroup label="운영관리">'+opts(['운영관리 전체',...OPS_CATS])+'</optgroup><optgroup label="계약구분">'+GCATS.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c.slice(2))+'</option>').join('')+'</optgroup>';
   render();$('stat').textContent='생성 완료: 업무일지 분류 '+diaryClassified.length+'묶음 · 계약/견적 자료 '+rows.filter(r=>r.q).length+'건'}
 /* 카드 필터: '주간 전체'는 사업 구분 없이 주간영업현황 계약·견적 전체 */
-const ALL_Q={'주간 전체':[' 계약',' 견적']};const GRP={'영업관리 전체':SALES_CATS,'운영관리 전체':OPS_CATS};
+const ALL_Q={'주간 전체':[' 계약',' 견적']};
+/* 계약구분(계약 데이터의 계약구분 열, 관리계약 제외) 카드: 'G:구분' */
+const GUBUN=['신규계약','단가인상','단가인하','계약조건변경','재계약','계약종료','재출고개선','단가원복'];const GCATS=GUBUN.map(g=>'G:'+g);let GUBUN_OPEN=false;
+const catLbl=c=>String(c||'').replace(/^G:/,'계약구분 ');const GRP={'영업관리 전체':SALES_CATS,'운영관리 전체':OPS_CATS};
 const catMatch=(r,f)=>!f||(GRP[f]?r.cats.some(c=>GRP[f].includes(c)):ALL_Q[f]?r.cats.some(c=>BIZ.some(b=>ALL_Q[f].some(k=>c===b+k))):r.cats.includes(f));
 function visible(){const f=$('catf').value;return OUT.filter(r=>catMatch(r,f))}
 function uniqueFirmCount(list){return new Set(list.filter(r=>!r.q).map(r=>String(r.d.code||'').trim()||String(r.d.name||'').replace(/\s+/g,'').trim()||r.d.num)).size}
 function render(){if(!OUT)return;const rows=visible();
-  const cnt={};[...CATS,...Object.keys(ALL_Q),...Object.keys(GRP)].forEach(c=>cnt[c]=OUT.filter(r=>catMatch(r,c)).length);
+  const cnt={};[...CATS,...GCATS,...Object.keys(ALL_Q),...Object.keys(GRP)].forEach(c=>cnt[c]=OUT.filter(r=>catMatch(r,c)).length);
   const selCat=$('catf').value;
   const grp=GRP[selCat],selC=grp?'':selCat;/* 영업관리/운영관리 전체: 해당 표·상세 전체 */
   const metric=(c,label,cls)=>'<button type="button" class="metric-card'+(cls?' '+cls:'')+(c===selCat?' active':'')+'" data-cat="'+esc(c)+'" aria-pressed="'+(c===selCat)+'"><span>'+esc(label)+'</span><strong>'+cnt[c]+'</strong></button>';
   const weekly=['PPS','SCM','산업자재유통','글로벌비즈','지게차'];
   const bizGroup=b=>'<section class="biz-group"><h4>'+esc(b==='글로벌비즈'?'글로비즈':b)+'</h4><div class="metric-cards">'+metric(b+' 계약','계약')+metric(b+' 견적','견적')+'</div></section>';
-  $('cards').innerHTML='<section class="card-group"><h3>주간영업현황</h3><div class="biz-groups">'+'<section class="biz-group"><h4>전체</h4><div class="metric-cards">'+metric('주간 전체','계약·견적','all')+'</div></section>'+weekly.map(bizGroup).join('')+'</div></section>'+
+  $('cards').innerHTML='<section class="card-group"><h3>주간영업현황</h3><div class="biz-groups">'+'<section class="biz-group"><h4>전체</h4><div class="metric-cards">'+metric('주간 전체','계약·견적','all')+'</div></section>'+weekly.map(bizGroup).join('')+'<section class="biz-group"><h4>단가인상</h4><div class="metric-cards">'+metric('G:단가인상','계약')+'</div></section></div>'+
+    '<details class="gubun-box"'+(GUBUN_OPEN?' open':'')+'><summary>계약구분별 <span class="hint" style="margin:0">계약 데이터 '+GCATS.reduce((a,c)=>a+cnt[c],0)+'건 · 관리계약 제외</span></summary><div class="metric-cards" style="flex-wrap:wrap;margin-top:6px">'+GUBUN.map(g=>metric('G:'+g,g,'sm')).join('')+'</div></details></section>'+
     '<section class="card-group"><h3>대분류 · 영업관리</h3><div class="sales-row"><div class="activity-cards">'+metric('영업관리 전체','전체','all')+'</div><section class="biz-group"><h4>중분류 · 영업활동</h4><div class="activity-cards">'+NEW_SALES_SUBS.map(b=>metric('신규영업 '+b,b==='글로벌비즈'?'글로비즈':b)).join('')+'</div></section><div class="activity-cards">'+SALES_CATS.filter(c=>!c.startsWith('신규영업 ')).map(c=>metric(c,c)).join('')+'</div></div></section>'+
     '<section class="card-group"><h3>대분류 · 운영관리</h3><div class="activity-cards">'+metric('운영관리 전체','전체','all')+OPS_CATS.map(c=>metric(c,c)).join('')+'</div></section>';
+  {const gb=$('cards').querySelector('.gubun-box');if(gb)gb.ontoggle=()=>{GUBUN_OPEN=gb.open}}
   $('cards').querySelectorAll('.metric-card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
   /* 집계표 */
   const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};
@@ -693,13 +701,13 @@ function render(){if(!OUT)return;const rows=visible();
   const tw=n=>' style="width:'+(keyH.length+n)*72+'px"';const cg=n=>'<colgroup>'+'<col style="width:72px">'.repeat(keyH.length+n)+'</colgroup>';
   const W1=[...keyH.map(()=>72),...[...BIZ1,'합계'].flatMap(()=>[36,72,36,72])];const tw1=' style="width:'+W1.reduce((a,b)=>a+b,0)+'px"',cg1='<colgroup>'+W1.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup>';
   const NS=CATS2.filter(c=>c.startsWith('신규영업 ')),head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('업체수',1,2)+hg('영업활동',NS.length,1)+CATS2.filter(c=>!NS.includes(c)).map(c=>hg(c,1,2)).join('')+'</tr><tr>'+NS.map(c=>hg(c.replace('신규영업 ','').replace('글로벌비즈','글로비즈'))).join('')+'</tr>';
-  const ft=selCat?' <span class="tag">필터: '+esc(selCat)+'</span>':'';
+  const ft=selCat?' <span class="tag">필터: '+esc(catLbl(selCat))+'</span>':'';
   /* 카드를 누르면 해당 표만: 주간영업현황(전체 포함) → ①, 영업관리 → ②, 운영관리 → ③. 카드 선택이 없으면 ①②③ 모두 */
-  const only=!selCat?0:grp?(grp===SALES_CATS?2:3):SALES_CATS.includes(selCat)?2:OPS_CATS.includes(selCat)?3:1;
+  const isG=GCATS.includes(selCat);const only=!selCat?0:isG?-1:grp?(grp===SALES_CATS?2:3):SALES_CATS.includes(selCat)?2:OPS_CATS.includes(selCat)?3:1;
   const sec1='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)'+ft+'</div><table class="xl sumt"'+tw1+'>'+cg1+head1+body(S1.T,S1.flags)+'</table>',
     sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 영업관리 건수'+ft+' <span class="hint" style="margin:0">(영업활동은 업무일지 기준, 동일 업체가 여러 활동을 하면 각 분류에 표시)</span></div><table class="xl sumt"'+tw(CATS2.length+1)+'>'+cg(CATS2.length+1)+head2+body(S2.T,S2.flags)+'</table>',
     sec3='<div style="font-weight:700;color:var(--navy);margin:4px 0">③ 운영관리 건수'+ft+'</div><table class="xl sumt"'+tw(CATS3H.length+1)+'>'+cg(CATS3H.length+1)+'<tr>'+[...keyH,'업체수',...OPS_MAIN].map(h=>hg(h,1,2)).join('')+hg('기타',ETC_SUB.length,1)+'</tr><tr>'+ETC_SUB.map(k=>hg(k)).join('')+'</tr>'+body(S3.T,S3.flags)+'</table>';
-  $('sum').innerHTML=(only?[sec1,sec2,sec3][only-1]:[sec1,sec2,sec3].join('<div style="height:12px"></div>'));
+  $('sum').innerHTML=only<0?'':(only?[sec1,sec2,sec3][only-1]:[sec1,sec2,sec3].join('<div style="height:12px"></div>'));
   /* 상세: 영업관리·계약견적 → 날짜·담당자·분류·활동·코드·업체·예상매출·내용, 운영관리 → 예상매출 없이 같은 표 */
   const secSales=!selCat||SALES_CATS.includes(selCat)||grp===SALES_CATS,secOps=!selCat||OPS_CATS.includes(selCat)||grp===OPS_CATS,secQ=!!selCat&&!secSales&&!secOps;
   const brGroups=list=>{const g={};list.forEach(x=>{const k=x.r.reg+'|'+x.r.br;(g[k]=g[k]||[]).push(x)});return Object.keys(g).sort((a,b)=>{const [ar,ab]=a.split('|'),[br_,bb]=b.split('|');return sortKey({reg:ar,br:ab},{reg:br_,br:bb})}).map(k=>({reg:k.split('|')[0],br:k.split('|')[1],list:g[k]}))};
@@ -721,9 +729,9 @@ function render(){if(!OUT)return;const rows=visible();
   const CQ=rows.filter(r=>r.q&&r.qd&&catMatch(r,selCat)).sort((a,b)=>gNo(a)-gNo(b)||sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp})||(a.d.date?a.d.date.key:'').localeCompare(b.d.date?b.d.date.key:''));
   if(secQ||(selCat&&CQ.length)){h+='<h3 class="det-h">계약·견적 상세 <span class="hint" style="margin:0">'+CQ.length+'건</span></h3>';
     if(!CQ.length)h+='<div class="hint">표시할 자료가 없습니다</div>';
-    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태',(selCat==='손익개선'?'효과금액':'예상매출')+'(천원)','날짜','지점','담당자','코드','업체','내용'];
+    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태',(selCat==='손익개선'||/^G:(단가|재출고개선)/.test(selCat)?'효과금액':'예상매출')+'(천원)','날짜','지점','담당자','코드','업체','내용'];
       h+='<div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
-        CQ.map(r=>{const q=r.qd,amt=/^(계약|견적|단가인상)$/.test(q.kind)&&q.amt?Math.round(q.amt).toLocaleString('en-US'):'';
+        CQ.map(r=>{const q=r.qd,amt=/^(계약|견적|단가인상|기타계약)$/.test(q.kind)&&q.amt?Math.round(q.amt).toLocaleString('en-US'):'';
           return '<tr><td class="txt">'+esc(gOf(r))+'</td><td class="txt">'+esc(formOf(r))+'</td><td class="n" style="font-weight:700">'+esc(amt)+'</td><td class="c">'+esc(ymdOf(q.date)||q.wkTxt||'')+'</td><td class="c">'+esc(r.br)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td><td class="txt">'+esc(String(q.raw||q.memo||'').replace(/\s+/g,' ').trim())+'</td></tr>'}).join('')+'</table></div>'}}
   if(secSales&&!secQ)h+=detTable('영업관리 상세',selC?[selC]:SALES_CATS,false,true);
   if(secOps)h+=detTable('운영관리 상세',selC?[selC]:OPS_CATS,false,false);
@@ -776,7 +784,7 @@ function lstCheck(raw){const rows=parseTSV(raw).filter(r=>r.some(x=>String(x).tr
     if(!code)return {m:byName(ix,nm),how:'업체명'};
     const cand=byName(ix,nm).filter(x=>lcv(x.d.code)!==code);cand.forEach(x=>pend.push({key:code+'|'+lcv(x.d.code),x}));return {m:cand.filter(x=>same[code+'|'+lcv(x.d.code)]),how:'확인'}};
   const md=dt=>dt?dt.m+'/'+dt.d:'';const won=v=>v?' '+Math.round(v).toLocaleString('en-US')+'천원':'';
-  const qTxt=x=>{const q=x.qd;return [md(q.date),q.kind==='계약'?'신규계약':q.kind==='견적'?'':q.kind,q.biz==='글로벌비즈'?'RRPP':q.biz].filter(Boolean).join(' ')+won(q.amt)};
+  const qTxt=x=>{const q=x.qd;return [md(q.date),q.kind==='계약'?'신규계약':q.kind==='견적'?'':q.kind==='기타계약'?q.gubun:q.kind,q.biz==='글로벌비즈'?'RRPP':q.biz].filter(Boolean).join(' ')+won(q.amt)};
   const out=[];let total=0,nD=0,nC=0,nQ=0;
   rows.slice(1).forEach(r=>{total++;const code=ci>=0?lcv(r[ci]):'';const nm=ni>=0?normName(r[ni]):'';
     const D=find(IX.D,code,nm),C=find(IX.C,code,nm),Q=find(IX.Q,code,nm);if(!D.m.length&&!C.m.length&&!Q.m.length)return;
