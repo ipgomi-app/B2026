@@ -13,6 +13,7 @@
   'use strict';
 
   const SHEET = '영남영업본부';
+  const SHEET2 = '(영남)하반기 신규추진계획', SHEET3 = '(영남)하반기 신규추진(세부)';
   const KEEP_SHEETS = ['영남영업본부', '(영남)하반기 신규추진계획', '(영남)하반기 신규추진(세부)'];
   const REGIONS = ['경북권역', '부산권역', '경남권역'];
   const BRANCH = {
@@ -699,6 +700,13 @@
     const agPrev = stageBlocks(L.agPrev, 'AG'), agCur = stageBlocks(L.agCur, 'AG');
     // 점검 모음
     recs.forEach((r) => { if (r.list && r.flags.length) checks.push({ kind: '행 점검', text: (LISTS[r.list] || '') + ' ' + (BIZ_NAME[r.biz] || '') + ' · ' + [r.mgr, r.code].filter(Boolean).join(' ') + (r.mgr || r.code ? ' · ' : '') + r.name + ': ' + r.flags.join(', ') }); });
+    const sheetErr = {};
+    const tryGrid = (k) => { try { return parseSheetGrid(inputs[k]); } catch (e) { sheetErr[k] = e.message; return null; } };
+    const form2 = tryGrid('form2'), form3 = tryGrid('form3');
+    const oldAll = oldDetailRows(form3), oldDet = opts.detailKeep ? oldAll : [];
+    const detail = buildDetail(L, kept, M1, oldDet);
+    const majors = buildMajors(detail);
+    if (detail.length > 477) checks.push({ kind: '신규추진(세부)', text: '행이 ' + detail.length + '개라 틀(477행)을 넘습니다. 넘는 행은 빠집니다.' });
     const perfPrev = perfValues(form, M), perfCur = perfValues(form, M1);
     checkPerf(perfPrev, M, checks, M + '월 실적 현황');
     checkPerf(perfCur, M1, checks, M1 + '월 영업추진 계획');
@@ -712,7 +720,7 @@
       prev, sonikNote, cur, tgtPrev, tgtCur, agPrev, agCur,
       tgtSum: trim(inputs.tgtSum) ? parseTargetSum(inputs.tgtSum) : null,
       agSum: trim(inputs.agSum) ? parseAgSum(inputs.agSum) : null,
-      texts, drafts, checks, dups, notDone, lists: L, recs,
+      texts, drafts, checks, dups, notDone, lists: L, recs, form2, form3, sheetErr, detail, majors, oldCount: oldAll.length,
     };
   }
 
@@ -752,6 +760,79 @@
       lines.push((mode === 'ag' ? ': ' : '- ') + items);
     });
     return lines.join('\n');
+  }
+
+  // ---------- 신규추진(세부)·신규추진계획 시트 ----------
+  // 붙여넣은 양식 시트: '팀권역' 칸(틀에서 B5)을 기준으로 행·열을 맞춘다. 반환 { grid, dr, dc } (틀 행 = 격자 행 + dr, 1부터)
+  function parseSheetGrid(str) {
+    if (!trim(str)) return null;
+    const g = parseTSV(str);
+    for (let r = 0; r < Math.min(g.length, 15); r++) {
+      const c = (g[r] || []).findIndex((x) => norm(x) === '팀권역');
+      if (c >= 0) return { grid: g, dr: 5 - r, dc: 2 - c, hdrRow: r, hdrCol: c };
+    }
+    throw new Error('붙여넣은 신규추진 시트에서 "팀권역" 머리글을 찾지 못했습니다. 시트 전체(A1부터)를 복사해 붙여넣어 주세요.');
+  }
+  const DET_ITEM_ORDER = ['PPS', 'SCM', '산업자재유통', 'RRPP', 'ULS'];
+  const DET_STAGE_ORDER = ['신규확정', '협의중', '계획'];
+  const itemOfRec = (r) => (r.biz === 'PPS' || r.biz === 'AG' ? 'PPS' : r.biz === 'SCM' || r.biz === 'MHE' ? 'SCM' : r.biz === 'MRO' ? '산업자재유통' : r.biz === 'GLB' ? (/ULS/.test(r.gubun || '') ? 'ULS' : 'RRPP') : '');
+  // 계약 → 신규확정, 견적(방문 포함) → 견적: 사업마다 금액 순위 홀수(1·3·5…)는 협의중, 짝수(2·4·6…)는 계획
+  const detStage = (st) => (st === '계약확정' || st === '계약' ? '신규확정' : st === '협의중' || st === '견적' || st === '방문' ? '견적' : '');
+  // 월 금액: 연 금액 ÷ 12를 올림(500 미만 50 단위, 그 이상 100 단위: 233 → 250, 620 → 700)
+  const monthlyOf = (k) => { const v = k / 12; if (!(v > 0)) return 0; return v < 500 ? Math.ceil(v / 50 - 1e-9) * 50 : Math.ceil(v / 100 - 1e-9) * 100; };
+  const DET_MIN = 2000, DET_MIN_COUNT = 5;
+  // 당월 사업·타겟·농산 목록 → 세부 시트 행. 같은 업체·항목은 한 번만(계약 우선, 큰 금액).
+  function buildDetail(L, kept, M1, old) {
+    const pool = {};
+    ['cur', 'tgtCur', 'agCur'].forEach((list) => L[list].filter(kept).forEach((r) => {
+      const item = itemOfRec(r), stage = detStage(r.stageOut); if (!item || !stage || !(r.amount > 0)) return;
+      const k = r.key + '|' + item, cand = { r, item, stage, amount: r.amount, key: k };
+      const cur = pool[k];
+      if (!cur || (stage === '신규확정' && cur.stage !== '신규확정') || (stage === cur.stage && r.amount > cur.amount)) pool[k] = cand;
+    }));
+    const oldKeys = new Set((old || []).map((o) => 'n' + normName(o.name) + '|' + o.item));
+    const groups = [['PPS'], ['SCM'], ['산업자재유통'], ['RRPP', 'ULS']];
+    const rows = [];
+    groups.forEach((items) => {
+      const cands = Object.values(pool).filter((c) => items.includes(c.item) && !oldKeys.has('n' + normName(c.r.name) + '|' + c.item));
+      cands.sort((a, b) => b.amount - a.amount);
+      let pick = cands.filter((c) => c.amount >= DET_MIN);
+      if (pick.length < DET_MIN_COUNT) pick = pick.concat(cands.filter((c) => c.amount < DET_MIN).slice(0, DET_MIN_COUNT - pick.length));
+      pick = pick.map((c) => Object.assign({}, c));
+      pick.filter((c) => c.stage === '견적').sort((a, b) => b.amount - a.amount).forEach((c, i) => { c.stage = i % 2 === 0 ? '협의중' : '계획'; });
+      pick.sort((a, b) => DET_STAGE_ORDER.indexOf(a.stage) - DET_STAGE_ORDER.indexOf(b.stage) || b.amount - a.amount);
+      pick.forEach((c) => {
+        const mv = monthlyOf(c.amount), months = {};
+        for (let m = M1; m <= 12; m++) months[m] = mv;
+        rows.push({ region: c.r.region, name: c.r.name, item: c.item, stage: c.stage, months, k: c.amount, desc: c.r.desc, src: [LISTS[c.r.list], BIZ_NAME[c.r.biz], c.r.stageOut].filter(Boolean).join(' ') });
+      });
+    });
+    return (old || []).map((o) => Object.assign({ old: true }, o)).concat(rows);
+  }
+  // 양식 세부 시트의 기존 행
+  function oldDetailRows(p) {
+    if (!p) return [];
+    const out = [];
+    for (let r = p.hdrRow + 1; r < p.grid.length; r++) {
+      const row = p.grid[r] || [], at = (col) => trim(row[col - 2 + p.hdrCol] || ''); // col: 틀 열 번호(B=2)
+      if (!at(3) || /^예시/.test(trim(row[p.hdrCol - 1] || '')) || at(3) === 'OO') continue;
+      if (!REGIONS.includes(at(2))) continue;
+      const months = {}; [6, 7, 8, 9].forEach((c, i) => { const n = toNum(at(c)); if (n) months['c' + i] = n; });
+      out.push({ region: at(2), name: at(3), item: at(4), stage: at(5), cols: months, k: toNum(at(11)) || 0, desc: at(12) });
+    }
+    return out;
+  }
+  // 신규추진계획 맨 아래 '협의중 / 계획 주요 업체': 권역 × 항목마다 금액 큰 2업체
+  function buildMajors(detail) {
+    const out = {};
+    REGIONS.forEach((reg) => {
+      out[reg] = {};
+      ['PPS', '물류기기', 'SCM', '산업자재유통', 'RRPP', 'ULS'].forEach((item) => {
+        const rs = detail.filter((d) => d.region === reg && d.item === item && (d.stage === '협의중' || d.stage === '계획')).sort((a, b) => b.k - a.k).slice(0, 2);
+        out[reg][item] = rs.map((d) => d.name + ' : ' + d.desc).join('\n');
+      });
+    });
+    return out;
   }
 
   // ---------- 엑셀 쓰기 ----------
@@ -938,8 +1019,9 @@
     MG.forEach(([a, c1, b, c2]) => { if (b > a || c2 > c1) ws.mergeCells(26 + a, c1, 26 + b, c2); });
     sections.forEach(([a, b]) => ws.mergeCells(26 + a, 2, 26 + b, 3));
     // 마무리: 열 때 재계산
+    fillPlanSheets(wb, model);
     ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2', showGridLines: false, zoomScale: 95, zoomScaleNormal: 95 }];
-    [ws].forEach((sh) => stripResults(sh));
+    [ws, wb.getWorksheet(SHEET2), wb.getWorksheet(SHEET3)].filter(Boolean).forEach((sh) => stripResults(sh));
     wb.calcProperties = Object.assign({}, wb.calcProperties, { fullCalcOnLoad: true });
     return { wb, rows: { report: R.length, dataStart: newData } };
   }
@@ -950,6 +1032,50 @@
     if (v && v.f) { const m = /^R(\d+)\/U\1-1$/.exec(v.f.replace(/\$/g, '')); if (m && (sn.cells[20].v == null || sn.cells[20].v === '')) v.f = 'IFERROR(R' + m[1] + '/U' + m[1] + '-1,"")'; }
   }
   // 틀 행에 양식 붙여넣기 값 넣기 (수식 칸·월 머리글 숫자는 그대로)
+  // 신규추진계획(시트2)·신규추진(세부)(시트3) 채우기
+  function fillPlanSheets(wb, model) {
+    const s2 = wb.getWorksheet(SHEET2), s3 = wb.getWorksheet(SHEET3);
+    const isF = (c) => c.type === 6 || (c.value && typeof c.value === 'object' && (c.value.formula || c.value.sharedFormula));
+    if (s2) {
+      // 양식에서 붙여넣은 숫자: 1~99행의 빈 입력칸(수식·글자 칸 제외)에만
+      if (model.form2) {
+        const { grid, dr, dc } = model.form2;
+        grid.forEach((row, gr) => row.forEach((v, gc) => {
+          const r = gr + dr, c = gc + dc; if (r < 1 || r >= 100 || c < 1 || c > 45) return;
+          const cell = s2.getCell(r, c); if (isF(cell) || typeof cell.value === 'string') return;
+          const n = toNum(v); if (n != null) cell.value = n;
+        }));
+      }
+      if (s2.getCell('AC1').value == null) s2.getCell('AC1').value = model.M1;
+      // 주요 업체: '※ 협의중 / 계획 주요 업체' 아래 권역 블록(권역 순서는 1) 표의 B열 순서)
+      const regOrder = []; for (let r = 7; r < 36; r++) { const v = text(s2.getCell(r, 2).value).trim(); if (REGIONS.includes(v) && !regOrder.includes(v)) regOrder.push(v); }
+      let hr = -1; for (let r = 90; r <= s2.rowCount; r++) if (/주요\s*업체/.test(text(s2.getCell(r, 2).value))) { hr = r; break; }
+      if (hr > 0) {
+        let bi = -1;
+        for (let r = hr + 1; r <= s2.rowCount; r++) {
+          const item = text(s2.getCell(r, 3).value).trim(); if (!item) continue;
+          if (item === 'PPS') bi++;
+          const reg = regOrder[bi]; if (!reg || !model.majors[reg]) continue;
+          const t = model.majors[reg][item] || '';
+          s2.getCell(r, 4).value = t || null;
+          const lines = t ? t.split('\n').length : 0; if (lines > 2) s2.getRow(r).height = lines * 19.5;
+        }
+      }
+    }
+    if (s3) {
+      s3.getCell('M1').value = model.M1;
+      s3.getCell('N1').value = { formula: "'" + SHEET2 + "'!$B$28" };
+      const last = s3.rowCount;
+      model.detail.forEach((d, i) => {
+        const r = 7 + i; if (r > last) return;
+        const set = (c, v) => { s3.getCell(r, c).value = v == null || v === '' ? null : v; };
+        set(2, d.region); set(3, d.name); set(4, d.item); set(5, d.stage);
+        for (let j = 0; j < 4; j++) set(6 + j, d.old ? d.cols['c' + j] : d.months[model.M1 + j]);
+        set(11, d.k); set(12, d.desc);
+      });
+    }
+  }
+
   function fillFromGrid(sn, row) {
     if (!row) return;
     for (let c = 0; c < 19; c++) {
