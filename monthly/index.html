@@ -54,10 +54,11 @@
   .st.ok { color: var(--ok); } .st.err { color: var(--warn); }
   textarea { width: 100%; height: 64px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; background: #fff; }
   textarea.prose { height: 150px; font: 13.5px/1.6 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; }
-  td.desc { width: 100%; min-width: 420px; }
+  td.desc { width: 100%; min-width: 520px; }
   input.d1 { width: 100%; font-size: 12.5px; padding: 4px 7px; }
-  .fix1 { font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 900px; min-height: 0; margin-top: 2px; }
+  .fix1 { font-size: 11.5px; color: #1d5fd1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 900px; min-height: 0; margin-top: 2px; }
   .fix1:empty { display: none; }
+  textarea.maj { width: 100%; min-width: 0; height: 58px; font-size: 12px; }
   textarea.cell { height: 54px; font: 12.5px/1.45 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; min-width: 280px; }
   label.btn, button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8c2d3; background: #fff; color: var(--ink); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
   label.btn:hover, button:hover { background: var(--soft); }
@@ -67,20 +68,23 @@
   button.mini { padding: 2px 8px; font-size: 11.5px; border-radius: 6px; }
   input[type=text], input[type=number] { border: 1px solid #b8c2d3; border-radius: 8px; padding: 5px 7px; font: inherit; font-size: 13px; }
   input.n { width: 76px; text-align: right; }
-  input.g { width: 96px; }
+  input.g { width: 74px; padding: 4px 5px; font-size: 12px; }
+  td.nw { white-space: nowrap; } td.sm { font-size: 11.5px; color: var(--sub); } td.nm { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   th, td { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: middle; }
   th { white-space: nowrap; background: #f2f4f8; font-weight: 600; color: #394256; position: sticky; top: 0; z-index: 1; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tr.off td { color: #9aa3b2; text-decoration: line-through; }
-  #listBody td:nth-child(2), #listBody td:nth-child(3), #listBody td:nth-child(5), #listBody td:nth-child(6) { white-space: nowrap; }
+
   tr.grp td { background: #e9edf5; font-weight: 700; color: var(--navy); }
   .tablewrap { max-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
   .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
   .msg.err { background: #fdecea; color: var(--warn); } .msg.ok { background: #e6f4ec; color: var(--ok); } .msg.warn { background: #fff5d6; color: #7a5600; }
   .muted { color: var(--sub); }
   .chk { margin: 3px 0; font-size: 12.5px; } .chk b { color: #8a5a00; font-weight: 600; }
+  details.chk > summary { cursor: pointer; padding: 3px 0; list-style: none; } details.chk > summary::before { content: "▶ "; font-size: 10px; color: var(--sub); } details.chk[open] > summary::before { content: "▼ "; }
   .fix { font-size: 11.5px; color: var(--sub); }
+  .cg { font-weight: 700; color: var(--navy); margin-top: 6px; } .cm { font-weight: 600; color: #394256; margin: 2px 0 0 8px; } .ci { margin-left: 18px; }
   .sum { font-size: 12.5px; margin: 4px 0 0; } .sum b { color: var(--navy); }
   footer { color: var(--sub); font-size: 12px; text-align: center; padding: 8px 16px 28px; }
 </style>
@@ -140,13 +144,14 @@
     <h2><span class="step">5</span>점검 요약 · 중복 업체 배치</h2>
     <div id="checks" class="muted">데이터를 붙여넣으면 점검 결과가 여기에 나옵니다.</div>
     <div id="dupWrap" hidden style="margin-top:12px">
-      <p class="hint">PPS 사업·타겟·농산 목록에 함께 들어온 업체입니다(전월·당월끼리도 비교). 타겟·농산에도 있으면 기본은 타겟·농산에만 넣고 사업 목록에서는 뺍니다. 넣을 목록만 체크하세요. 체크를 풀어도 업체 행만 빠지고 머리글 건수·금액은 그대로입니다.</p>
+      <p class="hint">PPS 사업·타겟·농산 목록에 함께 들어온 업체입니다(전월·당월끼리도 비교). 타겟·농산에도 있으면 기본은 타겟·농산에만 넣고 사업 목록에서는 뺍니다(사업 목록 쪽이 계약이면 양쪽 다 넣음). 넣을 목록만 체크하세요. 체크를 풀어도 업체 행만 빠지고 머리글 건수·금액은 그대로입니다.</p>
       <div class="tablewrap"><table><thead><tr><th>권역</th><th>담당자</th><th>코드</th><th>업체명</th><th>전월</th><th>당월</th></tr></thead><tbody id="dupBody"></tbody></table></div>
     </div>
     <div id="ndWrap" hidden style="margin-top:12px">
       <p class="hint"><b>결재완료 아님(반려·미결재)</b> 행입니다. 기본은 빼고, 넣을 행만 체크하세요.</p>
       <div class="tablewrap"><table><thead><tr><th>넣기</th><th>권역</th><th>담당자</th><th>코드</th><th>업체명</th><th>사업 · 단계 · 월</th><th>결재상태</th><th class="num">금액</th></tr></thead><tbody id="ndBody"></tbody></table></div>
     </div>
+    <div class="genrow" id="placeRow" hidden><button class="primary gen" id="placeBtn">배치 확정</button><button class="mini" id="placeReset">배치 기본값으로</button><span class="gst" id="placeSt"></span></div>
   </section>
   </div>
 
@@ -154,15 +159,16 @@
   <section class="card">
     <h2>목록 수정</h2>
     <p class="hint">엑셀에 들어갈 목록입니다. <b>넣기</b> 체크를 풀면 빠지고, 구분·세부내용을 고치면 그대로 들어갑니다. 세부내용은 쉼표·띄어쓰기·오탈자·금액 표기를 자동으로 다듬은 결과입니다(수정이력 참고).</p>
-    <div class="row" style="margin-bottom:8px"><input type="text" id="listSearch" placeholder="업체명 검색" style="width:220px"><label style="font-size:12.5px"><input type="checkbox" id="listAll"> 거른 행(건수·금액 기준 밖)과 작은 수정(띄어쓰기·금액표기)도 보기</label></div>
-    <div class="tablewrap" style="max-height:640px"><table><thead><tr><th>넣기</th><th>부서명</th><th>담당자</th><th>구분</th><th>코드</th><th>업체명</th><th class="num">예상매출</th><th>세부내용 <span class="fix">(아래: 수정이력 · 점검)</span></th></tr></thead><tbody id="listBody"></tbody></table></div>
+    <div class="row" style="margin-bottom:8px"><input type="text" id="listSearch" placeholder="업체명 검색" style="width:220px"><label style="font-size:12.5px"><input type="checkbox" id="listAll"> 수정 없는 행·거른 행(건수·금액 기준 밖)·작은 수정(띄어쓰기·금액표기)도 보기</label></div>
+    <div class="tablewrap" style="max-height:640px"><table><thead><tr><th>넣기</th><th>담당자</th><th>구분</th><th>코드</th><th>업체명</th><th class="num">금액</th><th>세부내용 <span class="fix">(아래: 수정이력 · 점검)</span></th></tr></thead><tbody id="listBody"></tbody></table></div>
   </section>
   <section class="card">
     <h2>신규추진(세부) · 주요 업체 미리보기</h2>
-    <p class="hint">당월 사업·타겟·농산 목록에서 만듭니다. 계약 → 신규확정, 견적은 사업마다 금액 순위 1·3·5…위 협의중, 2·4·6…위 계획. 월 칸은 당월~12월 공란 없이. 사업마다(PPS·SCM·산업자재유통·글로벌비즈) 200만원 이상 전부, 5업체가 안 되면 금액 큰 순으로 채웁니다. 월 금액은 연 금액 ÷ 12 올림(500 미만 50 단위, 그 이상 100 단위). 위 목록 수정(넣기·세부내용)이 반영됩니다.</p>
+    <p class="hint">전월·당월 사업·타겟·농산 목록에서 만들고, 권역 → 항목 → 신규확정·협의중·계획 → 금액 큰 순으로 놓습니다. 계약 → 신규확정, 견적은 사업마다 금액 순위 1·3·5…위 협의중, 2·4·6…위 계획. 월 칸은 당월~12월 공란 없이. 권역 × 사업마다(PPS·SCM·산업자재유통·글로벌비즈) 400만원 이상 전부, 5업체가 안 되면 금액 큰 순으로 채웁니다. 월 금액은 연 금액 ÷ 12 올림(500 미만 50 단위, 그 이상 100 단위). 위 목록 수정(넣기·세부내용)이 반영됩니다.</p>
+    <div class="fix" id="detCnt" style="margin:0 0 6px"></div>
     <div class="tablewrap" style="max-height:420px"><table><thead><tr><th>매출항목</th><th>확정여부</th><th>팀권역</th><th>업체명</th><th class="num" id="detM0"></th><th class="num" id="detM1"></th><th class="num" id="detM2"></th><th class="num" id="detM3"></th><th class="num">년간</th><th>출처</th></tr></thead><tbody id="detBody"></tbody></table></div>
-    <h3 style="font-size:13.5px;margin:12px 0 4px">신규추진계획 맨 아래 · 협의중/계획 주요 업체 (권역 × 항목, 금액 큰 2업체)</h3>
-    <div id="majBody" class="fix" style="font-size:12px;white-space:pre-wrap"></div>
+    <div class="row" style="justify-content:space-between;margin:12px 0 4px"><h3 style="font-size:13.5px;margin:0">신규추진계획 맨 아래 · 협의중/계획 주요 업체 <span class="fix">(권역 × 항목, 초안은 금액 큰 2업체 · 고쳐 쓰면 그대로 들어갑니다)</span></h3><button class="mini" id="majReset">모두 초안으로</button></div>
+    <div class="tablewrap" style="max-height:none"><table id="majTable"></table></div>
   </section>
   </div>
 
@@ -191,7 +197,7 @@
   <section class="card">
     <h2><span class="step">✓</span>엑셀 만들기</h2>
     <div id="summary" class="sum muted"></div>
-    <div class="row" style="margin-top:10px"><button class="primary" id="buildBtn" disabled>엑셀 만들기 (3시트)</button></div>
+    <div class="row" style="margin-top:10px"><button class="primary gen" id="finalBtn" disabled>최종 확정</button><button class="primary" id="buildBtn" disabled>엑셀 만들기 (3시트)</button><span class="gst" id="finalSt"></span></div>
     <div id="buildMsg"></div>
   </section>
 </main>
@@ -215,6 +221,9 @@
   let S = { inputs: { biz: {} }, limits: {}, placement: {}, approve: {}, exclude: {}, edits: {}, texts: {} };
   try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j) S = Object.assign(S, j); } catch (e) { /* 저장소 없음 */ }
   S.inputs.biz = S.inputs.biz || {};
+  // 배치 규칙이 바뀌면 예전에 저장한 배치 선택은 한 번 비움(예전 규칙의 체크가 남아 업체가 빠지는 것을 막음)
+  const PLACE_VER = 3;
+  if (S.placeVer !== PLACE_VER) { S.placement = {}; S.placeVer = PLACE_VER; }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 용량 초과 등 */ } };
 
   // ---------- 탭 ----------
@@ -280,6 +289,9 @@
     ta.value = getIn(k);
     ta.addEventListener('input', () => { setIn(k, ta.value); save(); const g = genOf(k); if (g) markDirty(g); else schedule(); });
   });
+  $('placeBtn').addEventListener('click', confirmPlacement);
+  $('placeReset').addEventListener('click', () => { S.placement = {}; pend = { placement: {}, approve: {} }; save(); refresh(); });
+  $('majReset').addEventListener('click', () => { delete S.texts.majors; save(); refresh(); });
   document.querySelectorAll('[data-gen]').forEach((b) => b.addEventListener('click', () => {
     const g = b.dataset.gen; b.disabled = true; const t = b.textContent; b.textContent = '생성 중…';
     setTimeout(() => { try { dirty[g] = true; refresh(); } finally { b.disabled = false; b.textContent = t; } }, 20);
@@ -340,10 +352,10 @@
   function refresh(redraft) { try { return refresh0(redraft); } finally { updateFold(); Object.keys(GEN).forEach((g) => { if (dirty[g] || ALL.some((k) => GEN[g](k) && getIn(k).trim())) genSummary(g); }); } }
   function refresh0(redraft) {
     ALL.forEach((k) => boxState(k, null, getIn(k).trim() ? E.parseTSV(getIn(k)).filter((r) => r.some((c) => c.trim())).length + '줄' : ''));
-    if (!S.inputs.form || !S.inputs.form.trim()) { model = null; $('buildBtn').disabled = true; $('summary').textContent = '먼저 1번 양식을 붙여넣으세요.'; return; }
+    if (!S.inputs.form || !S.inputs.form.trim()) { model = null; finalReset(); $('summary').textContent = '먼저 1번 양식을 붙여넣으세요.'; return; }
     try {
       model = E.buildModel(S.inputs, opts());
-    } catch (e) { model = null; boxState('form', false, e.message); $('buildBtn').disabled = true; $('summary').textContent = ''; return; }
+    } catch (e) { model = null; boxState('form', false, e.message); finalReset(); $('summary').textContent = ''; return; }
     boxState('form', true, '기준월 ' + model.M + '월 → 전월 실적 ' + model.M + '월 · 당월 계획 ' + model.M1 + '월');
     ['form2', 'form3'].forEach((k) => { if (!getIn(k).trim()) return; if (model.sheetErr[k]) boxState(k, false, model.sheetErr[k]); else boxState(k, true, k === 'form2' ? '1) 기존 예상매출 표 숫자를 넣습니다' : '기존 행 ' + model.oldCount + '개' + (S.detailKeep ? ' 남김' : ' (남기기 꺼짐)')); });
     // 칸별 인식 건수
@@ -354,37 +366,87 @@
     if (S.inputs.agList) boxState('agList', true, '영남 ' + (cnt.ag || 0) + '건');
     if (model.tgtSum) boxState('tgtSum', model.tgtSum.t1.length ? true : false, '전체 ' + model.tgtSum.t1.length + '줄 · 권역 ' + model.tgtSum.t2.length + '줄');
     if (model.agSum) boxState('agSum', model.agSum.a.length ? true : false, '권역 ' + model.agSum.a.length + '줄 · 2차 타겟 ' + model.agSum.b.length + '줄');
-    renderChecks(); renderDups(); renderNotDone(); renderList(); renderDetail(); renderTexts(redraft); renderSummary();
-    $('buildBtn').disabled = false;
+    renderChecks(); renderDups(); renderNotDone(); $('placeRow').hidden = !(model.dups.length || model.notDone.length); pendUI(); renderList(); renderDetail(); renderTexts(redraft); renderSummary();
+    finalReset();
   }
+  // 최종 확정: 확정한 뒤에만 엑셀을 만들 수 있고, 그 뒤 무엇이든 바뀌면 다시 확정해야 함
+  let finalOK = false;
+  function finalReset() {
+    finalOK = false; $('buildBtn').disabled = true; $('finalBtn').disabled = !model;
+    const st = $('finalSt'); st.className = 'gst'; st.textContent = model ? '내용을 확인한 뒤 최종 확정을 누르면 엑셀을 만들 수 있습니다.' : '';
+  }
+  $('finalBtn').addEventListener('click', () => {
+    const st = $('finalSt'), wait = [];
+    if (pendCount()) wait.push('5번 배치 확정');
+    Object.keys(GEN).forEach((g) => { if (dirty[g]) wait.push((g === 'g2' ? '2번' : '3번') + ' 생성'); });
+    if (wait.length) { st.className = 'gst dirty'; st.textContent = '먼저 ' + wait.join(', ') + '을(를) 눌러 반영하세요.'; return; }
+    refresh(); if (!model) return;
+    finalOK = true; $('buildBtn').disabled = false;
+    const d = new Date(); st.className = 'gst ok'; st.textContent = '최종 확정됨 (' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0') + ') · 이제 엑셀을 만들 수 있습니다. 내용을 바꾸면 다시 확정해야 합니다.';
+  });
   function renderChecks() {
     const c = model.checks;
     if (!c.length) { $('checks').innerHTML = '<span class="muted">특이사항 없음</span>'; return; }
-    const by = {}; c.forEach((x) => { (by[x.kind] = by[x.kind] || []).push(x.text || ''); });
-    $('checks').innerHTML = Object.keys(by).map((k) => '<div class="chk"><b>' + esc(k) + '</b> (' + by[k].length + ')<div style="margin:2px 0 6px 12px">' + by[k].map((t) => '· ' + esc(t)).join('<br>') + '</div></div>').join('');
+    const by = {}; c.forEach((x) => { (by[x.kind] = by[x.kind] || []).push(x); });
+    const body = (xs) => {
+      if (!xs[0].grp) return xs.map((x) => '· ' + esc(x.text || '')).join('<br>');
+      let h = '', g = null, m = null; // 사업군 → 담당자 묶음
+      xs.forEach((x) => {
+        if (x.grp !== g) { g = x.grp; m = null; h += '<div class="cg">■ ' + esc(g) + '</div>'; }
+        if (x.mgr !== m) { m = x.mgr; h += '<div class="cm">' + esc(m) + '</div>'; }
+        h += '<div class="ci">· ' + esc(x.text) + '</div>';
+      });
+      return h;
+    };
+    // 점검 종류마다 접기(기본 접힘, 펼친 상태는 저장)
+    S.chkOpen = S.chkOpen || {};
+    $('checks').innerHTML = Object.keys(by).map((k) => '<details class="chk" data-chk="' + esc(k) + '"' + (S.chkOpen[k] ? ' open' : '') + '><summary><b>' + esc(k) + '</b> (' + by[k].length + ')</summary><div style="margin:2px 0 6px 12px">' + body(by[k]) + '</div></details>').join('');
+    $('checks').querySelectorAll('details').forEach((d) => d.addEventListener('toggle', () => { S.chkOpen[d.dataset.chk] = d.open; save(); }));
+  }
+  // 배치·결재 선택은 '배치 확정'을 눌러야 반영
+  let pend = { placement: {}, approve: {} };
+  const pendCount = () => Object.keys(pend.placement).length + Object.keys(pend.approve).length;
+  function pendUI() {
+    const n = pendCount(), b = $('placeBtn'), st = $('placeSt'); if (!b) return;
+    b.classList.toggle('dirty', n > 0);
+    st.className = 'gst' + (n ? ' dirty' : ' ok'); st.textContent = n ? '바뀐 선택 ' + n + '곳 · 배치 확정을 눌러 반영하세요.' : '확정된 배치로 반영 중입니다.';
   }
   function renderDups() {
     const d = model.dups; $('dupWrap').hidden = !d.length;
     const cellOf = (x, ls) => x.lists.filter((l) => ls.includes(l)).map((l) => { const w = x.where.filter((y) => y.list === l);
-      return '<label style="display:block;white-space:nowrap"><input type="checkbox" data-dup="' + esc(x.key) + '|' + l + '"' + (x.on[l] ? ' checked' : '') + '> ' + esc(w.map((y) => y.label.replace(/(전월|당월) ?/, '') + ' ' + fmt(y.amount)).join(', ')) + '</label>'; }).join('');
+      const pk = x.key + '|' + l, on = pk in pend.placement ? pend.placement[pk] : x.on[l];
+      return '<label style="display:block;white-space:nowrap"><input type="checkbox" data-dup="' + esc(x.key) + '|' + l + '"' + (on ? ' checked' : '') + '> ' + esc(w.map((y) => y.label.replace(/(전월|당월) ?/, '') + ' ' + fmt(y.amount)).join(', ')) + '</label>'; }).join('');
     $('dupBody').innerHTML = d.map((x) => '<tr><td>' + esc(x.region) + '</td><td>' + esc(x.mgr) + '</td><td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td>' +
       cellOf(x, ['prev', 'tgtPrev', 'agPrev']) + '</td><td>' + cellOf(x, ['cur', 'tgtCur', 'agCur']) + '</td></tr>').join('');
     $('dupBody').querySelectorAll('input').forEach((inp) => inp.addEventListener('change', () => {
-      const [k, l] = inp.dataset.dup.split('|'); S.placement[k] = S.placement[k] || {}; S.placement[k][l] = inp.checked; save(); refresh();
+      const pk = inp.dataset.dup, [k, l] = pk.split('|'), x = model.dups.find((d) => d.key === k);
+      if (x && x.on[l] === inp.checked) delete pend.placement[pk]; else pend.placement[pk] = inp.checked;
+      pendUI();
     }));
   }
   function renderNotDone() {
     const d = model.notDone || []; $('ndWrap').hidden = !d.length;
-    $('ndBody').innerHTML = d.map((x) => '<tr class="' + (x.on ? '' : 'off') + '"><td><input type="checkbox" data-nd="' + esc(x.ndId) + '"' + (x.on ? ' checked' : '') + '></td><td>' + esc(x.region) + '</td><td>' + esc(x.mgr) + '</td><td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td>' + esc(x.label) + '</td><td>' + esc(x.status) + '</td><td class="num">' + fmt(x.amount) + '</td></tr>').join('');
-    $('ndBody').querySelectorAll('input').forEach((inp) => inp.addEventListener('change', () => { S.approve = S.approve || {}; if (inp.checked) S.approve[inp.dataset.nd] = true; else delete S.approve[inp.dataset.nd]; save(); refresh(); }));
+    $('ndBody').innerHTML = d.map((x) => '<tr class="' + (x.on ? '' : 'off') + '"><td><input type="checkbox" data-nd="' + esc(x.ndId) + '"' + ((x.ndId in pend.approve ? pend.approve[x.ndId] : x.on) ? ' checked' : '') + '></td><td>' + esc(x.region) + '</td><td>' + esc(x.mgr) + '</td><td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td>' + esc(x.label) + '</td><td>' + esc(x.status) + '</td><td class="num">' + fmt(x.amount) + '</td></tr>').join('');
+    $('ndBody').querySelectorAll('input').forEach((inp) => inp.addEventListener('change', () => { const id = inp.dataset.nd, x = model.notDone.find((y) => y.ndId === id); if (x && x.on === inp.checked) delete pend.approve[id]; else pend.approve[id] = inp.checked; pendUI(); }));
   }
   function renderDetail() {
     const M1 = model.M1; for (let j = 0; j < 4; j++) $('detM' + j).textContent = (M1 + j <= 12 ? M1 + j : M1 + j - 12) + '월';
+    const cnt = {}; model.detail.forEach((d) => { const k = d.region + '|' + d.item; cnt[k] = (cnt[k] || 0) + 1; });
+    $('detCnt').textContent = ['경북권역', '부산권역', '경남권역'].map((reg) => reg + ': ' + ['PPS', 'SCM', '산업자재유통', 'RRPP', 'ULS'].map((it) => it + ' ' + (cnt[reg + '|' + it] || 0)).join(' · ')).join('  /  ');
     $('detBody').innerHTML = model.detail.map((d) => '<tr><td>' + esc(d.item) + '</td><td>' + esc(d.stage) + '</td><td>' + esc(d.region) + '</td><td>' + esc(d.name) + '</td>' +
       [0, 1, 2, 3].map((j) => '<td class="num">' + fmt(d.old ? d.cols['c' + j] : d.months[M1 + j]) + '</td>').join('') + '<td class="num">' + fmt(d.k) + '</td><td class="fix">' + esc(d.old ? '양식 기존 행' : d.src) + '</td></tr>').join('') || '<tr><td colspan="10" class="muted">당월 목록이 없습니다.</td></tr>';
-    const mj = model.majors; const lines = [];
-    Object.keys(mj).forEach((reg) => Object.keys(mj[reg]).forEach((it) => { if (mj[reg][it]) lines.push('■ ' + reg + ' ' + it + '\n' + mj[reg][it]); }));
-    $('majBody').textContent = lines.join('\n\n') || '협의중·계획 업체가 없습니다.';
+    const mj = model.majors, regs = Object.keys(mj), items = ['PPS', '물류기기', 'SCM', '산업자재유통', 'RRPP', 'ULS'];
+    const act = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.maj : null;
+    if (!act) {
+      $('majTable').innerHTML = '<thead><tr><th>항목</th>' + regs.map((r) => '<th>' + esc(r) + '</th>').join('') + '</tr></thead><tbody>' +
+        items.map((it) => '<tr><td class="nw"><b>' + esc(it) + '</b></td>' + regs.map((r) => '<td style="min-width:300px"><textarea class="cell maj" data-maj="' + esc(r + '|' + it) + '">' + esc(mj[r][it] || '') + '</textarea></td>').join('') + '</tr>').join('') + '</tbody>';
+      $('majTable').querySelectorAll('[data-maj]').forEach((ta) => ta.addEventListener('input', () => { S.texts.majors = S.texts.majors || {}; S.texts.majors[ta.dataset.maj] = ta.value; save(); schedule(); }));
+    }
+  }
+  function confirmPlacement() {
+    Object.keys(pend.placement).forEach((pk) => { const [k, l] = pk.split('|'); S.placement[k] = S.placement[k] || {}; S.placement[k][l] = pend.placement[pk]; });
+    S.approve = S.approve || {}; Object.keys(pend.approve).forEach((id) => { if (pend.approve[id]) S.approve[id] = true; else delete S.approve[id]; });
+    pend = { placement: {}, approve: {} }; save(); refresh();
   }
   // 목록 수정 탭
   function listGroups() {
@@ -405,18 +467,19 @@
     let h = '', n = 0;
     groups.forEach((gr) => {
       const blockAll = (byBlock[gr.bkey] || []).slice().sort((a, b) => b.amount - a.amount);
-      let rows = showAll ? blockAll : blockAll.filter((r) => shown.has(r.id) || S.exclude[r.id]);
+      // 기본: 수정·점검이 있는 행(또는 손댄 행, 뺀 행)만
+      let rows = showAll ? blockAll : blockAll.filter((r) => (shown.has(r.id) || S.exclude[r.id]) && (r.fixMajor || r.flags.length || r.edited || S.exclude[r.id]));
       if (q) rows = rows.filter((r) => r.name.includes(q));
       if (!rows.length) return;
-      h += '<tr class="grp"><td colspan="8">' + esc(gr.title) + '</td></tr>';
+      h += '<tr class="grp"><td colspan="7">' + esc(gr.title) + '</td></tr>';
       rows.forEach((r) => {
         const inList = shown.has(r.id), ex = !!S.exclude[r.id]; n += inList ? 1 : 0;
-        h += '<tr class="' + (inList ? '' : 'off') + '"><td><input type="checkbox" data-ex="' + esc(r.id) + '"' + (ex ? '' : ' checked') + '></td><td>' + esc(r.region) + '</td><td>' + esc(r.mgr || '') + '</td>' +
-          '<td><input class="g" type="text" data-gu="' + esc(r.id) + '" value="' + esc(r.gubun) + '"></td><td>' + esc(r.code || '') + '</td><td>' + esc(r.name) + '</td><td class="num">' + fmt(r.amount) + '</td>' +
+        h += '<tr class="' + (inList ? '' : 'off') + '"><td><input type="checkbox" data-ex="' + esc(r.id) + '"' + (ex ? '' : ' checked') + '></td><td class="nw">' + esc(r.mgr || '') + '</td>' +
+          '<td><input class="g" type="text" data-gu="' + esc(r.id) + '" value="' + esc(r.gubun) + '"></td><td class="nw sm">' + esc(r.code || '') + '</td><td class="nm" title="' + esc(r.fullName || r.name) + '">' + esc(r.name) + '</td><td class="num">' + fmt(r.amount) + '</td>' +
           '<td class="desc"><input type="text" class="d1" data-de="' + esc(r.id) + '" value="' + esc(r.desc) + '"><div class="fix1" title="' + esc([r.fix, r.flags.join(', ')].filter(Boolean).join(' · ')) + '">' + esc([showAll ? r.fix : r.fixMajor, r.flags.join(', ')].filter(Boolean).join(' · ')) + '</div></td></tr>';
       });
     });
-    $('listBody').innerHTML = h || '<tr><td colspan="8" class="muted">목록이 없습니다.</td></tr>';
+    $('listBody').innerHTML = h || '<tr><td colspan="7" class="muted">수정·점검이 있는 행이 없습니다. 전체를 보려면 위 체크를 켜세요.</td></tr>';
     $('listCnt').textContent = n ? '(' + n + '건)' : '';
     $('listBody').querySelectorAll('[data-ex]').forEach((el) => el.addEventListener('change', () => { if (el.checked) delete S.exclude[el.dataset.ex]; else S.exclude[el.dataset.ex] = true; save(); refresh(); }));
     const ed = (el, f) => el.addEventListener('change', () => { const id = el.dataset[f === 'desc' ? 'de' : 'gu']; S.edits[id] = S.edits[id] || {}; S.edits[id][f] = el.value; save(); schedule(); });
@@ -443,7 +506,8 @@
   // ---------- 엑셀 만들기 ----------
   function b64(s) { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
   $('buildBtn').addEventListener('click', async () => {
-    const msg = $('buildMsg'); msg.innerHTML = '<div class="msg warn">만드는 중…</div>';
+    const msg = $('buildMsg');
+    if (!finalOK) { msg.innerHTML = '<div class="msg warn">먼저 최종 확정을 누르세요.</div>'; return; } msg.innerHTML = '<div class="msg warn">만드는 중…</div>';
     $('buildBtn').disabled = true;
     try {
       const m = E.buildModel(S.inputs, opts());
@@ -455,7 +519,7 @@
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
       msg.innerHTML = '<div class="msg ok">완료: ' + esc(a.download) + ' (보고 부분 ' + res.rows.report + '행)</div>';
     } catch (e) { console.error(e); msg.innerHTML = '<div class="msg err">' + esc(e.message || e) + '</div>'; }
-    $('buildBtn').disabled = false;
+    $('buildBtn').disabled = !finalOK;
   });
 
   refresh();
