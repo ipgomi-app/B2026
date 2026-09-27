@@ -417,8 +417,12 @@ function classifyNormal(d,c){
   if(/단가\s*(인상|협의)/.test(diaryCategory(d)))c.add('손익개선');
   /* 신규업체: 업무일지 머리(신규업체) 또는 운영관리 상세(수불관리 등) 내용에 "신규업체"가 있으면 신규업체 */
   if(/신규업체/.test(d.group||'')||d.dtl.some(x=>{const k=DTL_CAT[x.code]||(DTL_NAME_CAT.find(([re])=>re.test(x.typ))||[])[1];return (k?OPS_CATS.includes(k)&&k!=='기타':!raw.size)&&/신규\s*업체/.test(x.text)}))c.add('신규업체');
+  /* 신규업체(01) 일지라도 활동이 신규·경쟁사 영업·파렛트 영업·산업자재 영업 등 영업이면 영업관리 신규영업(신규)로 본다 */
+  const is01=x=>x.code==='01'||/^신규업체/.test(x.typ),n01=d.dtl.filter(is01),s01=n01.filter(x=>NEW_SALES_ACT.test(String(parseForm(x.text).act||'').replace(/\s+/g,' ').trim()));
+  if(s01.length){c.add('신규영업 신규');if(s01.length===n01.length&&!d.dtl.some(x=>!is01(x)&&/신규\s*업체/.test(x.text)))c.delete('신규업체')}
   if(c.has('신규업체'))c.delete('수불관리');
 }
+const NEW_SALES_ACT=/^(신규|신규\s*영업|[가-힣A-Za-z\s]{0,10}영업)$/;
 /* 품목 판정: PPS는 신규/경쟁사, 나머지 사업은 품목명 */
 function itemOf(cat,d){const all=d.dtl.map(x=>x.text).join(' ');const biz=cat.replace(/ (계약|견적)$/,'');const m=re=>(all.match(re)||[])[0]||'';
   if(biz==='PPS')return /경쟁사\s*전환|경쟁사\s*(사용|업체|계약)|재전환|전환\s*견적|AJ/.test(all)?'경쟁사':'신규';
