@@ -896,8 +896,9 @@ function render(){if(!OUT)return;const rows=visible();
   const z=T=>T.map(r=>r.map(v=>v===0?'':v));OUT.sumTable=[h1a,h1b,h1c,...z(S1.T)];
   /* 담당자(행)별 줄무늬: 권역마다 두 번째 행부터 한 줄 걸러 연한 회색 */
   /* 담당자 행 구분: 지점이 바뀌면 굵은 남색 선, 같은 지점 안은 점선, 담당자 이름 굵게, 반복되는 권역·지점은 연회색 글자 */
-  const body=(T,flags,cs)=>{const isEmp=$('mode').value==='emp';let prev=null;return T.map((r,i)=>{const data=!flags[i];const top=data?(prev&&prev[1]===r[1]?'':'border-top:1.5px solid #7f8a99;'):'';
-    const cells=r.map((v,j)=>{let st=flags[i]==='sub'?'background:#fff2cc;':flags[i]==='tot'?'background:#dce6f1;':top;if(data&&isEmp&&j===2)st+='font-weight:700;';if(data&&j<2&&prev&&prev[j]===v&&prev[1]===r[1])st+='color:#9aa3ad;';
+  const body=(T,flags,cs)=>{const isEmp=$('mode').value==='emp';let prev=null,k=0;return T.map((r,i)=>{const data=!flags[i];if(!data)k=0;const top=data?(prev&&prev[1]===r[1]?'':'border-top:1.5px solid #7f8a99;'):'';
+    /* 담당자 행은 아주 연한 회색을 한 줄 걸러 깔아 구분한다 */const zebra=data&&(k++%2)?'background:#f4f6f9;':'';
+    const cells=r.map((v,j)=>{let st=flags[i]==='sub'?'background:#fff2cc;':flags[i]==='tot'?'background:#dce6f1;':top+zebra;if(data&&isEmp&&j===2)st+='font-weight:700;';if(data&&j<2&&prev&&prev[j]===v&&prev[1]===r[1])st+='color:#9aa3ad;';
       return '<td class="'+(typeof v==='number'?'n':'c')+(flags[i]?' bd':'')+'" style="'+st+(cs?cs(j):'')+'">'+(typeof v==='number'?(v===0?'':v.toLocaleString('en-US')):esc(v))+'</td>'}).join('');prev=data?r:null;return '<tr>'+cells+'</tr>'}).join('')};
   /* 표① 계약 칸(건수·금액)은 파란색 강조 */
   const CBH=';background:#dbe8fb;color:#0b4fb3',CB=j=>j>=keyH.length&&(j-keyH.length)%4<2?'color:#0b4fb3;font-weight:700;':'';
