@@ -225,6 +225,7 @@ const DTL_NAME_CAT=[[/^신규업체/,'신규업체'],[/^신규계약/,'신규영
 const NEW_SALES_SUBS=['신규','SCM','산업자재유통','글로벌비즈','지게차'];
 const SALES_CATS=[...NEW_SALES_SUBS.map(b=>'신규영업 '+b),'경쟁사','손익개선','엔지니어링','미수금','재계약'];
 const RENT_RE=/(임대|렌탈)\s*(문의|안내|상담)|(단가|임대료|이용료)\s*안내/;
+const SLIP_RE=/전표\s*(수령|회수|수취|받)/;
 const OPS_CATS=['수불관리','입고미회수','재고실사','신규업체','재출고개선','클레임/문제해결','기타'];
 /* 기타로 작성된 일지와 견적만 기록한 일지는 활동 실적에서 제외한다. */
 const OTHER_DIARY_RE=/^(?:업무일지\s*)?기타$/;
@@ -628,9 +629,12 @@ function build(){const wk=curWeek();
   /* 직출·직퇴: 업무일지기타(40)의 직출/직퇴 기록 → 기타·직출 한 칸에 함께 표시 */
   /* 임대문의: 운영관리 상세(수불관리 등)라도 내용이 임대 문의·임대 안내·단가 안내면 기타·임대문의 */
   const isRent=x=>{const k=DTL_CAT[x.code]||(DTL_NAME_CAT.find(([re])=>re.test(x.typ))||[])[1];return OPS_CATS.includes(k)&&RENT_RE.test(x.text)};
+  /* 전표수령: 수불관리 상세 내용이 전표 수령(이동전표 수령 등)이면 기타·전표수령 */
+  const isSlip=x=>(DTL_CAT[x.code]||(DTL_NAME_CAT.find(([re])=>re.test(x.typ))||[])[1])==='수불관리'&&SLIP_RE.test(x.text);
   const isOut=(d,x)=>OTHER_DIARY_RE.test(String(x.typ||'').trim())&&(/직출|직퇴/.test(x.text)||/^(직출|직퇴)/.test(String(d.group||'').trim()));
   const diaryRows=inWk.filter(d=>d.dtl.length&&!isLeave(d)).map(d=>{const keep=d.dtl.filter(x=>!AUTO_QUOTE_RE.test(x.text));if(keep.length<d.dtl.length){autoQ++;if(!keep.length)return null;d={...d,dtl:keep}}
     const out=d.dtl.filter(x=>isOut(d,x));if(out.length){etcRows.push({...d,dtl:out,_etc:'직출'});d={...d,dtl:d.dtl.filter(x=>!isOut(d,x))};if(!d.dtl.length)return null}
+    const slip=d.dtl.filter(isSlip);if(slip.length){etcRows.push({...d,dtl:slip,_etc:'전표수령'});d={...d,dtl:d.dtl.filter(x=>!isSlip(x))};if(!d.dtl.length)return null}
     const rent=d.dtl.filter(isRent);if(rent.length){etcRows.push({...d,dtl:rent,_etc:'임대문의'});d={...d,dtl:d.dtl.filter(x=>!isRent(x))};if(!d.dtl.length)return null}
     const q=isQuoteOnlyDiary(d),o=OTHER_DIARY_RE.test(String(d.group||'').trim());
     if(q||o)return {...d,_q:q,_other:o&&!q};const dtl=d.dtl.filter(x=>!OTHER_DIARY_RE.test(String(x.typ||'').trim()));return dtl.length?{...d,dtl}:null}).filter(Boolean).concat(etcRows);
@@ -688,13 +692,13 @@ function render(){if(!OUT)return;const rows=visible();
   const stats1=list=>{return [...BIZ1.flatMap(b=>[cntOf(list,b+' 계약'),amtOf(list,b+' 계약'),cntOf(list,b+' 견적'),amtOf(list,b+' 견적')]),...['계약','견적'].flatMap(k=>[BIZ.reduce((s,b)=>s+cntOf(list,b+' '+k),0),BIZ.reduce((s,b)=>s+amtOf(list,b+' '+k),0)])]};
   /* 표2: 기타 분류 건수 */
   const CATS2=SALES_CATS,CATS3=OPS_CATS;
-  /* 표③ 기타는 직출·휴무·DRS작성·임대문의·기타로 나눠 표시 */
-  const OPS_MAIN=OPS_CATS.filter(c=>c!=='기타'),ETC_SUB=['직출','휴무','DRS작성','임대문의','기타'],CATS3H=[...OPS_MAIN,...ETC_SUB.map(k=>k==='기타'?'기타':'기타·'+k)];
-  /* 직출·휴무·DRS작성·임대문의는 날짜·업체별 건수(같은 담당자의 휴무 3일 → 3), 기타는 업체 수 */
+  /* 표③ 기타는 직출·휴무·DRS작성·임대문의·전표수령·기타로 나눠 표시 */
+  const OPS_MAIN=OPS_CATS.filter(c=>c!=='기타'),ETC_SUB=['직출','휴무','DRS작성','임대문의','전표수령','기타'],CATS3H=[...OPS_MAIN,...ETC_SUB.map(k=>k==='기타'?'기타':'기타·'+k)];
+  /* 직출·휴무·DRS작성·임대문의·전표수령은 날짜·업체별 건수(같은 담당자의 휴무 3일 → 3), 기타는 업체 수 */
   const etcCnt=(list,k)=>k==='기타'?list.filter(r=>r.cats.includes('기타')&&(r.d.parts||[r.d]).some(p=>p._other)).length:
     list.reduce((n,r)=>n+new Set((r.d.parts||[r.d]).filter(p=>p._etc===k).map(p=>(p.date?p.date.key:'')+'|'+p.code)).size,0);
   /* 업체수는 영업관리/운영관리 각각: 해당 항목으로 분류된 업체 수 (카드 필터와 무관하게 전체 기준) */
-  const visitFirm=(list,cats)=>[uniqueFirmCount((list.__all||list).filter(r=>!r.q&&r.cats.some(c=>cats.includes(c))&&!(r.d.parts||[r.d]).every(p=>p._etc&&p._etc!=='임대문의')))];/* 휴무·직출·DRS작성만 있는 행은 업체수에서 제외 (임대문의는 포함) */
+  const visitFirm=(list,cats)=>[uniqueFirmCount((list.__all||list).filter(r=>!r.q&&r.cats.some(c=>cats.includes(c))&&!(r.d.parts||[r.d]).every(p=>p._etc&&!/^(임대문의|전표수령)$/.test(p._etc))))];/* 휴무·직출·DRS작성만 있는 행은 업체수에서 제외 (임대문의·전표수령은 포함) */
   const stats2=list=>[...visitFirm(list,CATS2),...CATS2.map(c=>cntOf(list,c))];const stats3=list=>[...visitFirm(list,CATS3),...OPS_MAIN.map(c=>cntOf(list,c)),...ETC_SUB.map(k=>etcCnt(list,k))];
   const activeRegs=REG_ORDER.filter(reg=>OUT.some(r=>r.reg===reg));/* 데이터가 있는 권역만 표시 */
   const rowsOf=stats=>{const T=[],flags=[];REG_ORDER.forEach(reg=>{const gs=G.filter(g=>g.k[0]===reg);if(!gs.length||!activeRegs.includes(reg))return;gs.forEach(g=>{const L=g.rows.slice();L.__all=OUT.filter(r=>key(r).join('|')===g.k.join('|'));T.push([...g.k,...stats(L)]);flags.push('')});
