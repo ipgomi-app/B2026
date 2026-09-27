@@ -541,7 +541,7 @@ function findCols(r){const c=r.map(x=>String(x||'').trim());const idx=re=>c.find
   const br=idx(/^[가-힣]+지점$/);const gubun=idx(/^\d{2}-(신규계약|단가인상|단가인하|관리계약|계약조건변경|재계약|계약종료|재출고개선|단가원복)$/);
   const comp=idx(/^\d{2}-(재전환|해당없음|점유율확대|신규전환|전환)$/);const compName=c.findIndex((x,i)=>i>form&&/^\d{2}-[A-Za-z가-힣]{1,10}$/.test(x)&&i!==gubun&&i!==comp&&!/등급|임대|타용도|SCM|계약처|보증|미가입|연간|일반|신규|견적서|표준/.test(x));
   const priceKind=idx(/^\d{2}-(PLT렌탈료|렌탈료|재입고개선|성수기|센터이용료|재출고|단가)/);
-  const memo=c.reduce((best,x,i)=>x.length>best.len&&/[가-힣]/.test(x)&&!STATUS_RE.test(x)?{i,len:x.length}:best,{i:-1,len:14}).i;
+  const memo=c.reduce((best,x,i)=>x.length>best.len&&/[가-힣]/.test(x)&&!STATUS_RE.test(x)&&!/^\d{4}-\d{2}-\d{2}\s*(오전|오후)/.test(x)?{i,len:x.length}:best,{i:-1,len:14}).i;
   const status=idx(STATUS_RE);const docType=idx(/^\d{2}-?견적/);
   const after=gubun>=0?gubun:form;const amt=c.findIndex((x,i)=>i>after&&/^-?[\d,]+$/.test(x)&&Math.abs(numv(x))>=1000);
   const eff=amt>=0&&/^-?[\d,]+$/.test(c[amt+1]||'')?amt+1:-1;
