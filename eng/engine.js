@@ -753,6 +753,33 @@
     });
   }
 
+  // 머리글 행 서식으로 데이터 행 서식 만들기(굵게·채움 없이, 줄바꿈)
+  function plainFrom(h) {
+    const sn = clone(h); sn.height = 24;
+    sn.cells.forEach((c) => {
+      c.v = null; delete c.f; delete c.note;
+      if (!c.s) return;
+      if (c.s.font) c.s.font = Object.assign({}, c.s.font, { bold: false });
+      if (c.s.fill) delete c.s.fill;
+      c.s.alignment = Object.assign({}, c.s.alignment, { wrapText: true, vertical: 'middle' });
+    });
+    return sn;
+  }
+  // 예전 결과물처럼 ◎ 금주 주요 업체 섹션이 없으면 본부 리스트 서식으로 원래 양식(주차~추가 진행 현황)을 만든다
+  function makeBonbuWeek(secs) {
+    const list = secs.find((s) => s.kind === 'bonbuList');
+    if (!list || !list.header) return null;
+    const title = clone(list.titleRow); title.cells.forEach((c) => { c.v = null; delete c.f; }); title.cells[1].v = '◎  금주 주요 업체';
+    const header = clone(list.header); const hs = clone(header.cells[1].s);
+    header.cells.forEach((c) => { c.v = null; delete c.f; c.s = {}; });
+    const layout = [[2, '주차'], [3, '팀/권역'], [4, '담당자'], [5, '코드'], [6, '업체명', 7], [8, '추진과제/범위', 9], [10, '진행단계'], [11, '예상매출\n(억원)'], [12, '사업시기'], [13, '추가 진행 현황', 22]];
+    header.merges = [];
+    layout.forEach(([a, t, b]) => { for (let c = a; c <= (b || a); c++) header.cells[c - 1].s = clone(hs); header.cells[a - 1].v = t; if (b) header.merges.push([a, b]); });
+    const cols = {}; layout.forEach(([a, t]) => { const f = FIELD_OF[norm(t)]; if (f) cols[f] = a; });
+    const data = plainFrom(header);
+    return { title: norm('◎  금주 주요 업체'), kind: 'bonbuWeek', titleRow: title, header, cols, data: [data], tail: [clone(list.tail[0] || { cells: title.cells.map(() => ({ v: null, s: {} })), height: 18, merges: [] })] };
+  }
+
   function codeVal(f) { return f.codeRaw != null && f.codeRaw !== '' ? clone(f.codeRaw) : (/^\d+$/.test(f.code) ? Number(f.code) : f.code); }
   function amtVal(f) { return typeof f.amtRaw === 'number' ? f.amtRaw : (f.amt == null ? null : f.amt); }
 
@@ -776,9 +803,10 @@
     const maxCol = info.maxCol;
     const byKey = {}; rows.forEach((sn) => { if (!byKey[sn.key]) byKey[sn.key] = sn; });
     const F = (sn) => fields(sn, L);
-    // ◎ 금주 주요 업체(본부) 섹션은 없앤다 — 본부 반영은 리스트의 추가진행 주차/현황으로
-    let secs = info.secs.filter((s) => s.kind !== 'bonbuWeek');
+    // ▶본부 주요업체 바로 아래(빈 행 없이) ◎ 금주 주요 업체 = 화면에서 '본부' 체크한 업체
+    const secs = info.secs;
     secs.forEach((s) => { if (/^▶본부주요업체/.test(s.title)) s.tail = []; });
+    if (!secs.some((s) => s.kind === 'bonbuWeek')) { const bw = makeBonbuWeek(secs); if (bw) secs.splice(secs.findIndex((s) => s.kind === 'bonbuList'), 0, bw); }
     const mainSec = secs.find((s) => s.kind === 'main');
     const log = { bonbuAdded: [], bonbuUpdated: [], sheetFixes: 0 };
     const choose = opts.selection || {};
@@ -846,6 +874,12 @@
     secs.forEach((sec) => {
       if (sec.kind === 'main') sec.data = pick('main').map((f) => coRow(sec, f, f.newv === W ? '신규' : '기존'));
       else if (sec.kind === 'rev') sec.data = pick('rev').map((f) => coRow(sec, f, '기존'));
+      else if (sec.kind === 'bonbuWeek') {
+        const style = sec.data[0] || plainFrom(sec.header);
+        sec.data = [...bonbuSel].filter((k) => byKey[k]).map((k) => F(byKey[k]))
+          .sort((a, b) => (REGION_ORDER[a.region] ?? 9) - (REGION_ORDER[b.region] ?? 9) || (b.amt || 0) - (a.amt || 0))
+          .map((f) => makeRow(style, sec.cols, { k: W, region: f.region, mgr: f.mgr, grp: f.grp, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: spaceSections(clone(f.needs)) }, ws));
+      }
       else if (sec.kind === 'le') sec.data = cands.filter((c) => c.isLE && choose['LE:' + c.key] !== 'none').map((c) => F(rows[c.idx])).map((f) => coRow(sec, f, f.newv === W ? '신규' : '기존'));
       else if (opts.manual && opts.manual[sec.kind]) {
         const style = sec.data[0] || sec.tail[0] || sec.header;
