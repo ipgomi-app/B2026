@@ -470,9 +470,11 @@ function parseForm(text){const t=String(text||'').replace(/\r/g,'').replace(/\s*
   const f=kvFields(t);const nk=Object.keys(f).length;
   if(f.제목||f.계약형태||f.경쟁사구분||f.방문업체현황구분||f.계약특이사항||nk>=3){
     const tag=((f.제목||'').match(/^\[([^\]]+)\]/)||[])[1]||'';const doc=((f.제목||'').match(/견적요청|견적서|발주요청서|계약서/)||[])[0]||'';
-    if(f.경쟁사구분||f.방문업체현황구분||/경쟁사/.test(tag)){P.form='경쟁사';P.act='[경쟁사]';P.comp=[f.경쟁사구분,f.방문업체현황구분].filter(Boolean).join(' · ');
-      P.vol=f.경쟁사예상물동량?(f.경쟁사예상물동량+(f.경쟁사예상물동량_단위||'')).replace(/\s+/g,''):'';P.sales=setWon(P,f.경쟁사예상매출액,f.경쟁사예상매출액_단위);P.type=f.사용단가?('단가 '+f.사용단가+(f.사용단가_단위||'')).replace(/\s+(?=원)/,''):'';
-      const use=['PPS','산업자재(판매)','SCM','지게차','건설장비','OA'].filter(k=>f[k]&&!/^(N|X|미사용|없음|-)$/i.test(f[k])).map(k=>/^(Y|O|사용)$/i.test(f[k])?k+' 사용':k+' '+f[k]);if(use.length)P.body.push(use.join(', '))}
+    if(f.경쟁사구분||f.방문업체현황구분||/경쟁사/.test(tag)){P.form='경쟁사';P.act='[경쟁사]';P.comp=f.경쟁사구분||'';
+      /* 경쟁사 등록형: 경쟁사 구분 → 금액이 있는 항목만(PPS 2,000) → 비고 순. 0·빈 값 항목은 적지 않는다 */
+      const zero=v=>/^[\d,.\s]*$/.test(String(v||''))&&!num(v);
+      P.vol=f.경쟁사예상물동량&&!zero(f.경쟁사예상물동량)?(f.경쟁사예상물동량+(f.경쟁사예상물동량_단위||'')).replace(/\s+/g,''):'';P.sales=setWon(P,f.경쟁사예상매출액,f.경쟁사예상매출액_단위);P.type=f.사용단가&&!zero(f.사용단가)?('단가 '+f.사용단가+(f.사용단가_단위||'')).replace(/\s+(?=원)/,''):'';
+      P.use=['PPS','산업자재(판매)','SCM','지게차','건설장비','OA'].filter(k=>f[k]&&!zero(f[k])&&!/^(N|X|미사용|없음|-)$/i.test(f[k])).map(k=>/^(Y|O|사용)$/i.test(f[k])?k+' 사용':k+' '+(/^[\d,.\s]+$/.test(f[k])?num(f[k]).toLocaleString('en-US'):f[k])).join(', ')}
     else if(f.진행단계||f.진행사항){P.form='엔지';P.act=f.진행단계||'엔지니어링'}
     else{P.form='품의';P.act=(tag?'['+tag+'] ':'')+(doc||'견적');P.type=f.계약형태||'';P.sales=setWon(P,f.연간예상매출액||f.예상매출액||f.견적금액,f.연간예상매출액_단위||f.예상매출액_단위);if(f.예상수익율)P.rate=fmtRate(f.예상수익율)}
     if(f.예상물동량&&!P.vol)P.vol=f.예상물동량+(f.예상물동량_단위?' ('+f.예상물동량_단위+')':'');
@@ -509,7 +511,7 @@ function amtKindOf(cats,sel){const c=sel||'';if(c==='손익개선'||!c&&cats.inc
 function lineAmtK(ln,kind){let won=0;if(kind==='예상매출')won=ln.P.won||0;else{const m=ln.text.match(kind==='효과금액'?EFF_RE:RECV_RE);if(m)won=wonOf(m[1]+(m[2]||''),'원')}return won?Math.round(won/1000).toLocaleString('en-US'):''}
 const CONTRACT_ACT_RE=/계약\s*(완료|진행|체결|성사)|계약서\s*(작성|체결|날인)/;
 function salesAct(ln){return CONTRACT_ACT_RE.test(ln.text)?'계약':ln.P.form==='품의'?'견적':'방문'}
-function lineSummary(P,lead){const a=[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan].map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
+function lineSummary(P,lead){const a=(P.form==='경쟁사'?[lead,P.comp,P.use,P.type,P.vol?'물동량 '+P.vol:'',...P.body,P.plan]:[lead,P.region,P.industry,P.type,P.vol?'물동량 '+P.vol:'',P.comp?'경쟁사 '+P.comp:'',...P.body,P.plan]).map(x=>String(x||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/\s+/g,' ').replace(/^[\s,.·:]+|[\s,.·:]+$/g,'').trim()).filter(Boolean);
   return a.filter((x,i)=>a.indexOf(x)===i).map(x=>x.length>80?x.slice(0,80)+'…':x).join(', ')}
 /* 상세 줄: 업체 묶음의 상세 한 줄마다 분류를 다시 판정해 해당 항목 줄만 남긴다 */
 function detailLines(r,cats){const out=[],seen=new Set();const day=dt=>dt?String(dt.m).padStart(2,'0')+'월 '+String(dt.d).padStart(2,'0')+'일':'';
