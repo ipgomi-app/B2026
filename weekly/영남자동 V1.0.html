@@ -797,7 +797,7 @@ function recvHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
     if(i===0)h+=rtd(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
     if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=rtd(NUM(c[5]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg+TH,' colspan="6"');h+=rtd(NUM(c[16]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg)}
     else{h+=rtd(esc(c[1]),'text-align:center;');h+=rtd(esc(c[2]),"text-align:center;mso-number-format:'0';");h+=rtd(esc(c[3]),'text-align:left;white-space:normal;',' colspan="2"');h+=rtd(NUM(c[5]),RACC+TH);h+=rtd(esc(c[6]),'text-align:center;'+BLUE);h+=rtd(esc(c[7]),'text-align:center;'+BLUE+TH);h+=rtd(NUM(c[8]),RACC);h+=rtd(esc(c[9]),'text-align:center;');
-      h+=rtd(esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;'+TH,' colspan="6"');h+=rtd(NUM(c[16]),RACC+TH);h+=rtd(NUM(c[17]),RACC)}
+      h+=rtd(esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;mso-data-placement:same-cell;'+TH,' colspan="6" x:str');h+=rtd(NUM(c[16]),RACC+TH);h+=rtd(NUM(c[17]),RACC)}
     h+='</tr>'})});
   return h+'</table>'}
 function recvSumHtml(){const T=recvTable();const rows=T.filter(r=>r.t==='s'||r.t==='st');const title=T[0].cells[0];
@@ -972,7 +972,7 @@ function mgRptHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
     if(i===0)h+=rtd(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
     if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=rtd(NUM(c[5]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg+TH,' colspan="6"');h+=rtd(NUM(c[16]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg)}
     else{h+=rtd(esc(c[1]),'text-align:center;');h+=rtd(esc(c[2]),"text-align:center;mso-number-format:'0';");h+=rtd(esc(c[3]),'text-align:left;white-space:normal;',' colspan="2"');h+=rtd(NUM(c[5]),RACC+TH);h+=rtd(esc(c[6]),'text-align:center;'+BLUE);h+=rtd(esc(c[7]),'text-align:center;'+BLUE+TH);h+=rtd(NUM(c[8]),RACC);h+=rtd(esc(c[9]),'text-align:center;');
-      h+=rtd(esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;'+TH,' colspan="6"');h+=rtd(NUM(c[16]),RACC+TH);h+=rtd(NUM(c[17]),RACC);h+=rtd(esc(c[18]||''),'text-align:center;');h+=rtd(esc(c[19]||''),'text-align:center;');h+=rtd(esc(c[20]||''),'text-align:center;')}
+      h+=rtd(esc(memo).replace(/\n/g,'<br>'),'text-align:left;white-space:normal;mso-data-placement:same-cell;'+TH,' colspan="6" x:str');h+=rtd(NUM(c[16]),RACC+TH);h+=rtd(NUM(c[17]),RACC);h+=rtd(esc(c[18]||''),'text-align:center;');h+=rtd(esc(c[19]||''),'text-align:center;');h+=rtd(esc(c[20]||''),'text-align:center;')}
     h+='</tr>'})});
   return h+'</table>'}
 /* 주간회의자료 엑셀 파일: 원본 서식(B열 시작, 구분 세로 병합, 업체명 E:F, 세부 진행내역 L:Q 병합, 합계 행) */
