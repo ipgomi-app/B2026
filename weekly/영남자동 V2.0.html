@@ -1390,12 +1390,16 @@ function tgParseComp(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'')
   const H=Array.from({length:W},(_,i)=>(two&&R2[i])||R1[i]||'');const at=(re,from=0)=>{for(let i=from;i<W;i++)if(re.test(H[i])||re.test(R1[i]||''))return i;return -1};
   const data=rows.slice(hi+(two?2:1)).filter(r=>r.some(Boolean));
   const colOf=f=>{let best=-1,bs=0;for(let i=0;i<W;i++){const k=data.filter(r=>f(r[i]||'')).length;if(k>bs){bs=k;best=i}}return best};
-  let code=R1.findIndex(h=>h==='업체명');if(code<0||!data.some(r=>isCode6(r[code])))code=H.indexOf('코드');
-  let name=-1;if(code>=0)for(let i=code+1;i<Math.min(W,code+4);i++)if(data.some(r=>/[가-힣A-Za-z]/.test(r[i]||'')&&!isCode6(r[i]))){name=i;break}
-  const C={code,name,reg:colOf(v=>/권역$/.test(v)),cAll:at(/경쟁사연매출/),cPps:at(/^PPS$/),visit:at(/최종방문일/),quote:at(/\(견적\)최종결재일/),cont:at(/\(계약\)최종결재일/),stage:at(/^진행단계$/),amt:W-1,memo:at(/영업진행세부사항|세부사항|세부내용/)};
+  /* 1행 머리글은 병합(코드·빈칸·이름 3칸 등)이라 다음 머리글 전까지를 한 묶음으로 보고, 묶음 안에서 코드(6자리)와 이름(마지막 글자 칸)을 찾음 */
+  const heads=[];for(let i=0;i<W;i++)if(R1[i])heads.push(i);const span=re=>{const k=heads.findIndex(i=>re.test(R1[i]));if(k<0)return null;return [heads[k],k+1<heads.length?heads[k+1]:W]};
+  const pickCode=(r,sp)=>{if(!sp)return '';for(let i=sp[0];i<sp[1];i++)if(isCode6(r[i]))return r[i];return ''};
+  const pickName=(r,sp)=>{if(!sp)return '';for(let i=sp[1]-1;i>=sp[0];i--){const v=r[i]||'';if(v&&!isCode6(v)&&/[가-힣A-Za-z]/.test(v))return v}return ''};
+  const S={reg:span(/팀\/권역/),br:span(/팀\/지점/),emp:span(/^\(실적\)담당자$/),co:span(/^업체명$/)};
+  const C={cAll:at(/경쟁사연매출/),cPps:at(/^PPS$/),visit:at(/최종방문일/),quote:at(/\(견적\)최종결재일/),cont:at(/\(계약\)최종결재일/),stage:at(/^진행단계$/),amt:W-1,memo:at(/영업진행세부사항|세부사항|세부내용/)};
   for(let i=W-1;i>=0;i--)if(H[i]==='예상매출'){C.amt=i;break}
-  const g=(r,i)=>i>=0?(r[i]||''):'';const out=[];data.forEach(r=>{const c=g(r,C.code);if(!isCode6(c))return;
-    out.push({grp:'BIGS',code:c,name:g(r,C.name),reg:g(r,C.reg),br:'',emp:'',cAll:g(r,C.cAll),cPps:g(r,C.cPps),visit:g(r,C.visit).slice(0,10),quote:g(r,C.quote).slice(0,10),cont:g(r,C.cont).slice(0,10),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});
+  const g=(r,i)=>i>=0?(r[i]||''):'';const out=[];data.forEach(r=>{let c=pickCode(r,S.co);if(!c){const k=H.indexOf('코드');if(k>=0&&isCode6(r[k]))c=r[k]}if(!c)return;
+    out.push({grp:'BIGS',code:c,name:pickName(r,S.co),reg:pickName(r,S.reg)||(r.find(v=>/권역$/.test(v||''))||''),br:pickName(r,S.br),emp:pickName(r,S.emp),cAll:g(r,C.cAll),cPps:g(r,C.cPps),visit:g(r,C.visit).slice(0,10),quote:g(r,C.quote).slice(0,10),cont:g(r,C.cont).slice(0,10),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});
+  C.span=S;
   return {rows:out,C}}
 /* 표 종류: 공통 B~O(14칸) 뒤에 붙는 열. 세부사항은 남은 칸~Z 병합 */
 /* 원본 배치: 계약(110~) · 빈 1행 · 견적(120~) · 빈 2행 · 방문업체(131~, 단위 표기 없음) */
@@ -1405,7 +1409,7 @@ function tgYM(d){const m=String(d||'').match(/(\d{2,4})\D+(\d{1,2})/);return m?S
 function tgBuild(){const src=document.getElementById('tg-src').value,csrc=document.getElementById('tg-comp').value;const st=document.getElementById('tg-stat');if(!src.trim()&&!csrc.trim()){st.textContent='타겟업체 데이터나 경쟁사(BIGS) 자료를 붙여넣으세요';return}
   const P=src.trim()?tgParse(src):{rows:[]};if(!P){st.textContent='인식 실패: 타겟업체 데이터에 진행단계·업체(코드) 머리글 행이 필요합니다';return}
   const B=csrc.trim()?tgParseComp(csrc):{rows:[]};if(!B){st.textContent='인식 실패: 경쟁사 자료에 진행단계 머리글이 필요합니다';return}
-  /* BIGS 행의 지점·담당자는 타겟업체 데이터(빅스중복 행 포함)에서 코드로 가져옴 */const byCode={};P.rows.forEach(x=>{if(!byCode[x.code])byCode[x.code]=x});B.rows.forEach(x=>{const t=byCode[x.code];if(t){x.br=t.br;x.emp=t.emp;if(!x.reg)x.reg=t.reg}});
+  /* BIGS 행의 지점·담당자는 타겟업체 데이터(빅스중복 행 포함)에서 코드로 가져옴 */const byCode={};P.rows.forEach(x=>{if(!byCode[x.code])byCode[x.code]=x});B.rows.forEach(x=>{const t=byCode[x.code];if(t){if(!x.br)x.br=t.br;if(!x.emp)x.emp=t.emp;if(!x.reg)x.reg=t.reg}});
   const ALL=B.rows.concat(P.rows.filter(x=>!x.bigsDup));
   const regK=r=>{const k=Object.keys(TG_REG).find(x=>String(r).startsWith(x));return k?TG_REG[k]:9};TG={};const msg=[];
   TG_KIND.forEach(K=>{const list=ALL.filter(x=>x.stage===K.k)/* 빅스중복 '중복' 타겟은 제외(BIGS 자료로 표시) */.sort((a,b)=>(a.grp===b.grp?0:a.grp==='BIGS'?-1:1)||(regK(a.reg)-regK(b.reg)));
