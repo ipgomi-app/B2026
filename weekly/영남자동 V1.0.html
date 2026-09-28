@@ -38,10 +38,10 @@ table.cfg input[type=text]{width:80px}
 button.mg-reg.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .tabpane{display:none}.tabpane.on{display:block}
 /* 붙여넣기 칸 안내 그림 */
-.inbox{position:relative}.inbox>button.xs{position:relative;z-index:2}.inbox .ov{position:absolute;pointer-events:none;opacity:.9;font-size:11.5px;font-family:"Malgun Gothic","맑은 고딕",sans-serif;white-space:normal;max-width:calc(100% - 20px)}
+.inbox{position:relative}.inbox>button.xs{position:relative;z-index:2}.inbox .ov{position:absolute;pointer-events:none;opacity:.9;font-size:10px;line-height:1.3;font-family:"Malgun Gothic","맑은 고딕",sans-serif;white-space:normal;max-width:calc(100% - 20px)}
 .inbox .ov .mt{color:#243b63;margin-bottom:5px}.inbox .ov .mt b{color:#c0392b}.inbox.has .ov{display:none}
-table.xl{border-collapse:collapse;font-size:11px;width:max-content;table-layout:auto;color:#1c2430}table.xl th{background:#e9ecf1;color:#555;border:1px solid #c9ced6;padding:0 5px;font-weight:400;font-size:10.5px}
-table.xl td{border:1px solid #d3d8e0;padding:0 5px;white-space:nowrap;background:rgba(255,255,255,.75);color:#1c2430;font-weight:400;text-align:left}
+table.xl{border-collapse:collapse;font-size:9.5px;width:max-content;table-layout:auto;color:#1c2430}table.xl th{background:#e9ecf1;color:#555;border:1px solid #c9ced6;padding:0 4px;font-weight:400;font-size:9px}
+table.xl td{border:1px solid #d3d8e0;padding:0 4px;white-space:nowrap;background:rgba(255,255,255,.75);color:#1c2430;font-weight:400;text-align:left}
 table.xl td.hh{background:#dde5f2;font-weight:700;text-align:center;color:#1c2430}table.xl td.st{outline:2px solid #c0392b;outline-offset:-2px}table.xl td.e{color:#999;text-align:center}
 table.xl tr td.rg{border-left:2px solid #2b6cb0}table.xl tr td.rgr{border-right:2px solid #2b6cb0}table.xl tr.rt td{border-top:2px solid #2b6cb0}table.xl tr.rb td{border-bottom:2px solid #2b6cb0}
 .inbox .ov .lg{color:#556;margin-top:4px}
@@ -197,21 +197,13 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <div class="card"><h2>2. AMS 채권관리현황 › 월별(업체현황) <span class="hint" style="margin:0">(청구년월·수금일·완납 판정용)</span></h2><textarea id="mg-mon" style="min-height:130px" placeholder="AMS 월별(업체현황) 표를 그대로 붙여넣기 (청구년월, 거래처 코드·명, 등급, 결재, 조건, 청구부서, 청구담당, 수금담당, 재무담당, 미수금, 최종입금전표일, 최종입금전표 생성일). '합 계' 행은 무시됩니다"></textarea><div class="hint" id="mg-mon-stat"></div></div>
 <div class="card"><h2>3. 수금 데이터 <span class="hint" style="margin:0">(AMS 수금내역 · 거래처별 결제금액 합산 → 수금금액)</span></h2><textarea id="mg-pay" style="min-height:130px" placeholder="AMS 수금내역을 그대로 붙여넣기 (청구부서, 청구담당자, 관리담당자, 거래처 코드·명, 조건, 기일, 세금계산서일자, 수금일자, 청구금액, 결제금액, …). 거래처 코드별로 결제금액을 합쳐 수금금액에 넣고, '거 래 처 계' 소계 행은 검증에만 씁니다. 수금일자가 금주 기간 안이면 금주수금 O, 최종수금일에도 반영됩니다"></textarea><div class="hint" id="mg-pay-stat"></div></div>
 <div class="card"><h2>4. 전주 내역 데이터 <span class="hint" style="margin:0">(지난주 출력표 → 전주 세부내역 자동 입력)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
-<div class="card"><h2>5. 금주현황 붙여넣기 <span class="hint" style="margin:0">권역 소계 3행 + 본부계 (업체수·보증보험 미가입·1~6개월·소계·미수채권 총계·지난주·지난주 수금액) · 본부주간 보고 맨 위에 붙습니다</span></h2>
-  <textarea id="mg-cur" style="min-height:90px" placeholder="경북권역 소계&#9;175&#9;57&#9;82,758,954 …
-부산권역 소계 …
-경남권역 소계 …
-본부계 …"></textarea><div class="hint" id="mg-cur-stat"></div></div>
-<div class="card"><h2>6. 금주 내역 데이터 <span class="hint" style="margin:0">취합 출력표에 금주 세부내역·수금금액을 채운 시트 (구분 … 전주 세부내역, 금주 세부내역, 수금금액, 잔여 미수금, 청구년월, 금주수금, 최종수금일)</span></h2>
-  <textarea id="mg-week" style="min-height:90px" placeholder="금주 세부내역을 업데이트한 취합 출력표를 머리글 포함 그대로 붙여넣기. 본부주간 보고 버튼을 누르면 이 자료를 바탕으로 작성하며, 세부 진행내역은 금주 세부내역(없으면 전주 세부내역)을 씁니다"></textarea><div class="hint" id="mg-week-stat"></div></div>
 </div>
-<div class="card"><h2>7. 취합 결과 · 본부주간 보고 <span class="tag">영남 소속 · 기준금액 이상 · 법조치/회생채권/결제지연</span></h2>
+<div class="card"><h2>5. 취합 결과 <span class="tag">영남 소속 · 기준금액 이상 · 법조치/회생채권/결제지연</span></h2>
   <div class="row" style="margin-bottom:8px">
     <label>금주 기간 <input type="date" id="mg-from"> ~ <input type="date" id="mg-to"></label>
     <label>기준금액(원) <input type="number" id="mg-min" value="1000000" style="width:110px"></label>
     <label>기준 청구년월 <input type="month" id="mg-ym" style="width:140px" title="1번 시트 제목(예: 26년 7월분 미수채권)에서 자동 인식. 이 달까지의 청구년월만 씁니다"></label><span class="hint" id="mg-ym-stat" style="margin:0"></span>
     <button id="mg-run">취합 작성</button>
-    <button id="mg-report">주간회의자료 생성 (5·6번 자료 우선, 없으면 취합 결과)</button> <button class="sec" id="mg-report-xlsx" title="붙여넣기에서 병합·서식이 깨질 때: 원본 서식 그대로 엑셀 파일로 저장">엑셀 파일로 저장 (원본 서식)</button> <label class="hint" style="margin:0">보고 기준금액 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상 업체만</label>
     <button class="sec" id="mg-xlsx">엑셀 파일 저장 (전체·권역별 시트, 권역 입력 → 전체 자동 반영)</button>
     <span id="mg-stat" class="ok"></span></div>
   <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
@@ -219,6 +211,20 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <span class="hint" style="margin:0">선택한 권역만 표에 표시되고 복사 버튼도 그 권역만 복사합니다.</span></div>
   <div class="hint">1번 시트가 기준입니다. 구분은 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고(청구년월은 기준 청구년월까지만 사용, 기준월은 1번 시트 제목 "26년 7월분"에서 자동 인식하며 수정 가능), 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다. 최종입금전표일이 금주 기간 안이면 금주수금 O. 3번 수금 데이터에 같은 업체가 있으면 수금금액은 그 결제금액 합산(더 정확)으로 넣고 수금일자가 기간 안이면 금주수금 O·최종수금일에도 반영합니다. 청구년월·금주수금·최종수금일·완납의 기본 틀은 2번 월별 자료입니다. 잔여 미수금 = 미수채권 − 수금금액. 4번 지난주 출력표의 세부 진행내역은 '전주 세부내역'에 들어가고 금주 세부내역은 표에서 직접 입력합니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다. 미수금 탭은 별개로 동작합니다.</div>
   <div id="merge-out" class="prev" style="margin-top:8px"></div>
+</div>
+<div class="card" style="border:2px solid var(--navy)"><h2>주간회의자료 생성 <span class="hint" style="margin:0">②가 있으면 ② 기준(금주 세부내역, 없으면 전주), 없으면 5번 취합 결과 기준 · 보고 기준금액 이상 업체만</span></h2>
+<div class="grid">
+<div class="card"><h2>① 금주 본부 미수금 합계표 <span class="hint" style="margin:0">본부·권역 합계표 (경북·부산·경남권역 소계 + 본부계 행) · 주간회의자료 맨 위에 붙습니다</span></h2>
+  <textarea id="mg-cur" style="min-height:90px" placeholder="경북권역 소계&#9;175&#9;57&#9;82,758,954 …
+부산권역 소계 …
+경남권역 소계 …
+본부계 …"></textarea><div class="hint" id="mg-cur-stat"></div></div>
+<div class="card"><h2>② 금주 엑셀취합 완료 데이터 <span class="hint" style="margin:0">위 5번에서 저장한 엑셀(전체 시트)에 금주 세부내역·수금금액을 채운 뒤 그 시트를 붙여넣기</span></h2>
+  <textarea id="mg-week" style="min-height:90px" placeholder="금주 세부내역을 업데이트한 취합 출력표를 머리글 포함 그대로 붙여넣기. 본부주간 보고 버튼을 누르면 이 자료를 바탕으로 작성하며, 세부 진행내역은 금주 세부내역(없으면 전주 세부내역)을 씁니다"></textarea><div class="hint" id="mg-week-stat"></div></div>
+</div>
+  <div class="row" style="margin-top:8px">
+    <button id="mg-report">주간회의자료 생성 (서식 복사)</button> <button class="sec" id="mg-report-xlsx" title="붙여넣기에서 병합·서식이 깨질 때: 원본 서식 그대로 엑셀 파일로 저장">엑셀 파일로 저장 (원본 서식)</button> <label class="hint" style="margin:0">보고 기준금액 <input type="number" id="mg-rmin" value="3000000" style="width:100px"> 원 이상 업체만</label>
+    <span id="mg-rstat" class="ok"></span></div>
 </div>
 </div>
 <div class="tabpane" id="pane-help"></div>
@@ -1051,7 +1057,7 @@ function mgParseWeek(raw){const list=[];if(!raw||!raw.trim())return {list};const
       memoPrev,memoCur:memoCur||((g(r,C.wk)==='O'&&amt>0&&paid>=amt)?mgDoneMemo(memoPrev,g(r,C.pd),amt,g(r,C.ym)):''),memo:'',paid:Math.min(paid,amt),ym:g(r,C.ym),wk:g(r,C.wk),pd:g(r,C.pd)})});
   list.forEach(x=>{x.memo=x.memoCur||x.memoPrev});
   return {list,cur:list.filter(x=>x.memoCur).length}}
-document.getElementById('mg-week').addEventListener('input',()=>{const W=mgParseWeek(document.getElementById('mg-week').value);document.getElementById('mg-week-stat').textContent=W.list.length?'금주 내역 '+W.list.length+'업체 인식 · 금주 세부내역 '+W.cur+'건(나머지는 전주 세부내역 사용)':(document.getElementById('mg-week').value.trim()?'인식 실패: 머리글(코드, 전주/금주 세부내역)이 있는 취합 출력표를 붙여넣으세요':'')});
+document.getElementById('mg-week').addEventListener('input',()=>{const W=mgParseWeek(document.getElementById('mg-week').value);document.getElementById('mg-week-stat').textContent=W.list.length?'금주 내역 '+W.list.length+'업체 인식 · 금주 세부내역 '+W.cur+'건(나머지는 전주 세부내역 사용)':(document.getElementById('mg-week').value.trim()?'인식 실패: 코드·업체명·미수채권이 있는 취합 엑셀 시트를 붙여넣으세요':'')});
 document.getElementById('mg-cur').addEventListener('input',()=>{const D=recvCurParse(document.getElementById('mg-cur').value);document.getElementById('mg-cur-stat').textContent=D&&D.length?'금주현황 '+D.length+'행 인식 ('+D.map(x=>x.label).join(', ')+')':(document.getElementById('mg-cur').value.trim()?'인식 실패: "○○권역 소계 / 본부계" 행과 숫자 열이 필요합니다':'')});
 ['mg-week','mg-cur'].forEach(id=>document.getElementById(id).addEventListener('cleared',()=>document.getElementById(id+'-stat').textContent=''));
 /* 기준 청구년월: 1번 시트 제목 '26년 7월분 미수채권' 또는 머리글의 월 열(202607·26.07·2026-07)에서 인식 */
@@ -1105,14 +1111,14 @@ const mgNeed=()=>{if(!MGR){alert('먼저 취합 작성을 실행하세요');retu
 /* 본부주간 보고: 300만원 이상 업체를 미수금 탭 형식(구분·권역·코드·업체명·미수채권·연체개월·결제기일·보증금액·법조치현황·세부 진행내역·수금금액·잔여)으로 복사 */
 function mgRptSrc(){const lim=+document.getElementById('mg-rmin').value||3000000;
   const W=mgParseWeek(document.getElementById('mg-week').value);const useWeek=W.list.length>0;
-  if(!useWeek&&!MGR){alert('6. 금주 내역 데이터를 붙여넣거나 먼저 취합 작성을 실행하세요');return null}
+  if(!useWeek&&!MGR){alert('② 금주 엑셀취합 완료 데이터를 붙여넣거나 먼저 취합 작성을 실행하세요');return null}
   const src=useWeek?W.list:MGR.list;/* 6번 자료가 있으면 그 자료(금주 세부내역, 없으면 전주 세부내역) 기준, 없으면 취합 결과 */
   const list=src.filter(x=>x.amt>=lim&&(!MG_REG||x.reg===MG_REG)).map(x=>({...x,memo:(useWeek?(x.memoCur||x.memoPrev):(x.memo||x.memoPrev))||''}));if(!list.length){alert(fmtWon(lim)+'원 이상 업체가 없습니다');return null}
   return {lim,useWeek,list,T:mgRptTable(list,lim)}}
-document.getElementById('mg-report-xlsx').onclick=()=>{const R=mgRptSrc();if(!R)return;const nm=mgRptXlsx(R.T);document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' ('+(R.useWeek?'6번 금주 내역 기준':'취합 결과 기준')+' · '+fmtWon(R.lim)+'원 이상 '+R.list.length+'업체) → 시트를 열어 B1부터 복사해 회의자료에 붙이면 병합·서식이 그대로 들어갑니다'};
+document.getElementById('mg-report-xlsx').onclick=()=>{const R=mgRptSrc();if(!R)return;const nm=mgRptXlsx(R.T);document.getElementById('mg-rstat').textContent='엑셀 파일 저장: '+nm+' ('+(R.useWeek?'② 금주 엑셀취합 완료 데이터 기준':'취합 결과 기준')+' · '+fmtWon(R.lim)+'원 이상 '+R.list.length+'업체) → 시트를 열어 B1부터 복사해 회의자료에 붙이면 병합·서식이 그대로 들어갑니다'};
 document.getElementById('mg-report').onclick=async()=>{const R=mgRptSrc();if(!R)return;const {lim,useWeek,list,T}=R;const rows=T.filter(r=>r.t==='d'||r.t==='sum');const CUR=recvCurParse(document.getElementById('mg-cur').value);const hasCur=!!(CUR&&CUR.length);
   const html=XLHTML((hasCur?recvCurHtml(false,CUR)+'<br>':'')+mgRptSumHtml(T)+'<br>'+mgRptHtml(rows,true));const text=(hasCur?recvCurText(CUR)+'\r\n\r\n':'')+T.map(r=>r.t==='title'?r.cells[0]:r.t==='blank'?'':r.cells.map(v=>typeof v==='number'?(v||''):tsvCell(v)).join('\t')).join('\r\n');
-  const ok=await writeBoth(html,text);document.getElementById('mg-stat').textContent=ok?'본부주간 보고 ('+(useWeek?'6번 금주 내역 기준 · 금주 세부내역 '+list.filter(x=>x.memoCur).length+'건/전주 '+list.filter(x=>!x.memoCur&&x.memoPrev).length+'건':'취합 결과 기준')+(hasCur?' · 금주현황 포함':'')+' · '+(MG_REG?MG_REG+' ':'')+fmtWon(lim)+'원 이상 '+list.length+'업체) 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
+  const ok=await writeBoth(html,text);document.getElementById('mg-rstat').textContent=ok?'주간회의자료 ('+(useWeek?'② 기준 · 금주 세부내역 '+list.filter(x=>x.memoCur).length+'건/전주 '+list.filter(x=>!x.memoCur&&x.memoPrev).length+'건':'취합 결과 기준')+(hasCur?' · 금주현황 포함':'')+' · '+(MG_REG?MG_REG+' ':'')+fmtWon(lim)+'원 이상 '+list.length+'업체) 서식 포함 복사됨 → 빈 시트 A1 선택 후 일반 붙여넣기(Ctrl+V)':'복사 실패'};
 addClearButtons();
 
 /* ===== 금주요약 탭 ===== */
@@ -1339,16 +1345,16 @@ const PASTE_GUIDE={
   'comp-src':{t:'경쟁사 리스트 <b>A1</b>부터 전체 (머리글 3줄 포함)',cols:['(팀/권역)','(팀/지점)','(실적)담당자','코드','업체명','…','(계약)건수','(계약)효과금액','(견적)효과금액','영업진행사항']},
   'pr-src':{t:'단가인상 결재 리스트 <b>A1</b>부터 전체 (머리글 포함)',cols:['부서','담당자','항목','코드','계약처명','…','계약특이사항']},'pr-src2':{t:'진행중 단가인상 리스트 <b>A1</b>부터 전체 (결재 리스트와 같은 형식)',cols:['부서','담당자','항목','코드','계약처명','…','계약특이사항']},
   'sum-cumsrc':{t:'지난주 회의자료 "금주 진행사항" 표의 <b>26년 누계 열(건수·매출액)</b>: 계약 머리글부터 MHE 행까지',rows:[['26년 누계',''],['계약',''],['건수/대수','매출액'],['379','1,268,942'],['⋮','⋮'],['69업체 94대','484,371']],nohdr:true},
-  'recv-cur':{t:'금주현황 표에서 <b>경북권역 소계 행의 첫 셀</b>부터 본부계 행 마지막 열까지',rows:CUR_ROWS,nohdr:true},'mg-cur':{t:'금주현황 표에서 <b>경북권역 소계 행의 첫 셀</b>부터 본부계 행 마지막 열까지',rows:CUR_ROWS,nohdr:true},
+  'recv-cur':{t:'합계표에서 <b>경북권역 소계 행의 첫 셀</b>부터 본부계 행 마지막 열까지',rows:CUR_ROWS,nohdr:true},'mg-cur':{t:'본부 미수금 합계표에서 <b>경북권역 소계 행의 첫 셀</b>부터 본부계 행 마지막 열까지 (머리글 제외)',rows:CUR_ROWS,nohdr:true},
   'mg-prev':{t:'미수채권세부 시트 <b>A1</b>(제목 "■ KPP 미수채권현황")부터 마지막 행까지 전체. 숨은 열이 있어도 그대로',rows:[{c:['','■ KPP 미수채권현황 / 업체별 세부'],bold:1,sp:1},{c:['','- 26년 7월분 미수채권 중 결제조건 48일이상 업체, 26년 6월분 중 79일 이상 업체 제외'],sp:1},{c:['','','','1','2','150'],fg:'#c00',al:'r'},{c:['','관리부서명','관리담당자','거래처','거래처명','합계','연체개월'],h:1},{c:['','WP팀','김남영','268414','주식회사 대영테크','1,320,000','2'],d1:1},{c:['','화성지점','이다은','257498','주식회사 서진프레시','2,976,341','3']},{c:['','⋮','⋮','⋮','⋮','⋮','⋮'],e:1},{c:['','화성지점','이태훈','256239','주식회사 씨엘씨컴퍼니','1,227,006','1']}],sc:1,hbg:'#d9d9d9',cbg:{5:'#fff2cc'},bd:'#999',ral:{5:1,6:1},lg:'제목 줄의 "26년 7월분"으로 기준 청구년월을 읽습니다'},
   'mg-mon':{t:'AMS 월별(업체현황) 표에서 <b>첫 데이터 행의 청구년월 셀</b>부터 마지막 행까지 (머리글은 선택이 안 되므로 제외). 왼쪽 행번호 열이 같이 붙어도 됨',ams:1,rows:[{c:['','청구년월','거래처','','등급','결재','조건','청구부서','…'],h:1},{c:['1','201604','214579','주식회사 신승엠앤티','NR','현금','30','진주지점','…'],d1:1},{c:['2','201604','','합  계','','','','',''],bg:'#eef0ff',fg:'#2b45c9'},{c:['3','201605','214579','주식회사 신승엠앤티','NR','현금','30','진주지점','…']},{c:['4','201605','','합  계','','','','',''],bg:'#eef0ff',fg:'#2b45c9'}],sc:1,hbg:'#e4e6f2',bd:'#b8bccf',lg:'"합 계" 행은 포함돼도 무시'},
   'mg-pay':{t:'AMS 수금내역에서 <b>첫 데이터 행의 청구부서 셀</b>부터 마지막 행까지 (머리글은 선택이 안 되므로 제외). 왼쪽 행번호 열이 같이 붙어도 됨',ams:1,rows:[{c:['','청구부서','','청구담당자','','관리담당자','','거래처','','조건'],h:1},{c:['1','600691','진주지점','223116','정준혁','223116','정준혁','200210','곤명농협 곤양지점','현금'],bg:'#eef0ff',d1:1},{c:['2','','','','','','','200210','거 래 처 계',''],bg:'#c9c9f5',fg:'#d00'},{c:['3','600044','대구지점','221123','박승훈','221123','박승훈','200329','한국수지','현금'],bg:'#eef0ff'},{c:['4','','','','','','','200329','거 래 처 계',''],bg:'#c9c9f5',fg:'#d00'}],sc:1,hbg:'#dcdcf4',bd:'#b8bccf',lg:'"거 래 처 계" 소계 행은 검증에만 사용'},
-  'mg-last':{t:'지난주 취합 출력표 <b>A1</b>부터 전체 (머리글 포함)',rows:OUT_ROWS,hbg:'#fff2cc',cbg:{0:'#e2efda'},cbold:{0:1},bd:'#999',ral:{6:1,7:1,8:1},lg:'세부 진행내역 → 전주 세부내역'},'mg-week':{t:'금주 세부내역을 채운 취합 출력표 <b>A1</b>부터 전체',rows:OUT_ROWS,hbg:'#fff2cc',cbg:{0:'#e2efda'},cbold:{0:1},bd:'#999',ral:{6:1,7:1,8:1}}
+  'mg-last':{t:'지난주 취합 출력표 <b>A1</b>부터 전체 (머리글 포함)',rows:OUT_ROWS,hbg:'#fff2cc',cbg:{0:'#e2efda'},cbold:{0:1},bd:'#999',ral:{6:1,7:1,8:1},lg:'세부 진행내역 → 전주 세부내역'},'mg-week':{t:'금주 세부내역을 채운 취합 엑셀 시트 <b>A1</b>부터 전체',rows:OUT_ROWS,hbg:'#fff2cc',cbg:{0:'#e2efda'},cbold:{0:1},bd:'#999',ral:{6:1,7:1,8:1}}
 };
 SUMIN.forEach(([k,l])=>{PASTE_GUIDE['sum-src-'+k]={t:l+' 시트 <b>A1</b>부터 전체 (머리글 포함)',cols:Q_COLS[k]}});
 function guideHtml(g){const esc=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;');const MAXC=9;const rows=[];const R=(c,o={})=>rows.push(Object.assign({c:c.slice(0,MAXC)},o));
   if(g.rows){g.rows.forEach((r,i)=>{if(Array.isArray(r))R(r,{h:g.hdr&&i===0,d1:g.hdr&&i===1});else R(r.c,Object.assign({},r,{h:r.h||(g.hdr&&i===0),d1:r.d1||(g.hdr&&i===1)}))})}
-  else{const cols=g.cols;(g.pre||[]).forEach(r=>R(r,{pre:1}));R(cols,{h:1});R(cols.map(()=>'…'),{d1:1});R(cols.map(()=>'⋮'),{e:1});R(cols.map(()=>'…'))}
+  else{const cols=g.cols;(g.pre||[]).forEach(r=>R(r,{pre:1}));R(cols,{h:1});R(cols.map(()=>'…'),{d1:1});R(cols.map(()=>'⋮'),{e:1})}
   const W=Math.max(...rows.map(r=>r.c.length));const L=i=>{let s='';i++;while(i>0){s=String.fromCharCode(65+((i-1)%26))+s;i=Math.floor((i-1)/26)}return s};const sc=g.sc||0;
   let h='<table class="xl"><tr><th></th>'+Array.from({length:W},(_,i)=>'<th>'+L(i)+'</th>').join('')+'<th>…</th></tr>';
   rows.forEach((r,ri)=>{const cls=((g.ams?r.d1:ri===0)?'rt ':'')+(ri===rows.length-1?'rb':'');h+='<tr class="'+cls+'"><th>'+(r.e?'…':ri===rows.length-1?'n':ri+1)+'</th>';
@@ -1369,7 +1375,7 @@ const HELP=[
  ['3. 타겟업체 탭 · 4. 경쟁사 탭',`<ol class="step"><li><b>1. 데이터 붙여넣기</b>: 타겟업체 리스트 / 경쟁사 실적관리 리스트를 <span class="rng">A1부터 전체</span>(머리글 포함, 경쟁사는 머리글 3줄) 복사. 열 이름이 다르면 칸 아래 열 매핑에서 골라 준다.</li><li><b>2. 금주 주요업체 선정 기준</b>: 시행일·진행단계·효과금액 기준을 고르면 결과가 다시 계산된다. 데이터 탭의 PPS 견적/계약과 코드·업체명이 겹치면 그 단계·금액·내용을 가져온다.</li><li><b>3. 결과</b>: 집계표(권역·지점별)와 금주 주요업체 표. 서식 복사로 회의자료에 붙인다.</li></ol>`],
  ['5. 단가인상 탭',`<ol class="step"><li><b>1. 결재 리스트</b>: 부서·담당자·항목·코드·계약처명·계약특이사항 열이 있는 시트를 <span class="rng">A1부터 전체</span> 복사.</li><li><b>2. 진행중</b>: 같은 형식의 진행중 리스트. 3-2 주요업체에 "진행중"으로 표시된다.</li><li><b>3-1 관리시트 행</b>: 하반기 단가인상 계획취합 리스트에 붙일 행. <b>3-2 금주 주요업체</b>: 회의자료 주요업체 표.</li></ol>`],
  ['6. 금주요약 탭',`<ol class="step"><li><b>1. 금주 데이터</b>: 데이터 탭에 붙였으면 비워 두어도 된다(작성 시 가져올지 묻는다). 칸마다 금액 단위(천원/원/월 임대료)를 확인한다.</li><li><b>2. 전주 누계</b>: 지난주 회의자료 "금주 진행사항" 표의 <span class="rng">26년 누계 열(건수·매출액)</span>을 계약 머리글부터 MHE 행까지 복사. 26년 누계 = 전주 누계 + 금주 계약.</li><li><b>3. 글로벌비즈 수기 입력</b>: RRPP 견적·계약 건수/금액을 직접 넣는다.</li><li><b>4-1 금주 실적 표</b>: "값 복사(D5부터)"는 회의자료의 견적 건수 셀(D5)을 선택하고 붙여넣기. <b>4-2 상세내역</b>: "값 복사"는 텍스트만, "서식 복사"는 예상매출을 빨간 글씨로 넣는다.</li></ol>`],
- ['7. 미수금 취합 탭',`<ol class="step"><li><b>1. KPP 미수채권현황 › 업체별 세부</b>: 미수채권세부 시트를 <span class="rng">A1부터 전체(제목 줄 포함)</span> 복사. 제목의 "26년 7월분"으로 <b>기준 청구년월</b>이 자동 설정되고 7번에서 고칠 수 있다.</li><li><b>2. AMS 월별(업체현황)</b>: 표 전체(머리글 포함). 기준월까지의 청구년월과 최종입금전표일을 가져온다. "합 계" 행은 무시. 1번에 있고 여기(기준월까지)에 없으면 완납.</li><li><b>3. 수금 데이터</b>: AMS 수금내역 전체. 거래처별 결제금액을 합쳐 수금금액에 넣고, 수금일자가 금주 기간 안이면 금주수금 O. "거 래 처 계" 소계 행은 검증에만 쓰며 다르면 경고가 뜬다.</li><li><b>4. 전주 내역 데이터</b>: 지난주 취합 출력표(머리글 포함). 세부 진행내역이 "전주 세부내역"에 들어간다.</li><li><b>5. 금주현황</b>: 권역 소계 3행 + 본부계. 본부주간 보고 맨 위에 붙는다.</li><li><b>6. 금주 내역 데이터</b>: 금주 세부내역을 채운 출력표. 본부주간 보고는 이 자료로 작성한다(금주 세부내역 없으면 전주 사용).</li><li><b>7. 취합 결과</b>: 금주 기간·기준금액·기준 청구년월 확인 → <b>취합 작성</b>. 금주 수금이 완료된 업체는 금주 세부내역에 "전주 첫 줄, M/D일 결제 완료(금액원)"이 자동으로 들어간다. 표에서 세부내역·수금금액을 직접 고칠 수 있고, 서식 복사 / 엑셀 저장 / 본부주간 보고 버튼으로 내보낸다.</li></ol><div class="kv">판정 규칙: 구분은 법조치현황으로(회생 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 잔여 미수금 = 미수채권 − 수금금액. 영남 소속이 아니거나 기준금액 미만 업체는 제외.</div>`]
+ ['7. 미수금 취합 탭',`<ol class="step"><li><b>1. KPP 미수채권현황 › 업체별 세부</b>: 미수채권세부 시트를 <span class="rng">A1부터 전체(제목 줄 포함)</span> 복사. 제목의 "26년 7월분"으로 <b>기준 청구년월</b>이 자동 설정되고 7번에서 고칠 수 있다.</li><li><b>2. AMS 월별(업체현황)</b>: 표 전체(머리글 포함). 기준월까지의 청구년월과 최종입금전표일을 가져온다. "합 계" 행은 무시. 1번에 있고 여기(기준월까지)에 없으면 완납.</li><li><b>3. 수금 데이터</b>: AMS 수금내역 전체. 거래처별 결제금액을 합쳐 수금금액에 넣고, 수금일자가 금주 기간 안이면 금주수금 O. "거 래 처 계" 소계 행은 검증에만 쓰며 다르면 경고가 뜬다.</li><li><b>4. 전주 내역 데이터</b>: 지난주 취합 출력표(머리글 포함). 세부 진행내역이 "전주 세부내역"에 들어간다.</li><li><b>5. 취합 결과</b>: 금주 기간·기준금액·기준 청구년월 확인 → <b>취합 작성</b>. 금주 수금이 완료된 업체는 금주 세부내역에 "연체청구월 / 품목, M/D일 결제 완료(금액원)"이 자동으로 들어간다. 표에서 세부내역·수금금액을 직접 고칠 수 있고, <b>엑셀 파일 저장</b>으로 전체·권역별 시트를 내보내 권역장이 금주 세부내역을 채운다.</li><li><b>주간회의자료 생성</b>: ① 금주 본부 미수금 합계표(권역 소계 3행 + 본부계)와 ② 금주 엑셀취합 완료 데이터(세부내역을 채운 엑셀 시트)를 붙이고 <b>주간회의자료 생성</b>(서식 복사) 또는 <b>엑셀 파일로 저장</b>(원본 서식·병합 그대로)을 누른다. ②가 없으면 5번 취합 결과로 만든다.</li></ol><div class="kv">판정 규칙: 구분은 법조치현황으로(회생 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 잔여 미수금 = 미수채권 − 수금금액. 영남 소속이 아니거나 기준금액 미만 업체는 제외.</div>`]
 ];
 document.getElementById('pane-help').innerHTML='<div class="card"><h2>사용설명서 <span class="hint" style="margin:0">각 화면을 누르면 펼쳐집니다 · 칸 안의 미니 시트 그림이 복사 범위를 알려 줍니다</span></h2>'+HELP.map((h,i)=>'<details class="m"'+(i===0?' open':'')+'><summary>'+h[0]+'</summary><div class="b">'+h[1]+'</div></details>').join('')+'</div>';
 </script>
