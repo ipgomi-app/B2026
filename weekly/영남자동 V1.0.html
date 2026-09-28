@@ -1032,6 +1032,13 @@ function mgYMSync(){const el=document.getElementById('mg-ym'),st=document.getEle
 document.getElementById('mg-prev').addEventListener('input',mgYMSync);document.getElementById('mg-prev').addEventListener('cleared',mgYMSync);document.getElementById('mg-ym').addEventListener('input',()=>{delete document.getElementById('mg-ym').dataset.auto});
 /* 금주 수금 완료 업체: 전주 세부내역 첫 줄 + ", M/D일 결제 완료(금액원)" */
 function mgDoneMemo(memoPrev,pd,paid){const m=String(pd||'').match(/(\d{2})\.(\d{2})\.(\d{2})$/);const d=m?(+m[2])+'/'+(+m[3])+'일 ':'';const first=String(memoPrev||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean)[0]||'';return (first?first.replace(/[,，]\s*$/,'')+', ':'')+d+'결제 완료('+Math.round(paid).toLocaleString()+'원)'}
+/* 붙여넣는 즉시(입력·칸 벗어남) 인식 결과 표시 */
+const MG_LIVE={'mg-prev':()=>{const P=mgParsePrev(document.getElementById('mg-prev').value);const n=Object.keys(P).length;const g=RECV_GROUPS.map(gp=>gp+' '+Object.values(P).filter(x=>(x.grp||'결제지연')===gp).length).join(', ');return n?'기준 시트 '+n+'업체 인식(영남 소속) · '+g:'인식 실패: 머리글(관리부서명, 거래처, 합계 …)과 6자리 코드 행이 필요합니다'},
+  'mg-mon':()=>{const M=mgParseMon(document.getElementById('mg-mon').value);const n=Object.keys(M).length;const rows=Object.values(M).reduce((s,x)=>s+x.rows.length,0);const yms=Object.values(M).flatMap(x=>x.rows.map(r=>r.ym)).filter(Boolean).sort();return n?'월별 '+n+'업체 '+rows+'행 인식 · 청구년월 '+yms[0].slice(2,4)+'.'+yms[0].slice(4)+'~'+yms[yms.length-1].slice(2,4)+'.'+yms[yms.length-1].slice(4):'인식 실패: 청구년월(202607 형식)과 거래처 코드 열이 필요합니다'},
+  'mg-pay':()=>{const PAY=mgParsePay(document.getElementById('mg-pay').value);const n=Object.keys(PAY.amt).length;const tot=Object.values(PAY.amt).reduce((s,x)=>s+x,0);return n?'수금 '+n+'업체 '+PAY.rows+'건 인식 · 결제금액 합계 '+tot.toLocaleString()+'원'+(PAY.warn.length?' · 소계 불일치 '+PAY.warn.length+'건: '+PAY.warn.slice(0,3).join(', '):''):'인식 실패: 거래처 코드·거래처명·수금일자·청구금액·결제금액 열이 있는 AMS 수금내역을 붙여넣으세요'},
+  'mg-last':()=>{const L=mgParseLast(document.getElementById('mg-last').value);const n=Object.keys(L).length;return n?'전주 '+n+'업체 세부 진행내역 인식':'인식 실패: 코드와 세부 진행내역 열이 있는 지난주 출력표를 붙여넣으세요'}};
+Object.keys(MG_LIVE).forEach(id=>{const ta=document.getElementById(id),st=document.getElementById(id+'-stat');const upd=()=>{if(!ta.value.trim()){st.textContent='';return}try{st.textContent=MG_LIVE[id]()}catch(e){st.textContent='인식 실패: '+e.message}};
+  ['input','change','blur','mouseleave'].forEach(ev=>ta.addEventListener(ev,upd));ta.addEventListener('cleared',()=>st.textContent='')});
 let MG=null;
 function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value),M=mgParseMon(document.getElementById('mg-mon').value);
   const codes=Object.keys(P);if(!codes.length){alert('1번 KPP 업체별 세부 시트를 붙여넣으세요');return}
