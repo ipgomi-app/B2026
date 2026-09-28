@@ -975,7 +975,7 @@ function mgRptSumHtml(T){const rows=T.filter(r=>r.t==='s'||r.t==='st');const tit
   rows.forEach(r=>{const bg='background:'+(RBG[r.cells[0]]||'#eee')+';';h+='<tr>'+rtd(esc(r.cells[0]),bg+'text-align:center;font-weight:700;')+r.cells.slice(1).map(v=>rtd(typeof v==='number'?v:'',bg+RACC+'font-weight:700;')).join('')+'</tr>'});
   return h+'</table>'}
 /* ===== 미수금 취합 탭: AMS 합계/상세 + 전주 시트 → 미수금 시트 형식 ===== */
-const isCode6=v=>/^\d{6}$/.test(String(v||'').trim());const isYM=v=>/^20\d{2}(0[1-9]|1[0-2])$/.test(String(v||'').trim());
+const isCode6=v=>/^\d{6}$/.test(String(v||'').trim());const normDate=v=>{const t=String(v||'').trim();let m=t.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})(?:\s.*)?$/)||t.match(/^(\d{4})(\d{2})(\d{2})$/)||t.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})$/);if(!m)return '';const y=m[1].length===2?'20'+m[1]:m[1];return y+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')};const isYM=v=>/^20\d{2}(0[1-9]|1[0-2])$/.test(String(v||'').trim());
 function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const hRow=(()=>{const i=rows.findIndex(r=>r.some(c=>isCode6(c)));const cand=rows.slice(0,i<0?rows.length:i).reverse().find(r=>r.some(c=>/거래처|관리부서|합계/.test(String(c||''))));return cand||rows[0]||[]})();const H=hRow.map(x=>String(x||'').replace(/\s+/g,''));
   const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};const cc=col(['거래처↓','거래처코드','코드','거래처'],3),cl=col(['법조치현황','법조치'],11),cg=H.findIndex(h=>h==='구분');
   const C={br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금','합계'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입','가입여부'],9),gamt:col(['보증금액'],-1)};
@@ -984,14 +984,14 @@ function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterY
     if(!RECV_GROUPS.includes(g))g=/회생/.test(law)?'회생채권':(law?'법조치':'');
     out[code]={grp:g,law,br:g2(r,C.br),emp:g2(r,C.emp),name:g2(r,C.name),amt:num(g2(r,C.amt)),months:num(g2(r,C.mon)),cond:g2(r,C.due),grade:g2(r,C.grade),gamt:num(g2(r,C.gamt))}});return out}
 /* AMS 월별(업체현황): 청구년월별 행, 최종입금전표일이 기간 안이면 그 달 미수금은 수금된 것으로 본다 */
-function mgParseMon(raw){const out={};if(!raw.trim())return out;const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||'').trim());
+function mgParseMon(raw){const out={};if(!raw.trim())return out;const isDate=v=>!!normDate(v);
   parseTSV(raw).forEach(r=>{const c=r.map(x=>String(x||'').trim());if(c.some(x=>/^합\s*계$/.test(x)))return;const yi=c.findIndex(isYM);if(yi<0)return;const ci=c.findIndex((x,i)=>i>yi&&isCode6(x));if(ci<0)return;
     const code=c[ci];const name=c[ci+1]||'';const br=c.find(x=>/(지점|팀|파트)$/.test(x))||'';const bi=c.indexOf(br);const emp=bi>=0?(c[bi+1]||''):'';
     const nums=c.map((x,i)=>({x,i})).filter(o=>o.i>ci+1&&/^[\d,]+$/.test(o.x)&&!/^\d{1,3}$/.test(o.x));const amt=nums.length?num(nums[0].x):0;
-    const dates=c.filter(isDate);const pay=dates[0]||'';const cond=c.slice(ci+2).find(x=>/^\d{1,3}$/.test(x))||'';const grade=c.slice(ci+2).find(x=>/^(NR|[A-D]{1,3}[0+\-]?|평가없음|농협)$/.test(x))||'';
+    const dates=c.filter(isDate).map(normDate);const pay=dates[0]||'';const cond=c.slice(ci+2).find(x=>/^\d{1,3}$/.test(x))||'';const grade=c.slice(ci+2).find(x=>/^(NR|[A-D]{1,3}[0+\-]?|평가없음|농협)$/.test(x))||'';
     if(!out[code])out[code]={code,name,br,emp,cond,grade,rows:[]};out[code].rows.push({ym:c[yi],amt,pay})});return out}
 /* 수금 데이터(AMS 수금내역: 청구부서·청구담당자·관리담당자·거래처 코드+명·조건·기일·세금계산서일자·수금일자·청구금액·결제금액·…): 거래처 코드별 결제금액 합산, '거 래 처 계' 소계 행은 검증용, 수금일자는 금주수금·최종수금일 판정용 */
-function mgParsePay(raw){const out={amt:{},dates:{},sub:{},rows:0,warn:[]};if(!raw.trim())return out;const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v);const isAmt=v=>/^-?[\d,]+$/.test(v)&&v.replace(/[^\d]/g,'').length>=1;const norm=v=>v.replace(/\s+/g,'');
+function mgParsePay(raw){const out={amt:{},dates:{},sub:{},rows:0,warn:[]};if(!raw.trim())return out;const isDate=v=>!!normDate(v);const isAmt=v=>/^-?[\d,]+$/.test(v)&&v.replace(/[^\d]/g,'').length>=1;const norm=v=>v.replace(/\s+/g,'');
   const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));
   const H=rows.find(r=>r.some(x=>norm(x)==='결제금액')&&r.some(x=>norm(x)==='거래처'||norm(x)==='거래처코드'));const hc=H?H.map(norm):[];
   const hi={code:hc.findIndex(x=>x==='거래처'||x==='거래처코드'),pay:hc.findIndex(x=>x==='결제금액'),bill:hc.findIndex(x=>x==='청구금액'),date:hc.findIndex(x=>x==='수금일자')};
@@ -1005,7 +1005,7 @@ function mgParsePay(raw){const out={amt:{},dates:{},sub:{},rows:0,warn:[]};if(!r
         payAmt=after.length>=2?after[1]:(after.length?after[0]:null)}}
     if(!code||payAmt===null)return;
     if(isSub){out.sub[code]=(out.sub[code]||0)+payAmt;return}
-    out.rows++;out.amt[code]=(out.amt[code]||0)+payAmt;if(date){(out.dates[code]=out.dates[code]||[]).push(date)}});
+    out.rows++;out.amt[code]=(out.amt[code]||0)+payAmt;if(date){(out.dates[code]=out.dates[code]||[]).push(normDate(date))}});
   Object.keys(out.sub).forEach(code=>{if(out.amt[code]===undefined)out.amt[code]=out.sub[code];else if(Math.round(out.amt[code])!==Math.round(out.sub[code]))out.warn.push(code+' 명세 '+out.amt[code].toLocaleString()+' ≠ 소계 '+out.sub[code].toLocaleString())});
   return out}
 /* 전주 출력표: 코드 → 세부 진행내역 */
@@ -1066,7 +1066,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
     const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';
     const payD=(PAY.dates[code]||[]).slice().sort();
     /* 월별(2번)이 기본 틀: 청구년월·금주수금·최종수금일·완납 판정. 3번 수금 데이터는 같은 업체가 있을 때 수금금액(과 수금일)만 더 정확한 값으로 덮어씀 */
-    const fullM=!!P[code]&&!mRows.length&&Object.keys(M).length>0;/* KPP에 있고 AMS 월별(기준월까지)에 없으면 완납 */
+    const fullM=!!P[code]&&Object.keys(M).length>0&&!mRows.some(x=>x.amt>0);/* KPP에 있고 AMS 월별(기준월까지)에 없거나 미수금이 모두 0이면 완납 */
     let paid=(code in PAY.amt)?Math.min(PAY.amt[code],amt):(fullM?amt:0);const full=fullM||(amt>0&&paid>=amt);
     const wk=(full||inRange(lastPay)||payD.some(inRange))?'O':'';const lastPay2=[lastPay,payD[payD.length-1]||''].sort().pop();
     if(wk)paidN++;if(full)fullN++;const pd=lastPay2?lastPay2.slice(2).replace(/-/g,'.'):'';
