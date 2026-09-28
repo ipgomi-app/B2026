@@ -190,10 +190,10 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </div>
 <div class="tabpane" id="pane-tgc">
 <div class="grid">
-<div class="card"><h2>1. 타겟업체 데이터 <span class="hint" style="margin:0">(머리글 포함 전체 · 진행단계로 계약/견적/방문 표 분리, 빅스중복 '중복' → BIGS)</span></h2><textarea id="tg-src" style="min-height:130px" placeholder="타겟업체 리스트를 머리글(NO, 권역, 지점, 담당자, 코드, 업체, … 방문, 견적, 계약, … 진행단계, 효과금액, 세부내용, 빅스중복 …)부터 그대로 붙여넣기"></textarea><div class="hint" id="tg-src-stat"></div></div>
-<div class="card"><h2>2. 경쟁사매출 자료 <span class="hint" style="margin:0">(코드로 매칭 · 경쟁사매출·KPP매출·점유율 칸 채움)</span></h2><textarea id="tg-comp" style="min-height:130px" placeholder="경쟁사매출 자료를 머리글 포함 붙여넣기 (코드, 경쟁사전체, 경쟁사PPS, 경쟁사단가, KPP전체, PPS, KPP단가, 점유율 KPP, AJ). 자료 형식을 받으면 인식을 맞춥니다"></textarea><div class="hint" id="tg-comp-stat"></div></div>
+<div class="card"><h2>1. 타겟업체 데이터 <span class="hint" style="margin:0">(머리글 포함 전체 · 구분 Target · 진행단계로 계약/견적/방문 표 분리)</span></h2><textarea id="tg-src" style="min-height:130px" placeholder="타겟업체 리스트를 머리글(NO, 권역, 지점, 담당자, 코드, 업체, … 방문, 견적, 계약, … 진행단계, 효과금액, 세부내용, 빅스중복 …)부터 그대로 붙여넣기"></textarea><div class="hint" id="tg-src-stat"></div></div>
+<div class="card"><h2>2. 경쟁사(BIGS) 자료 <span class="hint" style="margin:0">(구분 BIGS 행 · 경쟁사매출·KPP매출·점유율 · 자료 받으면 인식 완성)</span></h2><textarea id="tg-comp" style="min-height:130px" placeholder="경쟁사매출 자료를 머리글 포함 붙여넣기 (코드, 경쟁사전체, 경쟁사PPS, 경쟁사단가, KPP전체, PPS, KPP단가, 점유율 KPP, AJ). 자료 형식을 받으면 인식을 맞춥니다"></textarea><div class="hint" id="tg-comp-stat"></div></div>
 </div>
-<div class="card"><h2>▣ 계약 · 견적 · 방문업체 표</h2><div class="row" style="margin-bottom:8px"><button id="tg-run">표 작성</button><button class="sec" id="tg-xlsx">엑셀 파일로 저장</button><span class="hint" id="tg-stat" style="margin:0"></span></div><div id="tg-out" style="overflow:auto"></div></div>
+<div class="card"><h2>▣ 계약 · 견적 · 방문업체 표</h2><div class="row" style="margin-bottom:8px"><button id="tg-run">표 작성</button><button class="sec" id="tg-copyall">전체 서식 복사 (B110에 붙여넣기)</button><button class="sec" id="tg-xlsx">엑셀 파일로 저장</button><span class="hint" id="tg-stat" style="margin:0"></span></div><div id="tg-out" style="overflow:auto"></div></div>
 </div>
 <div class="tabpane" id="pane-merge">
 <div class="grid">
@@ -1381,12 +1381,13 @@ function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').tri
   const at=(...n)=>{for(const x of n){const i=H.indexOf(x);if(i>=0)return i}return -1};const pi=at('진행단계');const effAll=H.map((h,i)=>h==='효과금액'?i:-1).filter(i=>i>=0);const eff=effAll.find(i=>i>pi)??effAll[effAll.length-1]??-1;
   const C={reg:at('권역'),br:at('지점'),emp:at('담당자'),code:at('코드'),name:at('업체'),visit:at('최종방문일','방문'),quote:at('최종견적일','견적'),cont:at('계약','최종계약일'),stage:pi,amt:eff,memo:at('세부내용'),bigs:at('빅스중복')};
   const g=(r,i)=>i>=0?(r[i]||''):'';const out=[];rows.slice(hi+1).forEach(r=>{if(!r.some(Boolean))return;const code=g(r,C.code);if(!code&&!g(r,C.name))return;
-    out.push({grp:/중복/.test(g(r,C.bigs))?'BIGS':'Target',code,name:g(r,C.name),reg:g(r,C.reg),br:g(r,C.br),emp:g(r,C.emp),visit:g(r,C.visit),quote:g(r,C.quote),cont:g(r,C.cont),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});return {rows:out,C}}
+    out.push({grp:'Target',bigsDup:/중복/.test(g(r,C.bigs)),code,name:g(r,C.name),reg:g(r,C.reg),br:g(r,C.br),emp:g(r,C.emp),visit:g(r,C.visit),quote:g(r,C.quote),cont:g(r,C.cont),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});return {rows:out,C}}
 function tgParseComp(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.some(c=>c.replace(/\s+/g,'')==='코드'));if(hi<0)return {};const H=rows[hi].map(x=>x.replace(/\s+/g,''));
   const f=re=>H.findIndex(h=>re.test(h));const C={code:H.indexOf('코드'),cAll:f(/경쟁사.*전체/),cPps:f(/경쟁사.*PPS/i),cUp:f(/경쟁사.*단가/),kAll:f(/KPP.*전체/i),kPps:H.findIndex(h=>/^PPS$/i.test(h)),kUp:f(/KPP.*단가/i),sK:f(/점유율.*KPP|^KPP$/i),sA:f(/AJ/i)};const out={};
   rows.slice(hi+1).forEach(r=>{const code=r[C.code];if(!isCode6(code))return;const o={};Object.keys(C).forEach(k=>{if(k!=='code'&&C[k]>=0)o[k]=r[C[k]]||''});out[code]=o});return out}
 /* 표 종류: 공통 B~O(14칸) 뒤에 붙는 열. 세부사항은 남은 칸~Z 병합 */
-const TG_KIND=[{k:'계약',t:'▣ 계약',ext:['최종 방문일','최종견적일'],grp:{t:'계약',sub:['계약년월','예상매출']}},{k:'견적',t:'▣ 견적',ext:['최종 방문일','최종견적일']},{k:'방문',t:'▣ 방문업체',ext:['최종 방문일']}];
+/* 원본 배치: 계약(110~) · 빈 1행 · 견적(120~) · 빈 2행 · 방문업체(131~, 단위 표기 없음) */
+const TG_KIND=[{k:'계약',t:'▣ 계약',ext:['최종 방문일','최종견적일'],grp:{t:'계약',sub:['계약년월','예상매출']},unit:1,gap:1},{k:'견적',t:'▣ 견적',ext:['최종 방문일','최종견적일'],unit:1,gap:2},{k:'방문',t:'▣ 방문업체',ext:['최종 방문일'],gap:0}];
 const TG_REG={경북:0,부산:1,경남:2};let TG=null;
 function tgYM(d){const m=String(d||'').match(/(\d{2,4})\D+(\d{1,2})/);return m?String(m[1]).slice(-2)+'년 '+(+m[2])+'월':''}
 function tgBuild(){const src=document.getElementById('tg-src').value;const st=document.getElementById('tg-stat');if(!src.trim()){st.textContent='타겟업체 데이터를 붙여넣으세요';return}
@@ -1402,25 +1403,26 @@ const TG_HB='#e2efda';
 function tgHtml(K,view){const B='border:1px solid #808080;font-family:\'맑은 고딕\';font-size:9pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;';
   const nFix=14+K.ext.length+(K.grp?2:0);const mc=25-nFix;/* 세부사항 병합 칸 수(B~Z 25칸) */
   let h='<table style="border-collapse:collapse'+(view?';min-width:1400px':'')+'">';
-  h+='<tr><td style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700">'+esc(K.t)+'</td><td colspan="24" style="font-family:\'맑은 고딕\';font-size:9pt;text-align:right">[단위 : 천원]</td></tr>';
+  h+='<tr><td style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700">'+esc(K.t)+'</td><td colspan="24" style="font-family:\'맑은 고딕\';font-size:9pt;text-align:right">'+(K.unit?'[단위 : 천원]':'')+'</td></tr>';
   const rs=' rowspan="2"';h+='<tr>'+['구분','코드','거래처명','권역','지점','담당자'].map(t=>td(t,H,rs)).join('')+td('경쟁사매출',H,' colspan="3"')+td('KPP매출',H,' colspan="3"')+td('점유율',H,' colspan="2"')+K.ext.map(t=>td(t,H,rs)).join('')+(K.grp?td(K.grp.t,H,' colspan="2"'):'')+td('영업 진행 세부사항',H,' colspan="'+mc+'" rowspan="2"')+'</tr>';
   h+='<tr>'+['경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가','KPP','AJ',...(K.grp?K.grp.sub:[])].map(t=>td(t,H)).join('')+'</tr>';
   const NUM="text-align:right;mso-number-format:'#\\,##0';";(TG[K.k]||[]).forEach(r=>{h+='<tr>'+r.slice(0,nFix).map((v,i)=>td(typeof v==='number'?v.toLocaleString():v,'text-align:'+(i===2?'left':'center')+';vertical-align:middle;'+(typeof v==='number'?NUM:''),i===1?' x:str':'')).join('')+td(r[nFix],'text-align:left;vertical-align:middle;white-space:normal;mso-data-placement:same-cell;',' colspan="'+mc+'"')+'</tr>'});
   return h+'</table>'}
+async function tgCopyAll(){if(!TG)tgBuild();if(!TG)return;let h='';const txt=[];TG_KIND.forEach(K=>{h+=tgHtml(K,false).replace(/^<table[^>]*>/,'').replace(/<\/table>$/,'')+'<tr><td></td></tr>'.repeat(K.gap)});const ok=await writeBoth(XLHTML('<table style="border-collapse:collapse">'+h+'</table>'),'');document.getElementById('tg-stat').textContent=ok?'계약·견적·방문업체 전체 서식 복사됨 → 엑셀 B110(▣ 계약 제목 칸)에 붙여넣기':'복사 실패'}
 async function tgCopy(k){const K=TG_KIND.find(x=>x.k===k);const t=(TG[k]||[]).map(r=>r.map(v=>String(v).replace(/\s*\n\s*/g,' ')).join('\t')).join('\n');const ok=await writeBoth(XLHTML(tgHtml(K,false)),t);document.getElementById('tg-stat').textContent=ok?K.t.slice(2)+' 서식 복사됨 ('+(TG[k]||[]).length+'행) → 엑셀 제목 행 B열에 붙여넣기':'복사 실패'}
 function tgXlsx(){const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=[];const HB='E2EFDA';const hs=S({b:1,sz:9,fill:HB,border:'thin',wrap:1});const L=i=>colL(i);
   const dc=S({sz:9,border:'thin'}),dl=S({sz:9,border:'thin',h:'left',wrap:1}),dn=S({sz:9,border:'thin',h:'right',num:1});
   TG_KIND.forEach(K=>{const nFix=14+K.ext.length+(K.grp?2:0);const mS=1+nFix;/* 세부사항 시작 열 index(B=1) */const t=rows.length+1;
-    rows.push({cells:[null,{v:K.t,s:S({b:1,sz:10,h:'left'})},...Array(22).fill(null),{v:'[단위 : 천원]',s:S({sz:9,h:'right'})}],ht:20});
+    rows.push({cells:[null,{v:K.t,s:S({b:1,sz:10,h:'left'})},...Array(22).fill(null),K.unit?{v:'[단위 : 천원]',s:S({sz:9,h:'right'})}:null],ht:20});
     const top=['구분','코드','거래처명','권역','지점','담당자','경쟁사매출','','','KPP매출','','','점유율','',...K.ext,...(K.grp?[K.grp.t,'']:[])],sub=['','','','','','','경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가','KPP','AJ',...K.ext.map(()=>''),...(K.grp?K.grp.sub:[])];
     const pad=a=>a.concat(Array(25-a.length).fill(''));rows.push({cells:[null,...pad(top.concat('영업 진행 세부사항')).map(v=>({v,s:hs}))],ht:18},{cells:[null,...pad(sub).map(v=>({v,s:hs}))],ht:18});const h1=t+1,h2=t+2;
     [1,2,3,4,5,6].forEach(c=>merges.push(L(c)+h1+':'+L(c)+h2));merges.push('H'+h1+':J'+h1,'K'+h1+':M'+h1,'N'+h1+':O'+h1);K.ext.forEach((_,i)=>merges.push(L(15+i)+h1+':'+L(15+i)+h2));if(K.grp)merges.push(L(15+K.ext.length)+h1+':'+L(16+K.ext.length)+h1);merges.push(L(mS)+h1+':Z'+h2);
     (TG[K.k]||[]).forEach(r=>{const rn=rows.length+1;const cells=[null];r.slice(0,nFix).forEach((v,i)=>{let val=v;if(i===1&&/^[1-9]\d{0,14}$/.test(String(v)))val=+v;cells.push({v:val,s:typeof v==='number'?dn:i===2?dl:dc})});cells.push({v:r[nFix],s:dl});while(cells.length<26)cells.push({v:'',s:dl});
       const lines=String(r[nFix]||'').split('\n').reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/70)),0);rows.push({cells,ht:Math.min(409,Math.max(22,lines*13))});merges.push(L(mS)+rn+':Z'+rn)});
-    rows.push({cells:[]})});
+    for(let i=0;i<K.gap;i++)rows.push({cells:[]})});
   const widths=[2,8,8,16,9,9,8,10,10,10,10,9,9,8,8,11,11,9,10,10,10,10,10,10,10,10];
   const u8=xlWorkbook([{name:'타겟업체',xml:xlSheet(rows,merges,widths)}],ST.xml());const d=new Date();const nm='타겟_계약견적방문_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);return nm}
-document.getElementById('tg-run').onclick=tgBuild;
+document.getElementById('tg-run').onclick=tgBuild;document.getElementById('tg-copyall').onclick=tgCopyAll;
 document.getElementById('tg-xlsx').onclick=()=>{if(!TG)tgBuild();if(!TG)return;document.getElementById('tg-stat').textContent='저장: '+tgXlsx()};
 ['input','change'].forEach(ev=>{document.getElementById('tg-src').addEventListener(ev,()=>{const v=document.getElementById('tg-src').value,s=document.getElementById('tg-src-stat');if(!v.trim()){s.textContent='';return}const P=tgParse(v);if(!P){s.textContent='인식 실패: 진행단계·업체 머리글이 필요합니다';return}const n=k=>P.rows.filter(x=>x.stage===k).length;s.textContent=P.rows.length+'행 인식 · 계약 '+n('계약')+' · 견적 '+n('견적')+' · 방문 '+n('방문')+(P.C.visit<0?' · 최종방문일 열 없음':'')+(P.C.quote<0?' · 최종견적일 열 없음':'')});
   document.getElementById('tg-comp').addEventListener(ev,()=>{const v=document.getElementById('tg-comp').value;document.getElementById('tg-comp-stat').textContent=v.trim()?Object.keys(tgParseComp(v)).length+'업체 인식':''})});
