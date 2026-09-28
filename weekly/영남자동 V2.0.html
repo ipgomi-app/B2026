@@ -1381,9 +1381,9 @@ addPasteGuides();document.querySelectorAll('.tabs button').forEach(b=>b.addEvent
 /* ===== 타겟업체 '▣ 계약 / 견적 / 방문업체' 표 (V2.0) ===== */
 function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.includes('진행단계')&&r.some(c=>c==='업체'||c==='코드'));if(hi<0)return null;const H=rows[hi].map(x=>x.replace(/\s+/g,''));
   const at=(...n)=>{for(const x of n){const i=H.indexOf(x);if(i>=0)return i}return -1};const pi=at('진행단계');const effAll=H.map((h,i)=>h==='효과금액'?i:-1).filter(i=>i>=0);const eff=effAll.find(i=>i>pi)??effAll[effAll.length-1]??-1;
-  const C={reg:at('권역'),br:at('지점'),emp:at('담당자'),code:at('코드'),name:at('업체'),visit:at('최종방문일','방문'),quote:at('최종견적일','견적'),cont:at('계약','최종계약일'),stage:pi,amt:eff,memo:at('세부내용'),bigs:at('빅스중복')};
+  const C={reg:at('권역'),br:at('지점'),emp:at('담당자'),code:at('코드'),name:at('업체'),visit:at('최종방문일','방문'),quote:at('최종견적일','견적'),cont:at('계약','최종계약일'),stage:pi,amt:eff,memo:at('세부내용'),bigs:at('빅스중복'),pre:at('예상매출')/* P열 예상매출 = 경쟁사 PPS 매출 */};
   const g=(r,i)=>i>=0?(r[i]||''):'';const out=[];rows.slice(hi+1).forEach(r=>{if(!r.some(Boolean))return;const code=g(r,C.code);if(!code&&!g(r,C.name))return;
-    out.push({grp:'Target',bigsDup:/중복/.test(g(r,C.bigs)),code,name:g(r,C.name),reg:g(r,C.reg),br:g(r,C.br),emp:g(r,C.emp),visit:g(r,C.visit),quote:g(r,C.quote),cont:g(r,C.cont),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});return {rows:out,C}}
+    out.push({grp:'Target',bigsDup:/중복/.test(g(r,C.bigs)),code,name:g(r,C.name),reg:g(r,C.reg),br:g(r,C.br),emp:g(r,C.emp),visit:g(r,C.visit),quote:g(r,C.quote),cont:g(r,C.cont),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo),cPps:g(r,C.pre)})});return {rows:out,C}}
 /* 경쟁사(BIGS) 자료: 2줄 머리글(No.·Bigs·(실적)담당부서·업체명(코드/업체)·경쟁사 연매출·매출분야별 PPS…·Bigs 실적(최종방문일자·(견적)최종결재일자·(계약)최종결재일자)·진행단계·예상매출·영업진행 세부사항) */
 function tgParseComp(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.some(c=>c.replace(/\s+/g,'')==='진행단계'));if(hi<0)return null;
   const n=x=>String(x||'').replace(/\s+/g,'');const R1=rows[hi].map(n),R2=(rows[hi+1]||[]).map(n);const two=!R2.some(isCode6);const W=Math.max(R1.length,R2.length);
@@ -1410,14 +1410,15 @@ function tgBuild(){const src=document.getElementById('tg-src').value,csrc=docume
   const P=src.trim()?tgParse(src):{rows:[]};if(!P){st.textContent='인식 실패: 타겟업체 데이터에 진행단계·업체(코드) 머리글 행이 필요합니다';return}
   const B=csrc.trim()?tgParseComp(csrc):{rows:[]};if(!B){st.textContent='인식 실패: 경쟁사 자료에 진행단계 머리글이 필요합니다';return}
   /* BIGS 행의 지점·담당자는 타겟업체 데이터(빅스중복 행 포함)에서 코드로 가져옴 */const byCode={};P.rows.forEach(x=>{if(!byCode[x.code])byCode[x.code]=x});B.rows.forEach(x=>{const t=byCode[x.code];if(t){if(!x.br)x.br=t.br;if(!x.emp)x.emp=t.emp;if(!x.reg)x.reg=t.reg}});
-  const ALL=B.rows.concat(P.rows.filter(x=>!x.bigsDup));
+  /* 빅스중복 표시 행과, 코드가 BIGS 자료에도 있는 Target 행은 제외(BIGS 행으로 표시) */const bc=new Set(B.rows.map(x=>x.code));const dupN=P.rows.filter(x=>!x.bigsDup&&bc.has(x.code)).length;
+  const ALL=B.rows.concat(P.rows.filter(x=>!x.bigsDup&&!bc.has(x.code)));
   const regK=r=>{const k=Object.keys(TG_REG).find(x=>String(r).startsWith(x));return k?TG_REG[k]:9};TG={};const msg=[];
   TG_KIND.forEach(K=>{const list=ALL.filter(x=>x.stage===K.k)/* 빅스중복 '중복' 타겟은 제외(BIGS 자료로 표시) */.sort((a,b)=>(a.grp===b.grp?0:a.grp==='BIGS'?-1:1)||(regK(a.reg)-regK(b.reg)));
     TG[K.k]=list.map(x=>{const r=[x.grp,x.code,x.name,x.reg,x.br,x.emp,x.cAll||'',x.cPps||'','','','','','','',x.visit];if(K.ext.length>1)r.push(x.quote);if(K.grp)r.push(tgYM(x.cont),x.amt||'');r.push(x.memo);return r});
     msg.push(K.k+' '+list.length+'(BIGS '+list.filter(x=>x.grp==='BIGS').length+')')});
   document.getElementById('tg-out').innerHTML=TG_KIND.map(K=>'<div class="row" style="margin:12px 0 4px"><button class="sec xs" data-tgcopy="'+K.k+'">'+K.t.slice(2)+' 내용 복사</button></div>'+tgHtml(K,true)).join('');
   document.querySelectorAll('[data-tgcopy]').forEach(b=>b.onclick=()=>tgCopy(b.dataset.tgcopy));
-  st.textContent=msg.join(' · ')+' · 타겟 '+P.rows.length+'행(빅스중복 제외 '+P.rows.filter(x=>x.bigsDup).length+') · BIGS '+B.rows.length+'행'+(B.rows.length?' (지점·담당자 매칭 '+B.rows.filter(x=>x.br).length+')':'')}
+  st.textContent=msg.join(' · ')+' · 타겟 '+P.rows.length+'행(빅스중복 제외 '+P.rows.filter(x=>x.bigsDup).length+', BIGS와 코드 겹쳐 제외 '+dupN+') · BIGS '+B.rows.length+'행'+(B.rows.length?' (지점·담당자 매칭 '+B.rows.filter(x=>x.br).length+')':'')}
 const TG_HB='#e2efda';
 function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\'맑은 고딕\';font-size:9pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;';
   const nFix=14+K.ext.length+(K.grp?2:0);const mc=25-nFix;/* 세부사항 병합 칸 수(B~Z 25칸) */
