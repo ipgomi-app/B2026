@@ -399,7 +399,8 @@ function fullHtml(G){
 /* 서식 포함 복사: 예상매출 문구를 빨간 글씨로 (엑셀에서 일반 붙여넣기 Ctrl+V 시 적용, '값 붙여넣기'는 글자색 없이 텍스트만) */
 async function copyRich(G,text){
   const RED=/(예상매출\s*[\d.,]+\s*(?:억|천원|만원)[^,\s]*(?:\/년|\/건)?)/g;const skipA=cfg.colA==='0'&&!G.noSkip;
-  let h='<table>';G.forEach(r=>{h+='<tr>';const cells=new Array(G.W).fill(null);r.cells.forEach(c=>{cells[c.col]=c});(skipA?cells.slice(1):cells).forEach(c=>{if(!c){h+='<td></td>';return}
+  /* 병합으로 가려진 칸은 td를 만들지 않음(엑셀 붙여넣기 열 밀림 방지) */const cov=new Set();G.forEach((r,ri)=>r.cells.forEach(c=>{for(let dr=0;dr<(c.rs||1);dr++)for(let dc=0;dc<(c.cs||1);dc++)if(dr||dc)cov.add((ri+dr)+','+(c.col+dc))}));
+  let h='<table>';G.forEach((r,ri)=>{h+='<tr>';const cells=new Array(G.W).fill(null);r.cells.forEach(c=>{cells[c.col]=c});cells.forEach((c,ci)=>{if(skipA&&ci===0)return;if(cov.has(ri+','+ci))return;if(!c){h+='<td></td>';return}
     let v=cellVal(c,false);let t=esc(String(v??''));if(c.rich)t=t.replace(RED,'<font color="#ff0000">$1</font>');h+='<td style="font-family:\'맑은 고딕\';font-size:10pt"'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+'>'+t+'</td>'});h+='</tr>'});h+='</table>';
   const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><meta name="ProgId" content="Excel.Sheet"><style>br,td{mso-data-placement:same-cell}</style></head><body>'+h.replace(/<br\s*\/?>/g,'<br style="mso-data-placement:same-cell">')+'</body></html>';
   if(rawCopy(html,text))return true;
@@ -518,7 +519,10 @@ function listRun(id){
 }
 const compNorm=v=>String(v||'').replace(/\([^)]*\)|㈜|주식회사|유한회사|농업회사법인|영농조합법인|[\s\-_.,·]/g,'').toLowerCase();
 function compSource(){const out={};[['ppsC','dPpsC'],['ppsQ','dPpsQ']].forEach(([k,id])=>{const ta=document.getElementById(id);if(!ta||!ta.value.trim()){out[k]=[];return}try{out[k]=sumParse(k,filterYN(ta.value).tsv).recs.filter(x=>x.code||x.name)}catch(e){console.error(e);out[k]=[]}});return out}
-function compMatch(src,x){const nm=compNorm(x.name);for(const [k,st] of [['ppsC','계약'],['ppsQ','견적']]){const hit=src[k].find(y=>(x.code&&y.code&&x.code===y.code)||(nm.length>=3&&compNorm(y.name).length>=3&&(nm===compNorm(y.name)||nm.includes(compNorm(y.name))||compNorm(y.name).includes(nm))));if(hit)return {stage:st,rec:hit}}return null}
+/* 코드가 양쪽에 있으면 코드 일치만 인정, 이름 비교는 어느 한쪽 코드가 없을 때만 */
+function compMatch(src,x){const nm=compNorm(x.name);const KS=[['ppsC','계약'],['ppsQ','견적']];
+  if(x.code)for(const [k,st] of KS){const hit=src[k].find(y=>y.code&&x.code===y.code);if(hit)return {stage:st,rec:hit}}
+  for(const [k,st] of KS){const hit=src[k].find(y=>!(x.code&&y.code)&&nm.length>=3&&compNorm(y.name).length>=3&&(nm===compNorm(y.name)||nm.includes(compNorm(y.name))||compNorm(y.name).includes(nm)));if(hit)return {stage:st,rec:hit}}return null}
 function listCompute(id){
   const L=LISTS[id];const $=k=>document.getElementById(id+'-'+k);const m=L.map;
   const src=id==='comp'?compSource():null;const hasSrc=src&&(src.ppsC.length||src.ppsQ.length);let mc=0,mq=0;
@@ -1116,7 +1120,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   recs.forEach(x=>{const key=Object.keys(BR2REG).find(b=>x.br.startsWith(b));x.reg=key?REG_SHORT(BR2REG[key]):'';x.mon=x.months||'';x.due=x.cond||'';x.ins=x.insYN});
   MGR={list:recs,month:'',min};mgRender();
   const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 금주수금 O '+paidN+'업체(완납 '+fullN+', 결제 완료 세부내역 자동 '+recs.filter(x=>x.memo).length+'건'+(recs.filter(x=>x.memo&&!x.pd).length?' · 그중 최종입금일 없음 '+recs.filter(x=>x.memo&&!x.pd).length+'건(2번 월별에 해당 업체 행이 없거나 날짜를 못 읽음)':'')+') · 영남 외 '+outYN+'건, 기준금액 미만 '+outMin+'건 제외'}
-(function(){const d=new Date();const f=x=>x.toISOString().slice(0,10);const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
+(function(){const d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');/* 로컬(한국) 날짜 */const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;document.getElementById('mg-xlsx').onclick=mgXlsx;
 document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
 const mgNeed=()=>{if(!MGR){alert('먼저 취합 작성을 실행하세요');return false}return true};
@@ -1232,7 +1236,7 @@ function sumParse(k,rawOverride){
   m.memo=spec.memo?find(spec.memo):-1;
   if(m.memo<0){let best=-1,bl=0;for(let i=0;i<width;i++){if(i===m.name)continue;const l=data.reduce((a,r)=>a+((r[i]||'').match(/[가-힣]/g)||[]).length,0);if(l>bl&&data.some(r=>(r[i]||'').length>15)){bl=l;best=i}}m.memo=best}
   const g=(r,i)=>(i>=0?(r[i]||''):'').trim();
-  let recs=data.map(r=>{const br=g(r,m.branch);let region=reg(g(r,m.region));if(!region&&br){const key=Object.keys(BR2REG).find(b=>br.startsWith(b));region=key?BR2REG[key]:(m.branch>=0?'기타':null)}
+  let recs=data.map(r=>{const br=g(r,m.branch);const rv=String(g(r,m.region)||'').trim();let region=reg(rv);if(!region&&br){const key=Object.keys(BR2REG).find(b=>br.startsWith(b));region=key?BR2REG[key]:(m.branch>=0?'기타':null)}if(!region&&rv)region='기타';/* 영남이 아닌 권역명(서울권역 등)은 기타로 제외 */
     const kindv=g(r,m.kind);let memo=g(r,m.memo);if(!spec.memo){let bl=((memo.match(/[가-힣]/g)||[]).length);r.forEach((c,i)=>{if(i===m.name)return;const l=((c||'').match(/[가-힣]/g)||[]).length;if(l>bl){bl=l;memo=(c||'').trim()}})}return {region,branch:br,code:g(r,m.code),name:g(r,m.name),amtRaw:num(g(r,m.amt)),units:num(g(r,m.units)),memo,week:weekOf(g(r,m.week)),kind:/재전환|점유율확대/.test(kindv)?'재전환':'신규',glb:r.some(c=>/글로벌비즈/.test(c||''))}}).filter(x=>x.name||x.code);
   // 금액 단위
   let unit=rawOverride!=null?SUMSPEC[k].unit:document.getElementById('sum-unit-'+k).value;
@@ -1260,7 +1264,7 @@ function sumRun(){
   const agg=rs=>({n:rs.length,amt:rs.reduce((a,x)=>a+x.amt,0),units:rs.reduce((a,x)=>a+x.units,0)});
   const ppsQn=f.ppsQ.filter(x=>x.kind==='신규'),ppsQr=f.ppsQ.filter(x=>x.kind==='재전환'),ppsCn=f.ppsC.filter(x=>x.kind==='신규'),ppsCr=f.ppsC.filter(x=>x.kind==='재전환');
   // 단가인상: 단가인상 탭
-  const pr=(PR.out||[]).filter(x=>{const w=weekOf(x.week);return !wk||!w||w.w===wk.w});
+  const pr=(PR.out||[]).filter(x=>{const w=weekOf(x.week);return !wk||!w||(w.w===wk.w&&(!wk.m||!w.m||w.m===wk.m))});
   const price={n:pr.length,amt:pr.reduce((a,x)=>a+x.amt,0)};
   const cum={};document.querySelectorAll('#sum-cum input').forEach(i=>{(cum[i.dataset.k]=cum[i.dataset.k]||[])[+i.dataset.i]=+i.value||0});
   const glb={Qn:+$('glbQn').value||0,Qa:+$('glbQa').value||0,Cn:+$('glbCn').value||0,Ca:+$('glbCa').value||0};
@@ -1365,6 +1369,7 @@ function addPasteGuides(){Object.keys(PASTE_GUIDE).forEach(id=>{const ta=documen
   const upd=()=>{wrap.classList.toggle('has',!!ta.value.trim());pos()};['input','change','cleared'].forEach(ev=>ta.addEventListener(ev,upd));ta.addEventListener('focus',()=>{ov.style.opacity='.45'});ta.addEventListener('blur',()=>{ov.style.opacity='.9'});
   upd();window.addEventListener('resize',pos);ta.placeholder=''})}
 addPasteGuides();document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>document.querySelectorAll('.inbox textarea').forEach(t=>t.dispatchEvent(new Event('change'))),0)));
+document.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',e=>{if(e.isTrusted)delete t.dataset.fromData}));/* 직접 고친 칸은 데이터 탭 자료로 다시 덮지 않음 */
 </script>
 </body>
 </html>
