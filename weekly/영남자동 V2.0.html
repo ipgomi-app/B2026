@@ -449,7 +449,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.que
 /* ===== 타겟업체 / 경쟁사 : 금주 주요업체 리스트 ===== */
 const LISTW=18; // A~R
 const FIELDS={
-  target:[['biz','사업구분',['사업구분','사업']],['region','부서(권역)',['팀/권역','권역']],['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항']],['date','시행일(선택)',['시행일']]],
+  target:[['biz','사업구분',['사업구분']],['region','부서(권역)',['팀/권역','권역']],['branch','팀/지점',['팀/지점','지점']],['person','담당자',['담당프로','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명','업체']],['stage','진행단계',['진행단계']],['amt','효과금액',['효과금액']],['memo','영업진행사항',['영업진행사항','진행사항','세부내용']],['date','시행일(선택)',['시행일']],['dVisit','최종방문일(선택)',['최종방문일']],['dQuote','최종견적일(선택)',['최종견적일']],['dCont','계약일(선택)',['계약']],['bigs','빅스중복(선택)',['빅스중복']]],
   comp:[['region','부서(권역)',['(팀/권역)','팀/권역','권역']],['branch','팀/지점',['(팀/지점)','팀/지점','지점']],['person','담당자',['(실적)담당자','담당자']],['code','코드',['코드']],['name','업체명',['업체명','거래처명']],['stage','진행단계(없으면 자동)',['진행단계']],['cCnt','(계약)건수',['(계약)건수']],['cAmt','(계약)효과금액',['(계약)효과금액']],['qAmt','(견적)효과금액',['(견적)효과금액']],['amt','효과금액(직접)',['효과금액(年)']],['memo','영업진행사항',['영업진행사항','진행사항','현황']],['date','최종방문일(선택)',['최종방문일','시행일']]]
 };
 const LISTS={};
@@ -490,16 +490,17 @@ function listDetect(id){
   L.hdr=rows.slice(0,first);L.data=rows.slice(first);
   const htxt=Array.from({length:width},(_,i)=>L.hdr.map(r=>(r[i]||'').replace(/\s+/g,'')).join(' '));
   const map={};
-  FIELDS[id].forEach(([k,,keys])=>{map[k]=-1;for(const key of keys){const kk=key.replace(/\s+/g,'');const i=htxt.findIndex(t=>t.includes(kk));if(i>=0){map[k]=i;break}}});
+  /* 정확히 같은 머리글 먼저(권역코드·사업장명·효과금액(계약) 오인 방지), 없으면 포함 비교 */
+  FIELDS[id].forEach(([k,,keys])=>{map[k]=-1;for(const key of keys){const kk=key.replace(/\s+/g,'');const i=htxt.findIndex(t=>t.split(' ').includes(kk));if(i>=0){map[k]=i;break}}if(map[k]<0&&!/^d(Visit|Quote|Cont)$|^bigs$/.test(k))for(const key of keys){const kk=key.replace(/\s+/g,'');const i=htxt.findIndex(t=>t.includes(kk));if(i>=0){map[k]=i;break}}});
   // 데이터 기반 보정: 코드, 지점, 담당자, 권역
   const colMatch=f=>{let best=-1,bs=0;for(let i=0;i<width;i++){const n=L.data.filter(r=>f(r[i])).length;if(n>bs){bs=n;best=i}}return bs>=Math.max(1,L.data.length*0.5)?best:-1};
   const isName=v=>/^[가-힣]{2,4}$/.test(String(v||'').trim());
   if(id==='target'){const b=colMatch(v=>/PPS|물류기기|산업자재|SCM|RRPP|지게차|글로벌/i.test(String(v||'')));if(b>=0&&(map.biz<0||!L.data.some(r=>/PPS|물류기기|산업자재|SCM|RRPP|지게차|글로벌/i.test(r[map.biz]||''))))map.biz=b}
   const kind=colMatch(v=>/^\d\d-/.test(String(v||'').trim())); // 코드구분(01-일반) 바로 뒤가 코드
-  if(kind>=0){map.code=kind+1;map.name=[kind+2,kind+3,kind+4].find(i=>L.data.filter(r=>(r[i]||'').trim()&&!isCode(r[i])).length>=L.data.length*0.5)??map.name}
-  else{const c=colMatch(isCode);if(c>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code]))))map.code=c}
+  if(kind>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code])))){map.code=kind+1;map.name=[kind+2,kind+3,kind+4].find(i=>L.data.filter(r=>(r[i]||'').trim()&&!isCode(r[i])).length>=L.data.length*0.5)??map.name}
+  else if(map.code<0||!L.data.some(r=>isCode(r[map.code]))){const c=colMatch(isCode);if(c>=0&&(map.code<0||!L.data.some(r=>isCode(r[map.code]))))map.code=c}
   const isDate=v=>/^(\d{8}|\d{4}[-./]\d{2}[-./]\d{2})/.test(String(v||'').trim());
-  if(map.date<0||!L.data.some(r=>isDate(r[map.date]))){const d=colMatch(isDate);if(d>=0)map.date=d}
+  if(map.date>=0&&!L.data.some(r=>isDate(r[map.date])))map.date=-1;if(map.date<0&&map.dVisit==null||map.date<0&&map.dVisit<0&&map.dQuote<0&&map.dCont<0){const d=colMatch(isDate);if(d>=0)map.date=d}
   if(map.stage<0||!L.data.some(r=>stage(r[map.stage]))){const st=colMatch(v=>!!stage(v)&&String(v).trim().length<=4);if(st>=0)map.stage=st}
   if(map.stage>=0&&(map.amt<0||!L.data.some(r=>num(r[map.amt])>0))){const a=[map.stage+1,map.stage-1].find(i=>i>=0&&L.data.filter(r=>/^[\s\d,.\-]+$/.test(r[i]||'')&&num(r[i])>0).length>=L.data.length*0.5);if(a!=null)map.amt=a}
   const br=colMatch(v=>/지점$/.test(String(v||'').trim()));if(br>=0&&(map.branch<0||!L.data.some(r=>/지점$/.test((r[map.branch]||'').trim()))))map.branch=br;
@@ -539,12 +540,13 @@ function listCompute(id){
     let st=stage(g(r,'stage')),amt=num(g(r,'amt'));
     if(id==='comp'&&!st){const cc=num(g(r,'cCnt')),ca=num(g(r,'cAmt')),qa=num(g(r,'qAmt'));if(cc>0||ca>0){st='계약';amt=ca||amt}else if(qa>0){st='견적';amt=qa||amt}else st='방문'}
     if(id==='comp'&&st==='계약'&&!amt)amt=num(g(r,'cAmt'));if(id==='comp'&&st==='견적'&&!amt)amt=num(g(r,'qAmt'));
-    const x={biz:g(r,'biz'),region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8),matched:false};
+    const x={biz:g(r,'biz'),region:g(r,'region'),branch:g(r,'branch'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),stage:st,amt,memo:g(r,'memo'),date:g(r,'date').replace(/\D/g,'').slice(0,8),bigs:/중복/.test(g(r,'bigs')),matched:false};
+    if(!x.date){const dd={계약:g(r,'dCont'),견적:g(r,'dQuote')}[st]||g(r,'dVisit');x.date=String(dd||'').replace(/\D/g,'').slice(0,8)}/* 시행일 없으면 단계별 날짜 */
     if(hasSrc){const h=compMatch(src,x);if(h){x.stage=h.stage;x.amt=Math.round(h.rec.amt)||x.amt;x.memo=h.rec.memo||'';x.matched=true;if(h.stage==='계약')mc++;else mq++}else x.memo=''}
     return x;
   }).filter(x=>x.code||x.name);
   const total=recs.length;let bizNote='';
-  if(id==='target'){if(m.biz>=0){const before=recs.length;recs=recs.filter(x=>/PPS|물류기기/i.test(x.biz||''));bizNote=', 사업구분 PPS/물류기기 '+recs.length+'행(제외 '+(before-recs.length)+')'}else bizNote=', 사업구분 열 없음(전체 대상)'}
+  if(id==='target'){const nb=recs.filter(x=>x.bigs).length;if(nb){recs=recs.filter(x=>!x.bigs);bizNote+=', 빅스중복 제외 '+nb+'행'}if(m.biz>=0){const before=recs.length;recs=recs.filter(x=>/PPS|물류기기/i.test(x.biz||''));bizNote+=', 사업구분 PPS/물류기기 '+recs.length+'행(제외 '+(before-recs.length)+')'}else bizNote+=', 사업구분 열 없음(전체 대상)'}
   if(from||to)recs=recs.filter(x=>x.date&&(!from||x.date>=from)&&(!to||x.date<=to));
   const cap={계약:+$('capC').value||0,견적:+$('capQ').value||0,방문:+$('capV').value||0},minAmt=+$('minAmt').value||0;
   const major=[];['계약','견적','방문'].forEach(s=>major.push(...recs.filter(x=>x.stage===s&&x.amt>=minAmt).sort((a,b)=>(b.matched-a.matched)||(b.amt-a.amt)).slice(0,cap[s])));
