@@ -1383,7 +1383,7 @@ function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').tri
   const at=(...n)=>{for(const x of n){const i=H.indexOf(x);if(i>=0)return i}return -1};const pi=at('진행단계');const effAll=H.map((h,i)=>h==='효과금액'?i:-1).filter(i=>i>=0);const eff=effAll.find(i=>i>pi)??effAll[effAll.length-1]??-1;
   const C={reg:at('권역'),br:at('지점'),emp:at('담당자'),code:at('코드'),name:at('업체'),visit:at('최종방문일','방문'),quote:at('최종견적일','견적'),cont:at('계약','최종계약일'),stage:pi,amt:eff,memo:at('세부내용'),bigs:at('빅스중복'),pre:at('예상매출')/* P열 예상매출 = 경쟁사 PPS 매출 */};
   const g=(r,i)=>i>=0?(r[i]||''):'';const out=[];rows.slice(hi+1).forEach(r=>{if(!r.some(Boolean))return;const code=g(r,C.code);if(!code&&!g(r,C.name))return;
-    out.push({grp:'Target',bigsDup:/중복/.test(g(r,C.bigs)),code,name:g(r,C.name),reg:g(r,C.reg),br:g(r,C.br),emp:g(r,C.emp),visit:g(r,C.visit),quote:g(r,C.quote),cont:g(r,C.cont),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo),cPps:g(r,C.pre)})});return {rows:out,C}}
+    out.push({grp:'Target',bigsDup:/중복/.test(g(r,C.bigs)),code,name:g(r,C.name),reg:g(r,C.reg),br:g(r,C.br),emp:g(r,C.emp),visit:g(r,C.visit),quote:g(r,C.quote),cont:g(r,C.cont),stage:tgStage(g(r,C.stage),g(r,C.visit)),amt:num(g(r,C.amt)),memo:g(r,C.memo),cPps:g(r,C.pre)})});return {rows:out,C}}
 /* 경쟁사(BIGS) 자료: 2줄 머리글(No.·Bigs·(실적)담당부서·업체명(코드/업체)·경쟁사 연매출·매출분야별 PPS…·Bigs 실적(최종방문일자·(견적)최종결재일자·(계약)최종결재일자)·진행단계·예상매출·영업진행 세부사항) */
 function tgParseComp(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.some(c=>c.replace(/\s+/g,'')==='진행단계'));if(hi<0)return null;
   const n=x=>String(x||'').replace(/\s+/g,'');const R1=rows[hi].map(n),R2=(rows[hi+1]||[]).map(n);const two=!R2.some(isCode6);const W=Math.max(R1.length,R2.length);
@@ -1398,9 +1398,11 @@ function tgParseComp(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'')
   const C={cAll:at(/경쟁사연매출/),cPps:at(/^PPS$/),visit:at(/최종방문일/),quote:at(/\(견적\)최종결재일/),cont:at(/\(계약\)최종결재일/),stage:at(/^진행단계$/),amt:W-1,memo:at(/영업진행세부사항|세부사항|세부내용/)};
   for(let i=W-1;i>=0;i--)if(H[i]==='예상매출'){C.amt=i;break}
   const g=(r,i)=>i>=0?(r[i]||''):'';const out=[];data.forEach(r=>{let c=pickCode(r,S.co);if(!c){const k=H.indexOf('코드');if(k>=0&&isCode6(r[k]))c=r[k]}if(!c)return;
-    out.push({grp:'BIGS',code:c,name:pickName(r,S.co),reg:pickName(r,S.reg)||(r.find(v=>/권역$/.test(v||''))||''),br:pickName(r,S.br),emp:pickName(r,S.emp),cAll:g(r,C.cAll),cPps:g(r,C.cPps),visit:g(r,C.visit).slice(0,10),quote:g(r,C.quote).slice(0,10),cont:g(r,C.cont).slice(0,10),stage:g(r,C.stage),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});
+    out.push({grp:'BIGS',code:c,name:pickName(r,S.co),reg:pickName(r,S.reg)||(r.find(v=>/권역$/.test(v||''))||''),br:pickName(r,S.br),emp:pickName(r,S.emp),cAll:g(r,C.cAll),cPps:g(r,C.cPps),visit:g(r,C.visit).slice(0,10),quote:g(r,C.quote).slice(0,10),cont:g(r,C.cont).slice(0,10),stage:tgStage(g(r,C.stage),g(r,C.visit)),amt:num(g(r,C.amt)),memo:g(r,C.memo)})});
   C.span=S;
   return {rows:out,C}}
+/* 진행단계 표기 통일: '계약'·'견적' 포함 → 그 단계, '방문'·'미팅'·'상담' 포함이나 단계 없이 방문일만 있으면 → 방문 */
+function tgStage(v,visit){v=String(v||'').replace(/\s+/g,'');if(/계약/.test(v))return '계약';if(/견적/.test(v))return '견적';if(/방문|미팅|상담|접촉|진행/.test(v))return '방문';if(!v&&String(visit||'').trim())return '방문';return v}
 /* 표 종류: 공통 B~O(14칸) 뒤에 붙는 열. 세부사항은 남은 칸~Z 병합 */
 /* 원본 배치: 계약(110~) · 빈 1행 · 견적(120~) · 빈 2행 · 방문업체(131~, 단위 표기 없음) */
 const TG_KIND=[{k:'계약',t:'▣ 계약',ext:['최종 방문일','최종견적일'],grp:{t:'계약',sub:['계약년월','예상매출']},unit:1,gap:1},{k:'견적',t:'▣ 견적',ext:['최종 방문일','최종견적일'],unit:1,gap:2},{k:'방문',t:'▣ 방문업체',ext:['최종 방문일'],gap:0}];
@@ -1418,7 +1420,7 @@ function tgBuild(){const src=document.getElementById('tg-src').value,csrc=docume
     msg.push(K.k+' '+list.length+'(BIGS '+list.filter(x=>x.grp==='BIGS').length+')')});
   document.getElementById('tg-out').innerHTML=TG_KIND.map(K=>'<div class="row" style="margin:12px 0 4px"><button class="sec xs" data-tgcopy="'+K.k+'">'+K.t.slice(2)+' 내용 복사</button></div>'+tgHtml(K,true)).join('');
   document.querySelectorAll('[data-tgcopy]').forEach(b=>b.onclick=()=>tgCopy(b.dataset.tgcopy));
-  st.textContent=msg.join(' · ')+' · 타겟 '+P.rows.length+'행(빅스중복 제외 '+P.rows.filter(x=>x.bigsDup).length+', BIGS와 코드 겹쳐 제외 '+dupN+') · BIGS '+B.rows.length+'행'+(B.rows.length?' (지점·담당자 매칭 '+B.rows.filter(x=>x.br).length+')':'')}
+  const oth={};ALL.forEach(x=>{if(!['계약','견적','방문'].includes(x.stage))oth[x.stage||'(빈칸)']=(oth[x.stage||'(빈칸)']||0)+1});st.textContent=msg.join(' · ')+(Object.keys(oth).length?' · 표에 안 들어간 진행단계: '+Object.entries(oth).map(([k,v])=>k+' '+v).join(', '):'')+' · 타겟 '+P.rows.length+'행(빅스중복 제외 '+P.rows.filter(x=>x.bigsDup).length+', BIGS와 코드 겹쳐 제외 '+dupN+') · BIGS '+B.rows.length+'행'+(B.rows.length?' (지점·담당자 매칭 '+B.rows.filter(x=>x.br).length+')':'')}
 const TG_HB='#e2efda';
 function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\'맑은 고딕\';font-size:9pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;';
   const nFix=14+K.ext.length+(K.grp?2:0);const mc=25-nFix;/* 세부사항 병합 칸 수(B~Z 25칸) */
