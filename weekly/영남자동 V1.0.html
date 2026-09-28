@@ -406,6 +406,7 @@ async function copyRich(G,text){
   let h='<table>';G.forEach(r=>{h+='<tr>';const cells=new Array(G.W).fill(null);r.cells.forEach(c=>{cells[c.col]=c});(skipA?cells.slice(1):cells).forEach(c=>{if(!c){h+='<td></td>';return}
     let v=cellVal(c,false);let t=esc(String(v??''));if(c.rich)t=t.replace(RED,'<font color="#ff0000">$1</font>');h+='<td style="font-family:\'맑은 고딕\';font-size:10pt"'+(c.cs>1?' colspan="'+c.cs+'"':'')+(c.rs>1?' rowspan="'+c.rs+'"':'')+'>'+t+'</td>'});h+='</tr>'});h+='</table>';
   const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><meta name="ProgId" content="Excel.Sheet"><style>br,td{mso-data-placement:same-cell}</style></head><body>'+h.replace(/<br\s*\/?>/g,'<br style="mso-data-placement:same-cell">')+'</body></html>';
+  if(rawCopy(html,text))return true;
   try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}catch(e){}
   return copy('',text)}
 async function copy(html,text){
@@ -792,7 +793,7 @@ function recvHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
     H.forEach((t,i)=>h+=rtd(t,hdrBg+'text-align:'+(i===9?'left':'center')+';font-weight:700;white-space:normal;'+(thick[i]?TH:''),cs[i]?' colspan="'+cs[i]+'"':''));h+='</tr>'}
   const groups=[];rows.forEach(r=>{if(r.t==='d'&&(!groups.length||groups[groups.length-1].grp!==r.grp))groups.push({grp:r.grp,rows:[]});if(groups.length)groups[groups.length-1].rows.push(r)});
   groups.forEach(g=>{const bg='background:'+(RBG[g.grp]||'#eee')+';';g.rows.forEach((r,i)=>{const c=r.cells;
-    const memo=String(c[10]||'');const lines=r.t==='d'?Math.max(1,...memo.split('\n').map(l=>Math.ceil(l.length/58))):1;const rh=r.t==='d'?Math.max(30,lines*15):20;
+    const memo=String(c[10]||'');const lines=r.t==='d'?Math.max(1,memo.split('\n').reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/40)),0)):1;const rh=r.t==='d'?Math.min(409,Math.max(30,lines*14)):20;
     h+='<tr style="height:'+rh+'pt">';
     if(i===0)h+=rtd(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
     if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=rtd(NUM(c[5]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg+TH,' colspan="6"');h+=rtd(NUM(c[16]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg)}
@@ -806,7 +807,10 @@ function recvSumHtml(){const T=recvTable();const rows=T.filter(r=>r.t==='s'||r.t
   rows.forEach(r=>{const bg='background:'+(RBG[r.cells[0]]||'#eee')+';';h+='<tr>'+rtd(esc(r.cells[0]),bg+'text-align:center;font-weight:700;')+r.cells.slice(1).map(v=>rtd(typeof v==='number'?v:'',bg+RACC+'font-weight:700;')).join('')+'</tr>'});
   return h+'</table>'}
 const XLHTML=body=>'<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><meta name="ProgId" content="Excel.Sheet"><style>br{mso-data-placement:same-cell}td{mso-data-placement:same-cell}</style></head><body>'+body.replace(/<br\s*\/?>/g,'<br style="mso-data-placement:same-cell">')+'</body></html>';/* 줄바꿈이 있어도 한 셀 안에 유지(행 분리 방지) */
-async function writeBoth(html,text){try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}catch(e){return copy('',text)}}
+/* 원본 HTML 그대로 클립보드에 쓰기: Chrome 비동기 클립보드는 HTML을 다시 써서 엑셀 전용 설정(mso-*)이 빠지므로 copy 이벤트로 직접 기록 */
+function rawCopy(html,text){let ok=false;const h=e=>{e.preventDefault();e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);ok=true};document.addEventListener('copy',h,true);
+  try{const ta=document.createElement('textarea');ta.value='x';ta.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}catch(e){}document.removeEventListener('copy',h,true);return ok}
+async function writeBoth(html,text){if(rawCopy(html,text))return true;try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}catch(e){return copy('',text)}}
 document.getElementById('recv-copyfmt').onclick=async()=>{if(!RECV){alert('먼저 미수금 작성을 실행하세요');return}const rows=recvTable().filter(r=>r.t==='d'||r.t==='sum');
   const ok=await writeBoth(XLHTML(recvHtml(rows,false)),rows.map(recvLine).join('\r\n'));
   document.getElementById('recv-stat').textContent=ok?'상세 '+rows.length+'행 서식 포함 복사됨 → 엑셀 첫 데이터 행의 구분 셀(B열) 선택 후 일반 붙여넣기(Ctrl+V) · 업체명 2칸(E:F)·세부 진행내역 6칸(L:Q) 병합 포함':'복사 실패'};
@@ -967,7 +971,7 @@ function mgRptHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
     H.forEach((t,i)=>h+=rtd(t,hdrBg+'text-align:'+(i===9?'left':'center')+';font-weight:700;white-space:normal;'+(thick[i]?TH:''),cs[i]?' colspan="'+cs[i]+'"':''));h+='</tr>'}
   const groups=[];rows.forEach(r=>{if(r.t==='d'&&(!groups.length||groups[groups.length-1].grp!==r.grp))groups.push({grp:r.grp,rows:[]});if(groups.length)groups[groups.length-1].rows.push(r)});
   groups.forEach(g=>{const bg='background:'+(RBG[g.grp]||'#eee')+';';g.rows.forEach((r,i)=>{const c=r.cells;
-    const memo=String(c[10]||'');const lines=r.t==='d'?Math.max(1,...memo.split('\n').map(l=>Math.ceil(l.length/58))):1;const rh=r.t==='d'?Math.max(30,lines*15):20;
+    const memo=String(c[10]||'');const lines=r.t==='d'?Math.max(1,memo.split('\n').reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/40)),0)):1;const rh=r.t==='d'?Math.min(409,Math.max(30,lines*14)):20;
     h+='<tr style="height:'+rh+'pt">';
     if(i===0)h+=rtd(esc(g.grp),bg+'text-align:center;font-weight:700;',' rowspan="'+g.rows.length+'"');
     if(r.t==='sum'){h+=rtd('합계',bg+'text-align:center;font-weight:700;',' colspan="4"');h+=rtd(NUM(c[5]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg+TH,' colspan="6"');h+=rtd(NUM(c[16]),bg+RACC+'font-weight:700;'+TH);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg);h+=rtd('',bg)}
@@ -984,13 +988,13 @@ function mgRptXlsx(T){const ST=xlStyles();const S=o=>ST.get(o);const hex=c=>Stri
     if(row.t==='s'||row.t==='st'){const bg=hex(RBG[row.grp||'합계']);push([null,...c.map((v,i)=>({v,s:S({b:1,fill:bg,border:'thin',h:i?'right':'center',num:i>0})}))],20);return}
     if(row.t==='blank'){push([]);return}
     if(row.t==='h2'){const H=['구분','권역','코드','업체명','','미수채권','연체개월','결제기일','보증금액\n(보증금+보증보험)','법조치현황','세부 진행내역','','','','','','수금금액','잔여\n미수금','금주수금','청구년월','최종수금일'];const rn=push([null,...H.map((v,i)=>({v,s:S({b:1,fill:HB,border:bd(i),wrap:1,h:i===10?'left':'center'})}))],30);merges.push('E'+rn+':F'+rn,'L'+rn+':Q'+rn);return}
-    if(row.t==='d'){const bg=hex(RBG[row.grp]||'#eeeeee');const memo=String(c[10]||'');const lines=Math.max(1,...memo.split('\n').map(l=>Math.ceil(l.length/58)));
+    if(row.t==='d'){const bg=hex(RBG[row.grp]||'#eeeeee');const memo=String(c[10]||'');const lines=Math.max(1,memo.split('\n').reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/40)),0));
       const cells=[null];c.forEach((v,i)=>{let st;if(i===0)st={b:1,fill:bg,border:'thin'};else if(i===3||i===4)st={h:'left',border:'thin',wrap:1};else if(i===10)st={h:'left',border:bd(i),wrap:1};else if([5,8,16,17].includes(i))st={h:'right',border:bd(i),num:1};else if(i===6||i===7)st={color:'1F3FBF',border:bd(i)};else st={border:bd(i)};
         cells.push({v:(i===0&&!v)?'':(typeof v==='number'?v:String(v||'')),s:S(st)})});
-      const rn=push(cells,Math.max(30,lines*15));merges.push('E'+rn+':F'+rn,'L'+rn+':Q'+rn);row._rn=rn;return}
-    if(row.t==='sum'){const bg=hex(RBG[row.grp]||'#eeeeee');const cells=[null,{v:'',s:S({b:1,fill:bg,border:'thin'})},{v:'합계',s:S({b:1,fill:bg,border:'thin'})}];for(let i=2;i<=20;i++){const v=c[i];cells.push({v:(i===5||i===16)?v:'',s:S({b:1,fill:bg,border:bd(i),h:'right',num:(i===5||i===16)})})}const rn=push(cells,20);merges.push('C'+rn+':F'+rn,'L'+rn+':Q'+rn);return}});
+      const rn=push(cells,Math.min(409,Math.max(30,lines*14)));merges.push('E'+rn+':F'+rn,'L'+rn+':Q'+rn);row._rn=rn;return}
+    if(row.t==='sum'){const bg=hex(RBG[row.grp]||'#eeeeee');const cells=[null,{v:'',s:S({b:1,fill:bg,border:'thin'})},{v:'합계',s:S({b:1,fill:bg,border:'thin'})}];for(let i=2;i<=20;i++){const v=c[i];cells.push({v:(i===5||i===16)?v:'',s:S({b:1,fill:bg,border:bd(i),h:'right',num:(i===5||i===16)})})}const rn=push(cells,20);merges.push('C'+rn+':F'+rn,'L'+rn+':Q'+rn);row._rn=rn;return}});
   /* 구분 세로 병합: 같은 그룹의 d 행 + 합계 행 */
-  let gs=null,gr=null;T.forEach(row=>{if(row.t==='d'){if(gr!==row.grp){gs=row._rn;gr=row.grp}}else if(row.t==='sum'&&gs){const rn=rows.length;merges.push('B'+gs+':B'+rn);gs=null;gr=null}});
+  let gs=null,gr=null;T.forEach(row=>{if(row.t==='d'){if(gr!==row.grp){gs=row._rn;gr=row.grp}}else if(row.t==='sum'&&gs){merges.push('B'+gs+':B'+row._rn);gs=null;gr=null}});
   const widths=[2,8,7,8,12,12,12,8,8,13,9,8,8,8,8,8,8,12,12,8,12,11];
   const u8=xlWorkbook([{name:'미수채권',xml:xlSheet(rows,merges,widths)}],ST.xml());const d=new Date();const nm='주간회의_미수채권_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);return nm}
 function mgRptSumHtml(T){const rows=T.filter(r=>r.t==='s'||r.t==='st');const title=T[0].cells[0];
