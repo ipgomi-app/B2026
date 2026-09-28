@@ -190,7 +190,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </div>
 <div class="tabpane" id="pane-tgc">
 <div class="grid">
-<div class="card"><h2>1. 타겟업체 데이터 <span class="hint" style="margin:0">(머리글 포함 전체 · 구분 Target · 진행단계로 계약/견적/방문 표 분리)</span></h2><textarea id="tg-src" style="min-height:130px" placeholder="타겟업체 리스트를 머리글(NO, 권역, 지점, 담당자, 코드, 업체, … 방문, 견적, 계약, … 진행단계, 효과금액, 세부내용, 빅스중복 …)부터 그대로 붙여넣기"></textarea><div class="hint" id="tg-src-stat"></div></div>
+<div class="card"><h2>1. 타겟업체 데이터 <span class="hint" style="margin:0">(머리글 포함 전체 · 구분 Target · 빅스중복 '중복' 제외 · 진행단계로 계약/견적/방문 표 분리)</span></h2><textarea id="tg-src" style="min-height:130px" placeholder="타겟업체 리스트를 머리글(NO, 권역, 지점, 담당자, 코드, 업체, … 방문, 견적, 계약, … 진행단계, 효과금액, 세부내용, 빅스중복 …)부터 그대로 붙여넣기"></textarea><div class="hint" id="tg-src-stat"></div></div>
 <div class="card"><h2>2. 경쟁사(BIGS) 자료 <span class="hint" style="margin:0">(구분 BIGS 행 · 경쟁사매출·KPP매출·점유율 · 자료 받으면 인식 완성)</span></h2><textarea id="tg-comp" style="min-height:130px" placeholder="경쟁사매출 자료를 머리글 포함 붙여넣기 (코드, 경쟁사전체, 경쟁사PPS, 경쟁사단가, KPP전체, PPS, KPP단가, 점유율 KPP, AJ). 자료 형식을 받으면 인식을 맞춥니다"></textarea><div class="hint" id="tg-comp-stat"></div></div>
 </div>
 <div class="card"><h2>▣ 계약 · 견적 · 방문업체 표</h2><div class="row" style="margin-bottom:8px"><button id="tg-run">표 작성</button><button class="sec" id="tg-copyall">전체 서식 복사 (B110에 붙여넣기)</button><button class="sec" id="tg-xlsx">엑셀 파일로 저장</button><span class="hint" id="tg-stat" style="margin:0"></span></div><div id="tg-out" style="overflow:auto"></div></div>
@@ -1393,7 +1393,7 @@ function tgYM(d){const m=String(d||'').match(/(\d{2,4})\D+(\d{1,2})/);return m?S
 function tgBuild(){const src=document.getElementById('tg-src').value;const st=document.getElementById('tg-stat');if(!src.trim()){st.textContent='타겟업체 데이터를 붙여넣으세요';return}
   const P=tgParse(src);if(!P){st.textContent='인식 실패: 진행단계·업체(코드) 머리글 행이 필요합니다';return}const CP=tgParseComp(document.getElementById('tg-comp').value);
   const regK=r=>{const k=Object.keys(TG_REG).find(x=>String(r).startsWith(x));return k?TG_REG[k]:9};TG={};const msg=[];
-  TG_KIND.forEach(K=>{const list=P.rows.filter(x=>x.stage===K.k).sort((a,b)=>(a.grp===b.grp?0:a.grp==='BIGS'?-1:1)||(regK(a.reg)-regK(b.reg)));
+  TG_KIND.forEach(K=>{const list=P.rows.filter(x=>x.stage===K.k&&!x.bigsDup)/* 빅스중복 '중복' 타겟은 제외(BIGS 자료로 표시) */.sort((a,b)=>(a.grp===b.grp?0:a.grp==='BIGS'?-1:1)||(regK(a.reg)-regK(b.reg)));
     TG[K.k]=list.map(x=>{const c=CP[x.code]||{};const r=[x.grp,x.code,x.name,x.reg,x.br,x.emp,c.cAll||'',c.cPps||'',c.cUp||'',c.kAll||'',c.kPps||'',c.kUp||'',c.sK||'',c.sA||'',x.visit];if(K.ext.length>1)r.push(x.quote);if(K.grp)r.push(tgYM(x.cont),x.amt||'');r.push(x.memo);return r});
     msg.push(K.k+' '+list.length+'(BIGS '+list.filter(x=>x.grp==='BIGS').length+')')});
   document.getElementById('tg-out').innerHTML=TG_KIND.map(K=>'<div class="row" style="margin:12px 0 4px"><button class="sec xs" data-tgcopy="'+K.k+'">'+K.t.slice(2)+' 서식 복사</button></div>'+tgHtml(K,true)).join('');
@@ -1424,7 +1424,7 @@ function tgXlsx(){const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=
   const u8=xlWorkbook([{name:'타겟업체',xml:xlSheet(rows,merges,widths)}],ST.xml());const d=new Date();const nm='타겟_계약견적방문_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);return nm}
 document.getElementById('tg-run').onclick=tgBuild;document.getElementById('tg-copyall').onclick=tgCopyAll;
 document.getElementById('tg-xlsx').onclick=()=>{if(!TG)tgBuild();if(!TG)return;document.getElementById('tg-stat').textContent='저장: '+tgXlsx()};
-['input','change'].forEach(ev=>{document.getElementById('tg-src').addEventListener(ev,()=>{const v=document.getElementById('tg-src').value,s=document.getElementById('tg-src-stat');if(!v.trim()){s.textContent='';return}const P=tgParse(v);if(!P){s.textContent='인식 실패: 진행단계·업체 머리글이 필요합니다';return}const n=k=>P.rows.filter(x=>x.stage===k).length;s.textContent=P.rows.length+'행 인식 · 계약 '+n('계약')+' · 견적 '+n('견적')+' · 방문 '+n('방문')+(P.C.visit<0?' · 최종방문일 열 없음':'')+(P.C.quote<0?' · 최종견적일 열 없음':'')});
+['input','change'].forEach(ev=>{document.getElementById('tg-src').addEventListener(ev,()=>{const v=document.getElementById('tg-src').value,s=document.getElementById('tg-src-stat');if(!v.trim()){s.textContent='';return}const P=tgParse(v);if(!P){s.textContent='인식 실패: 진행단계·업체 머리글이 필요합니다';return}const n=k=>P.rows.filter(x=>x.stage===k&&!x.bigsDup).length;s.textContent=P.rows.length+'행 인식 · 빅스중복 제외 '+P.rows.filter(x=>x.bigsDup).length+' · 계약 '+n('계약')+' · 견적 '+n('견적')+' · 방문 '+n('방문')+(P.C.visit<0?' · 최종방문일 열 없음':'')+(P.C.quote<0?' · 최종견적일 열 없음':'')});
   document.getElementById('tg-comp').addEventListener(ev,()=>{const v=document.getElementById('tg-comp').value;document.getElementById('tg-comp-stat').textContent=v.trim()?Object.keys(tgParseComp(v)).length+'업체 인식':''})});
 document.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',e=>{if(e.isTrusted)delete t.dataset.fromData}));/* 직접 고친 칸은 데이터 탭 자료로 다시 덮지 않음 */
 </script>
