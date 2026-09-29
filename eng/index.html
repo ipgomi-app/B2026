@@ -510,7 +510,7 @@
       '<div class="row"><button class="primary" id="efSave">' + (it.isNew ? '신규 업체로 저장' : '본문 변경 저장') + '</button>' + (state.edits[state.back[it.key] || it.key] ? '<button id="efUndo">수정 취소(원래대로)</button>' : '') + '<span class="muted" id="efSt"></span></div>';
     const upd = () => { const on = [...box.querySelectorAll('#ef_flags input:checked')].map((x) => x.value); $('msBtn').textContent = (on.length ? on.map((k) => E.FLAG_LABEL[k]).join(', ') : '선택 안 함') + '  ▾'; liveCheck(); };
     $('msBtn').addEventListener('click', () => { const p = box.querySelector('.pop'); p.hidden = !p.hidden; });
-    box.querySelectorAll('#ef_flags input').forEach((x) => x.addEventListener('change', upd));
+    box.querySelectorAll('#ef_flags input').forEach((x) => x.addEventListener('change', () => { upd(); box.querySelector('#ef_flags .pop').hidden = true; })); // 고르면 바로 닫힘
     $('ef_task').addEventListener('input', liveCheck);
     upd();
     $('efSave').addEventListener('click', saveForm);
