@@ -79,7 +79,8 @@
     const ws = wb.worksheets;
     const pool = ws.find((s) => s.name.includes('수주풀')) || null;
     const sum = ws.find((s) => s.name === '영남영업본부') || ws.find((s) => s.state === 'visible' && s !== pool && /영업/.test(s.name)) || null;
-    return { pool, sum };
+    const third = ws.find((s) => s.state === 'visible' && s !== pool && s !== sum && /재영업|창고/.test(s.name)) || ws.find((s) => s.state === 'visible' && s !== pool && s !== sum) || null;
+    return { pool, sum, third };
   }
 
   // ---------- 수주풀 읽기 ----------
@@ -623,7 +624,10 @@
     [/^▶LE동행방문대상/, 'leTarget'], [/^▶LE차주방문요청/, 'leNext'], [/^▶계약성사/, 'contract'],
     [/^▶금주주요업체/, 'main'], [/^▶전주LE동행방문/, 'le'], [/^▶전주재방문/, 'rev'],
     [/^◎금주주요업체/, 'bonbuWeek'], [/^◎본부니즈\/견적주요업체리스트/, 'bonbuList'],
+    [/^재영업대상$/, 'reList'], [/^창고이슈업체$/, 'whList'],
   ];
+  // ▶/◎ 제목 + 본부 리스트 아래 하위 제목(재영업 대상 / 창고이슈업체)
+  const isSecTitle = (t) => /^[▶◎]/.test(t) || /^(재영업대상|창고이슈업체)$/.test(t);
   const FIELD_OF = {
     '구분': 'k', '주차': 'k', '팀/권역': 'region', '팀권역': 'region', '담당자': 'mgr', '그룹/일반': 'grp', '코드': 'code', '업체명': 'name',
     '추진과제/범위': 'task', '진행단계': 'stage', '예상매출(억원)': 'amt', '사업시기': 'period', '계약예상시기': 'period',
@@ -636,7 +640,7 @@
     if (!t0) return null;
     const merges = rowMergeMap(ws);
     const last = ws.rowCount;
-    const isTitle = (r) => { const t = norm(text(ws.getCell(r, 2).value)); return /^[▶◎]/.test(t) ? t : null; };
+    const isTitle = (r) => { const t = norm(text(ws.getCell(r, 2).value)); return isSecTitle(t) ? t : null; };
     const hasVal = (r) => { for (let c = 2; c <= maxCol; c++) if (trim(text(ws.getCell(r, c).value))) return true; return false; };
     const secs = [];
     let r = t0.r;
@@ -787,6 +791,187 @@
     return { title: norm('◎  금주 주요 업체'), kind: 'bonbuWeek', titleRow: title, header, cols, data: [data], tail: [clone(list.tail[0] || { cells: title.cells.map(() => ({ v: null, s: {} })), height: 18, merges: [] })] };
   }
 
+  // ---------- 3번째 시트(재영업 및 창고이슈업체) ↔ 앞시트 본부 니즈/견적 리스트 ----------
+  const TH_FIELD = {
+    '팀/권역': 'region', '팀권역': 'region', '담당자': 'mgr', '그룹/일반': 'grp', '코드': 'code', '업체명': 'name', '추진과제/범위': 'task', '진행단계': 'stage',
+    '예상매출(억원)': 'amt', '사업시기': 'period', '방문계획': 'plan', '방문실적(신규)': 'newv', '방문실적(재방문)': 'rev', 'LE동행방문실적': 'le',
+    '재방문여부': 'revYN', '동행방문여부': 'leYN', '주요이슈및고객사Needs': 'text', '신축/이전시기': 'build', '주차': 'addWeek', '추가진행주차': 'addWeek', '추가진행현황': 'addText',
+  };
+  const thCols = (texts) => { const cols = {}; texts.forEach((t, i) => { const f = TH_FIELD[norm(t)]; if (f && !(f in cols)) cols[f] = i + 1; }); return cols; };
+  const isThHdr = (texts) => { const k = texts.map(norm); return k.includes('업체명') && k.includes('코드'); };
+  const rowKey = (sn, cols) => trim(text(fieldVal(sn, cols, 'code'))) + '|' + trim(text(fieldVal(sn, cols, 'name')));
+  function readThird(ws) {
+    const maxCol = 30; const merges = rowMergeMap(ws);
+    const tables = []; let cur = null;
+    for (let r = 1; r <= ws.rowCount; r++) {
+      const sn = snapRow(ws, r, maxCol, merges);
+      const ts = sn.cells.map((c) => text(c.v));
+      if (isThHdr(ts)) { cur = { header: sn, cols: thCols(ts), rows: [] }; tables.push(cur); continue; }
+      if (!cur || !trim(text(fieldVal(sn, cur.cols, 'name')))) continue;
+      sn.key = rowKey(sn, cur.cols); cur.rows.push(sn);
+    }
+    return { ws, maxCol, tables };
+  }
+  function writeThird(t) {
+    const { ws, maxCol } = t;
+    const blank = { cells: new Array(maxCol).fill(null).map(() => ({ v: null, s: {} })), height: undefined, merges: [] };
+    const seq = [blank];
+    t.tables.forEach((tb, i) => { if (i) seq.push(clone(blank)); seq.push(tb.header); tb.rows.forEach((sn) => seq.push(sn)); });
+    const end = Math.max(ws.rowCount, seq.length);
+    unmergeRows(ws, 1, end);
+    seq.forEach((sn, i) => writeRow(ws, i + 1, sn, maxCol, null));
+    for (let r = seq.length + 1; r <= end; r++) writeRow(ws, r, null, maxCol, null);
+    seq.forEach((sn, i) => (sn.merges || []).forEach(([a, b]) => { if (b > a) ws.mergeCells(i + 1, a, i + 1, b); }));
+  }
+  // 권역 재영업·창고이슈 붙여넣기 → [{rows:[{get(f), region, key, fields}]}] (표 순서대로)
+  function parseThirdPaste(str) {
+    const grid = parseTSV(str); const tables = []; let cur = null;
+    grid.forEach((row) => {
+      if (isThHdr(row)) { const idx = {}; row.forEach((t, j) => { const f = TH_FIELD[norm(t)]; if (f && !(f in idx)) idx[f] = j; }); cur = { idx, rows: [] }; tables.push(cur); return; }
+      if (!cur) return;
+      const idx = cur.idx; const g = (f) => (idx[f] == null ? '' : row[idx[f]] == null ? '' : String(row[idx[f]]));
+      if (!trim(g('name'))) return;
+      cur.rows.push({ get: g, fields: Object.keys(idx), region: trim(g('region')), key: trim(g('code')) + '|' + trim(g('name')), name: trim(g('name')) });
+    });
+    if (!tables.length) throw new Error('재영업·창고이슈 붙여넣기에서 헤더(코드/업체명) 행을 찾지 못했습니다.');
+    return tables;
+  }
+  function thirdVal(f, raw) {
+    if (f === 'text' || f === 'addText') { const v = String(raw).replace(/\r\n?/g, '\n').replace(/\n+$/, ''); return trim(v) ? v : null; }
+    if (f === 'amt') { const t = trim(raw).replace(/,/g, ''); return t === '' ? null : /^-+$/.test(t) ? 0 : isFinite(Number(t)) ? Number(t) : trim(raw); }
+    if (f === 'code') { const t = trim(raw); return /^\d+$/.test(t) ? Number(t) : t || null; }
+    if (['addWeek', 'plan', 'newv', 'rev', 'le'].includes(f)) return trim(raw) ? (isWeek(wk(raw)) ? wk(raw) : trim(raw)) : null;
+    return trim(raw) === '' ? null : trim(raw);
+  }
+  // 권역 붙여넣기 반영: 해당 권역 행 중 보고 주차(주차·방문실적)에 해당하는 행만 갱신, 새 업체는 표 끝에 추가
+  function mergeThird(third, region, pasted, W) {
+    const res = { region, updated: [], added: [], same: 0, skipped: 0 };
+    pasted.forEach((pt, ti) => {
+      const tb = third.tables[ti]; if (!tb) return;
+      const at = {}; tb.rows.forEach((sn, i) => { if (!(sn.key in at)) at[sn.key] = i; });
+      pt.rows.filter((r) => r.region === region).forEach((r) => {
+        const weeks = ['addWeek', 'newv', 'rev', 'le'].map((f) => wk(r.get(f))).filter(Boolean);
+        const put = (sn, isNew) => r.fields.forEach((f) => {
+          if (!tb.cols[f]) return;
+          let v = thirdVal(f, r.get(f));
+          if (!isNew && f === 'amt' && sameShown(fieldVal(sn, tb.cols, 'amt'), v)) v = fieldVal(sn, tb.cols, 'amt');
+          setField(sn, tb.cols, f, v);
+        });
+        if (r.key in at) {
+          if (!weeks.includes(W)) { res.skipped++; return; }
+          const sn = tb.rows[at[r.key]]; const before = JSON.stringify(sn.cells.map((c) => c.v));
+          put(sn, false);
+          if (JSON.stringify(sn.cells.map((c) => c.v)) !== before) res.updated.push(r.name); else res.same++;
+        } else {
+          const base = tb.rows[tb.rows.length - 1];
+          const sn = base ? clone(base) : plainFrom(tb.header);
+          sn.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; }); sn.hidden = false; sn.outline = 0;
+          put(sn, true); sn.key = r.key; tb.rows.push(sn); at[r.key] = tb.rows.length - 1; res.added.push(r.name);
+        }
+      });
+    });
+    return res;
+  }
+
+  // 본부 니즈/견적 리스트: 3번째 시트 재영업 표(없으면 앞시트 리스트)에 수정·본부 선택·신규 추가를 반영하고
+  // 앞시트에 '◎ 본부 니즈/견적 주요 업체 리스트' → '재영업 대상' 표 → '창고이슈업체' 표로 쓴다
+  function bonbuLists(secs, third, rows, L, W, opts, log) {
+    const byKey = {}; rows.forEach((sn) => { if (!byKey[sn.key]) byKey[sn.key] = sn; });
+    const F = (sn) => fields(sn, L);
+    const bonbuSel = new Set(opts.bonbu || []);
+    const titleSec = secs.find((s) => s.kind === 'bonbuList');
+    let reSec = secs.find((s) => s.kind === 'reList');
+    let whSec = secs.find((s) => s.kind === 'whList');
+    const src0 = reSec && reSec.header ? reSec : titleSec && titleSec.header ? titleSec : null;
+    if (!titleSec || !src0) return new Set();
+    const src = { header: clone(src0.header), cols: src0.cols, data: src0.data.slice() };
+    const useThird = third && third.tables[0] && third.tables[0].rows.length;
+    const T1 = useThird ? third.tables[0] : { header: src.header, cols: src.cols, rows: src.data.map((sn) => Object.assign(sn, { key: listKey(sn, src.cols) })) };
+    const T2 = useThird ? third.tables[1] || null : null;
+    const tabs = [T1, T2].filter(Boolean);
+    // 화면에서 수정한 업체는 같은 값으로, 삭제한 업체는 뺀다
+    const ed = opts._edit;
+    if (ed) tabs.forEach((tb) => {
+      tb.rows = tb.rows.filter((sn) => !ed.deleted.has(sn.key));
+      tb.rows.forEach((sn) => {
+        const k = ed.renamed[sn.key] || sn.key;
+        if (!ed.touched.has(k) || !byKey[k]) return;
+        const f = F(byKey[k]);
+        const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period };
+        Object.keys(vals).forEach((x) => setField(sn, tb.cols, x, vals[x]));
+        if (wk(text(fieldVal(sn, tb.cols, 'addWeek'))) === W) setField(sn, tb.cols, 'addText', clone(f.needs)); else setField(sn, tb.cols, 'text', clone(f.needs));
+        sn.key = k;
+      });
+    });
+    // '본부' 체크 업체: 재영업 표에 있으면 주차/추가 진행현황 갱신, 없으면 (니즈확인·견적·계약 자동 포함) 맨 아래에 권역 순·매출 순 추가
+    const have = new Set(T1.rows.map((sn) => sn.key));
+    T1.rows.forEach((sn) => {
+      const p = byKey[sn.key]; if (!p || !bonbuSel.has(sn.key)) return;
+      const f = F(p);
+      setField(sn, T1.cols, 'addWeek', W); setField(sn, T1.cols, 'addText', clone(f.needs));
+      log.bonbuUpdated.push(f.name);
+    });
+    const adds = [];
+    rows.forEach((sn) => {
+      if (have.has(sn.key)) return;
+      const f = F(sn);
+      const auto = opts.addBonbu !== false && !isOldRow(f) && KEY_STAGES.includes(f.stage);
+      if (!auto && !bonbuSel.has(sn.key)) return;
+      have.add(sn.key); adds.push({ f, key: sn.key, picked: bonbuSel.has(sn.key) });
+    });
+    adds.sort((a, b) => (REGION_ORDER[a.f.region] ?? 9) - (REGION_ORDER[b.f.region] ?? 9) || (b.f.amt || 0) - (a.f.amt || 0));
+    adds.forEach(({ f, key, picked }) => {
+      const base = T1.rows[T1.rows.length - 1];
+      const nr = base ? clone(base) : plainFrom(T1.header);
+      nr.hidden = false; nr.outline = 0;
+      nr.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; });
+      const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period,
+        plan: f.plan || null, newv: f.newv || null, rev: f.rev || null, le: f.le || null,
+        revYN: !f.newv && !f.rev ? '미방문' : f.newv && !f.rev ? '신규방문' : '재방문', leYN: f.le ? '동행방문' : 'X', text: clone(f.needs) };
+      if (picked) vals.addWeek = W;
+      Object.keys(vals).forEach((k) => setField(nr, T1.cols, k, vals[k]));
+      nr.key = key; T1.rows.push(nr);
+      log.bonbuAdded.push(f.name);
+    });
+
+    // 앞시트 리스트 행 만들기 (지난주 숨김 행은 그대로 숨김)
+    const hid = {}; [src].concat(whSec && whSec.header ? [whSec] : []).forEach((sec) => sec.data.forEach((sn) => { hid[listKey(sn, sec.cols)] = { hidden: sn.hidden, outline: sn.outline }; }));
+    const dataStyle = src.data[0] || plainFrom(src.header);
+    const LF = ['region', 'mgr', 'grp', 'code', 'name', 'task', 'stage', 'amt', 'period', 'text', 'addWeek', 'addText'];
+    const toList = (tb, cols, wh) => tb.rows.map((row) => {
+      const nr = clone(dataStyle);
+      nr.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; });
+      LF.forEach((f) => setField(nr, cols, f, clone(fieldVal(row, tb.cols, wh && f === 'period' && tb.cols.build ? 'build' : f))));
+      if (wh && tb.cols.build && cols.period) { const x = row.cells[tb.cols.build - 1]; if (x && x.s && x.s.fill) nr.cells[cols.period - 1].s = Object.assign({}, nr.cells[cols.period - 1].s, { fill: clone(x.s.fill), font: Object.assign({}, nr.cells[cols.period - 1].s.font, x.s.font && x.s.font.bold ? { bold: true } : {}) }); }
+      const h = hid[listKey(nr, cols)]; nr.hidden = !!(h && h.hidden); nr.outline = (h && h.outline) || 0;
+      return nr;
+    });
+    const sub = (label) => { const t = clone(titleSec.titleRow); t.cells.forEach((c) => { c.v = null; delete c.f; }); t.cells[1].v = label; if (t.cells[1].s && t.cells[1].s.font) t.cells[1].s.font = Object.assign({}, t.cells[1].s.font, { bold: false }); return t; };
+    // 시트 끝 여백 행: 예전 양식은 리스트 뒤, 새 양식은 마지막 표(창고이슈 → 재영업) 뒤
+    const tail = titleSec.header ? titleSec.tail : whSec ? whSec.tail : reSec ? reSec.tail : [];
+    const oneBlank = () => [clone((tail[0]) || { cells: dataStyle.cells.map(() => ({ v: null, s: {} })), height: 18, merges: [] })];
+    if (!reSec) reSec = { kind: 'reList', title: '재영업대상', titleRow: sub('재영업 대상'), header: clone(src.header), cols: src.cols, data: [], tail: [] };
+    reSec.data = toList(T1, reSec.cols || src.cols, false);
+    const idx = secs.indexOf(titleSec);
+    titleSec.titleRow.cells[1].v = '◎  본부 니즈/견적 주요 업체 리스트'; delete titleSec.titleRow.cells[1].f;
+    titleSec.header = null; titleSec.data = []; titleSec.tail = [];
+    if (!secs.includes(reSec)) secs.splice(idx + 1, 0, reSec);
+    if (T2) {
+      if (!whSec) {
+        const h = clone(src.header);
+        const put = (f, v) => { const c = src.cols[f]; if (c) h.cells[c - 1].v = v; };
+        put('amt', '예상매출\n(억원)'); put('period', '신축/이전시기'); put('addWeek', '주차');
+        whSec = { kind: 'whList', title: '창고이슈업체', titleRow: sub('창고이슈업체'), header: h, cols: src.cols, data: [], tail: [] };
+        secs.splice(secs.indexOf(reSec) + 1, 0, whSec);
+      }
+      whSec.data = toList(T2, whSec.cols && whSec.cols.name ? whSec.cols : src.cols, true);
+      reSec.tail = oneBlank();
+      whSec.tail = tail;
+    } else if (!whSec) reSec.tail = tail;
+    else reSec.tail = oneBlank();
+    return new Set(T1.rows.map((sn) => sn.key));
+  }
+
   function codeVal(f) { return f.codeRaw != null && f.codeRaw !== '' ? clone(f.codeRaw) : (/^\d+$/.test(f.code) ? Number(f.code) : f.code); }
   function amtVal(f) { return typeof f.amtRaw === 'number' ? f.amtRaw : (f.amt == null ? null : f.amt); }
 
@@ -819,56 +1004,8 @@
     const choose = opts.selection || {};
     const bonbuSel = new Set(opts.bonbu || []);
 
-    // 본부 니즈/견적 리스트
-    const list = secs.find((s) => s.kind === 'bonbuList');
-    if (list && list.cols) {
-      // 화면에서 수정한 업체는 리스트 행도 같은 값으로, 삭제한 업체는 리스트에서도 뺀다
-      const ed = opts._edit;
-      if (ed) {
-        list.data = list.data.filter((sn) => !ed.deleted.has(listKey(sn, list.cols)));
-        list.data.forEach((sn) => {
-          const k0 = listKey(sn, list.cols); const k = ed.renamed[k0] || k0;
-          if (!ed.touched.has(k) || !byKey[k]) return;
-          const f = F(byKey[k]);
-          const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period };
-          Object.keys(vals).forEach((x) => setField(sn, list.cols, x, vals[x]));
-          if (text(fieldVal(sn, list.cols, 'addWeek')) === W) setField(sn, list.cols, 'addText', clone(f.needs)); else setField(sn, list.cols, 'text', clone(f.needs));
-        });
-      }
-      const have = new Set(list.data.map((sn) => listKey(sn, list.cols)));
-      // 화면에서 '본부'로 고른 업체 중 이미 리스트에 있는 업체 → 추가진행 주차/현황
-      list.data.forEach((sn) => {
-        const k = listKey(sn, list.cols); const p = byKey[k];
-        if (!p || !bonbuSel.has(k)) return;
-        const f = F(p);
-        setField(sn, list.cols, 'addWeek', W);
-        setField(sn, list.cols, 'addText', clone(f.needs));
-        log.bonbuUpdated.push(f.name);
-      });
-      // 새로 추가: 니즈확인/견적/계약이 된 업체(자동) + 화면에서 '본부'로 고른 업체 → 맨 아래에 권역 순, 매출 상위 순
-      const style = list.data[list.data.length - 1] || list.header;
-      const adds = [];
-      rows.forEach((sn) => {
-        if (have.has(sn.key)) return;
-        const f = F(sn);
-        const auto = opts.addBonbu !== false && !isOldRow(f) && KEY_STAGES.includes(f.stage);
-        if (!auto && !bonbuSel.has(sn.key)) return;
-        have.add(sn.key);
-        adds.push({ f, picked: bonbuSel.has(sn.key) });
-      });
-      adds.sort((a, b) => (REGION_ORDER[a.f.region] ?? 9) - (REGION_ORDER[b.f.region] ?? 9) || (b.f.amt || 0) - (a.f.amt || 0));
-      adds.forEach(({ f, picked }) => {
-        const nr = clone(style);
-        nr.hidden = false; nr.outline = 0;
-        nr.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; });
-        const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: clone(f.needs) };
-        if (picked) { vals.addWeek = W; }
-        Object.keys(vals).forEach((k) => setField(nr, list.cols, k, vals[k]));
-        list.data.push(nr);
-        log.bonbuAdded.push(f.name);
-      });
-    }
-    const bonbuKeys = new Set(list ? list.data.map((sn) => listKey(sn, list.cols)) : []);
+    // 본부 니즈/견적 리스트 (3번째 시트 재영업·창고이슈 표 기준)
+    const bonbuKeys = bonbuLists(secs, opts._third, rows, L, W, opts, log);
     const cands = weekCandidates(rows, L, W, bonbuKeys);
 
     const coRow = (sec, f, k) => {
@@ -900,7 +1037,7 @@
         });
       }
       // 앞시트의 옮겨 온 서술도 수주풀과 같은 규칙으로 오탈자·띄어쓰기 수정
-      if (opts.fixText !== false && ['leTarget', 'leNext', 'contract', 'bonbuList'].includes(sec.kind)) {
+      if (opts.fixText !== false && ['leTarget', 'leNext', 'contract', 'bonbuList', 'reList', 'whList'].includes(sec.kind)) {
         sec.data.forEach((sn) => sn.cells.forEach((c) => {
           if (typeof c.v === 'string' && (c.v.length >= 15 || c.v.includes('\n')) || (c.v && c.v.richText)) {
             const lg = []; c.v = fixValue(c.v, lg); if (lg.length) log.sheetFixes++;
@@ -911,13 +1048,6 @@
     fitUpperSections(ws, secs);
 
     const pos = writeSections(ws, info.start, info.end, secs, maxCol);
-    // 본부 리스트 제목: 업체 수를 수식으로 (행을 더 넣어도 자동 갱신)
-    if (list && list.cols && pos.list) {
-      const { title, first, last } = pos.list;
-      const nameCol = colLetter(list.cols.name);
-      const label = String(text(list.titleRow.cells[1].v)).replace(/\s*\d+\s*업체\s*$/, '');
-      ws.getCell(title, 2).value = { formula: '"' + label.replace(/"/g, '""') + ' "&COUNTA(' + nameCol + first + ':' + nameCol + Math.max(first, last) + ')&"업체"', result: label + ' ' + list.data.length + '업체' };
-    }
     return { cands, log };
   }
 
@@ -995,7 +1125,7 @@
   function fillSummarySections(ws, grid, off, kitInfo, maxCol) {
     const g = (r0, c) => { const row = grid[r0]; return row ? row[c - 1 + off.dc] : undefined; };
     const rowVals = (r0) => { const v = []; for (let c = 1; c <= maxCol; c++) v.push(g(r0, c) == null ? '' : g(r0, c)); return v; };
-    const titleOf = (r0) => { const t = norm(g(r0, 2)); return /^[▶◎]/.test(t) ? t : null; };
+    const titleOf = (r0) => { const t = norm(g(r0, 2)); return isSecTitle(t) ? t : null; };
     let r0 = -1;
     for (let i = 0; i < grid.length; i++) if (/^▶LE동행방문/.test(norm(g(i, 2)))) { r0 = i; break; }
     if (r0 < 0) throw new Error('영남영업본부 붙여넣기에서 "▶ LE 동행방문 대상 리스트" 를 찾지 못했습니다.');
@@ -1007,7 +1137,8 @@
       const title = titleOf(r);
       if (!title) { r++; continue; }
       let kind = 'other'; SECTION_KIND.forEach(([re, kk]) => { if (re.test(title)) kind = kk; });
-      const ks = kitSecs.find((s) => s.kind === kind) || kitSecs.find((s) => s.title === title) || kitMain;
+      const kk = kind === 'reList' || kind === 'whList' ? 'bonbuList' : kind; // 본부 리스트 하위 표는 본부 리스트 서식
+      const ks = kitSecs.find((s) => s.kind === kk) || kitSecs.find((s) => s.title === title) || kitMain;
       const sec = { title, kind, titleRow: clone(ks.titleRow), header: null, data: [], tail: [] };
       sec.titleRow.cells[1].v = cellVal(g(r, 2));
       let q = r + 1;
@@ -1019,14 +1150,14 @@
         while (q < grid.length && !titleOf(q) && rowHasVal(rowVals(q))) {
           const sn = clone(style);
           sn.cells.forEach((c, i) => { c.v = cellVal(rowVals(q)[i]); delete c.f; delete c.note; });
-          if (kind !== 'bonbuList') {
+          if (!['bonbuList', 'reList', 'whList'].includes(kind)) {
             let tc = 0; sec.header.cells.forEach((c, i) => { if (trim(text(c.v))) tc = i + 1; });
             if (tc) sn.height = estHeight(sn.cells[tc - 1].v, spanWidth(ws, sn, tc), (sn.cells[tc - 1].s.font && sn.cells[tc - 1].s.font.size) || 10, Math.min(style.height || 18, 27));
           }
           sec.data.push(sn); q++;
         }
       }
-      sec.tail = clone(ks.tail && ks.tail.length ? ks.tail : [{ cells: new Array(maxCol).fill(null).map(() => ({ v: null, s: {} })), height: 18, merges: [] }]);
+      sec.tail = kind === 'bonbuList' && !sec.header ? [] : clone(ks.tail && ks.tail.length ? ks.tail : [{ cells: new Array(maxCol).fill(null).map(() => ({ v: null, s: {} })), height: 18, merges: [] }]);
       while (q < grid.length && !titleOf(q)) q++;
       out.push(sec);
       r = q;
@@ -1341,8 +1472,7 @@
       const cols = sec.header.cells.map((c, i) => (trim(text(c.v)) ? i + 1 : null)).filter(Boolean);
       out[sec.kind] = { title: text(sec.titleRow.cells[1].v), headers: cols.map((c) => text(sec.header.cells[c - 1].v).replace(/\s+/g, ' ').trim()), rows: sec.data.map((sn) => cols.map((c) => text(sn.cells[c - 1].v))) };
     });
-    const list = info.secs.find((s) => s.kind === 'bonbuList');
-    out.bonbuKeys = list && list.cols ? list.data.map((sn) => listKey(sn, list.cols)) : [];
+    out.bonbuKeys = bonbuKeysOf(ctx);
     return out;
   }
 
@@ -1398,6 +1528,15 @@
       inp.rows = keep; inp.partial = true; inp.skipped = skipped; inp.week = W0;
     });
     const merged = mergeRows(tpl.rows, inputs, TL);
+    // 3번째 시트(재영업·창고이슈): 권역 붙여넣기는 보고 주차 행만 반영
+    const thirdWs = findSheets(tplWb).third;
+    const third = thirdWs ? readThird(thirdWs) : null;
+    const thirdLog = [];
+    if (third) Object.keys(opts.thirdInputs || {}).forEach((region) => {
+      const t = opts.thirdInputs[region]; if (!trim(t)) return;
+      if (!W0) throw new Error('보고 주차를 먼저 입력하세요.');
+      thirdLog.push(mergeThird(third, region, parseThirdPaste(t), W0));
+    });
     const log = merged.log;
     const fixes = opts.fixText === false ? {} : fixRows(merged.rows, TL);
     const ed = applyEdits(merged.rows, TL, opts.edits, opts.adds, opts.deletes);
@@ -1411,15 +1550,18 @@
       const f = fields(sn, TL); [f.newv, f.rev, f.le].forEach((w) => { if (isWeek(w) && (!latest || weekOrder(w) > weekOrder(latest))) latest = w; });
     }));
     const suggested = latest && weekOrder(latest) > weekOrder(tplWeek) ? latest : nextWeek(tplWeek);
-    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed };
+    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog };
   }
 
-  function preview(ctx, W) {
+  // 본부 니즈/견적 리스트(재영업 대상)에 이미 있는 업체
+  function bonbuKeysOf(ctx) {
+    if (ctx.third && ctx.third.tables[0] && ctx.third.tables[0].rows.length) return ctx.third.tables[0].rows.map((sn) => sn.key);
     const info = readSections(ctx.sum, sumMaxCol(ctx.sum));
-    const list = info && info.secs.find((s) => s.kind === 'bonbuList');
-    const keys = new Set();
-    if (list && list.cols) list.data.forEach((sn) => keys.add(trim(text(fieldVal(sn, list.cols, 'code'))) + '|' + trim(text(fieldVal(sn, list.cols, 'name')))));
-    return weekCandidates(ctx.rows, ctx.TL, W, keys);
+    const list = info && (info.secs.find((s) => s.kind === 'reList' && s.cols) || info.secs.find((s) => s.kind === 'bonbuList' && s.cols));
+    return list ? list.data.map((sn) => listKey(sn, list.cols)) : [];
+  }
+  function preview(ctx, W) {
+    return weekCandidates(ctx.rows, ctx.TL, W, new Set(bonbuKeysOf(ctx)));
   }
 
   function build(ExcelJS, tplWb, ctx, W, opts) {
@@ -1440,7 +1582,8 @@
     const maxCol = sumMaxCol(sum);
     const info = readSections(sum, maxCol);
     let res = { cands: [], log: {} };
-    if (info) { info.maxCol = maxCol; res = rebuildSections(sum, info, ctx.rows, TL, W, Object.assign({ _edit: ctx.edit }, opts)); }
+    if (info) { info.maxCol = maxCol; res = rebuildSections(sum, info, ctx.rows, TL, W, Object.assign({ _edit: ctx.edit, _third: ctx.third }, opts)); }
+    if (ctx.third && ctx.third.tables[0] && ctx.third.tables[0].rows.length) writeThird(ctx.third);
     else warn.push('하단 업체 목록(▶ LE 동행방문 대상 리스트)을 찾지 못해 목록 갱신을 건너뜀');
     // 4) 열 때 재계산
     tplWb.calcProperties = Object.assign({}, tplWb.calcProperties, { fullCalcOnLoad: true });

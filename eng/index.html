@@ -49,6 +49,7 @@
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   @media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+  h3.sub { margin: 16px 0 4px; font-size: 14px; } h3.sub .opt { font-weight: 400; color: #6b7a90; font-size: 12px; }
   .box { border: 1px dashed #b8c2d3; border-radius: 10px; padding: 10px 12px; background: #fbfcfe; }
   .box.filled { border-style: solid; border-color: #9fb4d9; background: var(--soft); }
   .box h3 { margin: 0 0 6px; font-size: 13.5px; display: flex; justify-content: space-between; gap: 6px; }
@@ -116,6 +117,9 @@
     <h2><span class="step">2</span>이번 주 권역 자료 붙여넣기</h2>
     <p class="how">권역 담당이 보낸 파일의 <b>영남대상업체(수주풀) 시트 전체</b>(또는 권역 시트, 머리글 행 포함)를 복사해 해당 권역 칸에 붙여넣으세요. 그 권역 업체 행만 반영됩니다. 비워두면 지난주 내용 그대로입니다.</p>
     <div class="grid3" id="regions"></div>
+    <h3 class="sub">권역 재영업·창고이슈업체 <span class="opt">선택</span></h3>
+    <p class="how">권역 파일의 <b>재영업 및 창고이슈업체 시트 전체</b>(재영업 대상 표 + 창고이슈업체 표, 머리글 포함)를 붙여넣으세요. 그 권역 행 중 <b>보고 주차에 업데이트된 행</b>(주차 또는 방문실적이 보고 주차)만 반영되고, 새 업체는 표 끝에 추가됩니다. 결과는 3번째 시트와 앞시트 <b>◎ 본부 니즈/견적 주요 업체 리스트</b>(재영업 대상 · 창고이슈업체)에 함께 들어갑니다.</p>
+    <div class="grid3" id="reRegions"></div>
   </section>
 
   <section class="card">
@@ -181,7 +185,7 @@
   const $ = (id) => document.getElementById(id);
   const REG = E.REGIONS;
   // tpl: {type:'paste'} | {type:'file', bytes, name}
-  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, confirmed: null, ctx: null,
+  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, confirmed: null, reRegions: {}, ctx: null,
     edits: {}, orig: {}, notes: {}, adds: [], deletes: [], delNames: {}, lists: {}, listNotes: {}, listsBase: null, back: {}, addKeys: [], ed: { group: 'upd', sel: null } };
 
   const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
@@ -244,6 +248,22 @@
     if (t.trim()) state.regions[r] = { type: 'paste', text: t }; else delete state.regions[r];
     markRegion(r); changed();
   }
+  // 권역 재영업·창고이슈 붙여넣기
+  function renderReRegions() {
+    $('reRegions').innerHTML = REG.map((r) =>
+      '<div class="box" id="rebox_' + r + '"><h3><span>' + r + ' 재영업·창고이슈</span><span class="tools"><button class="mini" data-rereset="' + r + '">초기화</button></span></h3>' +
+      '<textarea data-re="' + r + '" placeholder="' + r + ' 파일의 재영업 및 창고이슈업체 시트 전체 붙여넣기"></textarea><div class="st" id="res_' + r + '"></div></div>').join('');
+    $('reRegions').querySelectorAll('textarea').forEach((el) => el.addEventListener('input', debounce(() => setReText(el.dataset.re, el.value), 300)));
+    $('reRegions').querySelectorAll('[data-rereset]').forEach((el) => el.addEventListener('click', () => {
+      const r = el.dataset.rereset; $('reRegions').querySelector('textarea[data-re="' + r + '"]').value = ''; setReText(r, '');
+    }));
+  }
+  function setReText(r, t) {
+    if (t.trim()) state.reRegions[r] = t; else delete state.reRegions[r];
+    $('rebox_' + r).classList.toggle('filled', !!state.reRegions[r]);
+    status('res_' + r, '', state.reRegions[r] ? lines(t) + '행 붙여넣음' : '비어 있음 — 지난주 내용 유지');
+    changed();
+  }
   function markRegion(r) {
     const i = state.regions[r];
     $('rbox_' + r).classList.toggle('filled', !!i);
@@ -277,15 +297,22 @@
   }
   const week = () => E.wk($('week').value);
 
-  function renderLog(log) {
-    $('mergeLog').innerHTML = log.map((l) => {
+  function renderLog(log, tlog) {
+    const tl = (tlog || []).map((l) => {
+      const parts = ['<b>' + l.region + ' 재영업·창고이슈</b>', '변경 ' + l.updated.length, '그대로 ' + l.same];
+      if (l.skipped) parts.push('<span class="muted">보고 주차 외 ' + l.skipped + '행은 지난주 그대로</span>');
+      if (l.added.length) parts.push('<span class="badge new">신규 ' + l.added.length + '</span> ' + esc(l.added.join(', ')));
+      if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.join(', ')) + '</span>');
+      return '<div>' + parts.join(' · ') + '</div>';
+    }).join('');
+    $('mergeLog').innerHTML = (log.map((l) => {
       const parts = ['<b>' + l.region + '</b> (' + (l.week ? l.week + ' 방문 ' : '') + l.source + '행 반영)', '변경 ' + l.updated.length, '그대로 ' + l.same];
       if (l.skipped) parts.push('<span class="muted">' + (l.week || '금주') + ' 외 ' + l.skipped + '행은 지난주 제출본 그대로</span>');
       if (l.added.length) parts.push('<span class="badge new">신규 ' + l.added.length + '</span> ' + esc(l.added.map((a) => a.name).join(', ')));
       if (l.removed.length) parts.push('<span class="badge le">삭제 ' + l.removed.length + '</span> ' + esc(l.removed.map((a) => a.name).join(', ')));
       if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.slice(0, 8).map((u) => u.name).join(', ') + (l.updated.length > 8 ? ' …' : '')) + '</span>');
       return '<div>' + parts.join(' · ') + '</div>';
-    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>';
+    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>') + tl;
   }
 
   function checkCell(issues) {
@@ -324,7 +351,7 @@
     $('checkWrap').hidden = false;
   }
 
-  const engineOpts = async () => ({ week: week(), inputs: await engineInputs(), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
+  const engineOpts = async () => ({ week: week(), inputs: await engineInputs(), thirdInputs: Object.assign({}, state.reRegions), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
   const keyOfForm = (f) => String(f.code == null ? '' : f.code).trim() + '|' + String(f.name || '').trim();
 
   async function refreshCtx() {
@@ -335,7 +362,7 @@
     if (!state.listsBase) state.listsBase = E.readLists(ctx);
     state.back = {}; Object.keys(ctx.edit.renamed).forEach((o) => { state.back[ctx.edit.renamed[o]] = o; });
     state.addKeys = state.adds.map(keyOfForm);
-    renderLog(ctx.log);
+    renderLog(ctx.log, ctx.thirdLog);
     state.cands = E.preview(ctx, week());
     renderCands();
     if (!$('p2').hidden) renderEditor();
@@ -637,6 +664,8 @@
   if (!window.ExcelJS || !window.JSZip || !KIT) msg($('buildMsg'), 'err', '구성 파일(vendor/, kit.js, engine.js)을 불러오지 못했습니다. index.html 과 같은 폴더에 있는지 확인하세요.');
   renderRegions();
   REG.forEach(markRegion);
+  renderReRegions();
+  REG.forEach((r) => status('res_' + r, '', '비어 있음 — 지난주 내용 유지'));
 })();
 </script>
 </body>
