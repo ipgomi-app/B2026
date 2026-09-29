@@ -84,6 +84,7 @@
   .how b { color: var(--navy); }
   .box h3 .tools { display: inline-flex; gap: 4px; align-items: center; }
   button.mini, label.mini { padding: 2px 8px; font-size: 11.5px; border-radius: 6px; }
+  #confirmSt.ok { color: var(--ok); font-weight: 600; font-size: 13px; } #confirmSt.warn { color: #8a5a00; font-size: 13px; }
   .chk { font-size: 12px; } .chk.bad { color: var(--warn); } .chk.warn { color: #8a5a00; } .chk.ok { color: var(--ok); }
   .fix { font-size: 12px; color: #394256; }
   #candBody td, #checkWrap td { white-space: nowrap; }
@@ -133,6 +134,7 @@
         <thead><tr><th>권역</th><th>업체명</th><th>담당자</th><th>단계</th><th class="num">예상매출</th><th>방문</th><th>배치</th><th>본부</th><th>점검(이상유무)</th><th>수정이력</th></tr></thead>
         <tbody id="candBody"></tbody>
       </table></div>
+      <div class="row" style="margin-top:10px"><button class="primary blue" id="confirmBtn">배치·본부 확정</button><span id="confirmSt" class="muted"></span></div>
     </div>
   </section>
 
@@ -179,7 +181,7 @@
   const $ = (id) => document.getElementById(id);
   const REG = E.REGIONS;
   // tpl: {type:'paste'} | {type:'file', bytes, name}
-  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, ctx: null,
+  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, confirmed: null, ctx: null,
     edits: {}, orig: {}, notes: {}, adds: [], deletes: [], delNames: {}, lists: {}, listNotes: {}, listsBase: null, back: {}, addKeys: [], ed: { group: 'upd', sel: null } };
 
   const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
@@ -301,8 +303,9 @@
       const bon = '<label class="chk"><input type="checkbox" data-b="' + i + '"' + (state.bonbu[c.key] ? ' checked' : '') + '> ' + (c.inBonbu ? '본부 갱신' : '본부 추가') + '</label>';
       return '<tr><td>' + esc(c.region.slice(0, 2)) + '</td><td>' + esc(c.name) + '<div class="muted" style="font-size:11.5px">' + esc(c.task || '') + '</div></td><td>' + esc(c.mgr) + '</td><td>' + esc(c.stage) + '</td><td class="num">' + (c.amt == null ? '-' : c.amt) + '</td><td>' + tags + '</td><td>' + sel + '</td><td>' + bon + '</td><td class="wrap">' + checkCell(ctx.checks[c.key]) + '</td><td class="wrap fix">' + esc(ctx.fixes[c.key] || '-') + '</td></tr>';
     }).join('') || '<tr><td colspan="10" class="muted">보고 주차에 방문한 업체가 없습니다.</td></tr>';
-    $('candBody').querySelectorAll('select').forEach((el) => el.addEventListener('change', () => { state.placement[state.cands[+el.dataset.i].key] = el.value; updateEditCnt(); }));
-    $('candBody').querySelectorAll('input[data-b]').forEach((el) => el.addEventListener('change', () => { state.bonbu[state.cands[+el.dataset.b].key] = el.checked; }));
+    $('candBody').querySelectorAll('select').forEach((el) => el.addEventListener('change', () => { state.placement[state.cands[+el.dataset.i].key] = el.value; updateEditCnt(); showConfirm(); }));
+    $('candBody').querySelectorAll('input[data-b]').forEach((el) => el.addEventListener('change', () => { state.bonbu[state.cands[+el.dataset.b].key] = el.checked; showConfirm(); }));
+    showConfirm();
     $('candWrap').hidden = false;
     renderCheckList();
   }
@@ -344,6 +347,29 @@
   }
 
   // ---- 확인 창 ----
+  // ---- 배치·본부 확정 ----
+  function selectionNow() {
+    const placement = {}; state.cands.forEach((c) => { if (c.visit) placement[c.key] = state.placement[c.key] || c.place; });
+    const bonbu = state.cands.filter((c) => state.bonbu[c.key]).map((c) => c.key);
+    return { week: week(), placement, bonbu };
+  }
+  const sameSel = (a, b) => !!a && !!b && a.week === b.week && JSON.stringify(a.placement) === JSON.stringify(b.placement) && a.bonbu.join('\n') === b.bonbu.join('\n');
+  function selSummary(sel) {
+    const name = (k) => { const c = state.cands.find((x) => x.key === k); return c ? c.name : k.split('|')[1]; };
+    const pick = (p) => Object.keys(sel.placement).filter((k) => sel.placement[k] === p).map(name);
+    const main = pick('main'), rev = pick('rev');
+    return ['▶ 금주 주요 업체 ' + main.length + '곳' + (main.length ? ': ' + main.join(', ') : ''),
+      '▶ 전주 재방문 업체 ' + rev.length + '곳' + (rev.length ? ': ' + rev.join(', ') : ''),
+      '◎ 본부 금주 주요 업체 ' + sel.bonbu.length + '곳' + (sel.bonbu.length ? ': ' + sel.bonbu.map(name).join(', ') : ' (체크 없음)')];
+  }
+  function showConfirm() {
+    const st = $('confirmSt'); if (!st) return;
+    const now = selectionNow();
+    if (sameSel(state.confirmed, now)) { st.className = 'ok'; st.textContent = '✓ 확정됨 — ' + selSummary(now).map((x) => x.replace(/:.*/, '')).join(' · ') + '. 엑셀 생성 시 이대로 반영됩니다.'; }
+    else { st.className = 'warn'; st.textContent = state.confirmed ? '확정 후 선택이 바뀌었습니다 — 다시 [배치·본부 확정]을 누르세요.' : '배치와 본부를 고른 뒤 [배치·본부 확정]을 누르세요.'; }
+  }
+  function doConfirm() { state.confirmed = selectionNow(); showConfirm(); }
+
   function ask(title, body, yes) {
     return new Promise((ok) => {
       const d = $('dlg'); $('dlgT').textContent = title; $('dlgB').textContent = body; $('dlgYes').textContent = yes || '진행';
@@ -363,10 +389,17 @@
   function updateEditCnt() { const n = editSummary().length; $('editCnt').textContent = n ? '(' + n + '건 수정)' : ''; }
 
   async function onBuild() {
+    if (!state.ctx && !(await doPreview())) return;
+    const now = selectionNow();
     const lines = editSummary();
-    const ok = lines.length
-      ? await ask('수정 내용 ' + lines.length + '건을 반영해 엑셀을 만듭니다', lines.join('\n'), '반영하고 생성')
-      : await ask('수정 없이 생성할까요?', '② 업체 수정 탭에서 바꾼 내용이 없습니다.\n수정 없이 이번 주 제출본 엑셀을 생성할까요?', '예, 생성');
+    const edTxt = lines.length ? '\n\n② 업체 수정 ' + lines.length + '건\n' + lines.join('\n') : '\n\n② 업체 수정: 없음';
+    let ok;
+    if (sameSel(state.confirmed, now)) ok = await ask('확정한 내용으로 엑셀을 생성할까요?', '[확정한 배치·본부]\n' + selSummary(state.confirmed).join('\n') + edTxt, '예, 생성');
+    else {
+      ok = await ask(state.confirmed ? '확정 후 바뀐 선택이 있습니다' : '배치·본부를 아직 확정하지 않았습니다',
+        '지금 화면의 선택으로 확정하고 생성할까요?\n\n' + selSummary(now).join('\n') + edTxt, '확정하고 생성');
+      if (ok) doConfirm();
+    }
     if (ok) doBuild();
   }
 
@@ -378,8 +411,8 @@
       const W = week();
       const tpl = await templateWorkbook();
       const ctx = E.prepare(ExcelJS, tpl, await engineOpts());
-      const bonbu = Object.keys(state.bonbu).filter((k) => state.bonbu[k]);
-      const res = E.build(ExcelJS, tpl, ctx, W, { selection: state.placement, bonbu, manual: manualInputs(), addBonbu: $('addBonbu').checked, fixText: $('fixText').checked });
+      const sel = state.confirmed || selectionNow();
+      const res = E.build(ExcelJS, tpl, ctx, W, { selection: sel.placement, bonbu: sel.bonbu, manual: manualInputs(), addBonbu: $('addBonbu').checked, fixText: $('fixText').checked });
       const buf = await E.saveWorkbook(JSZip, tpl);
       const base = state.tpl.type === 'file' && /\d{1,2}월\s*\d주/.test(state.tpl.name) ? state.tpl.name : '엔지니어링 영업추진현황_0월 0주.xlsx';
       const name = base.replace(/\d{1,2}월\s*\d주/, W);
@@ -590,6 +623,7 @@
   $('week').addEventListener('change', () => { $('week').dataset.touched = '1'; $('weekHint').textContent = ''; state.cands = []; $('candWrap').hidden = true; });
   $('previewBtn').addEventListener('click', doPreview);
   $('buildBtn').addEventListener('click', onBuild);
+  $('confirmBtn').addEventListener('click', doConfirm);
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', async () => {
     document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t));
     $('p1').hidden = t.dataset.tab !== 'p1'; $('p2').hidden = t.dataset.tab !== 'p2';
