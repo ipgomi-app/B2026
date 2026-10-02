@@ -133,7 +133,7 @@ table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2
   <div id="cards" class="card-groups"></div>
   <details id="review" class="hint" style="display:none;margin:0 0 12px"></details>
   <details class="hint" style="margin:0 0 12px"><summary style="cursor:pointer">분류·집계 기준 보기 (V2.0)</summary>
-    <div>① 사업별 계약·견적은 붙여넣은 계약·견적 자료(결재완료)만 집계합니다. V1과 같습니다.</div>
+    <div>① 사업별 계약·견적은 붙여넣은 계약·견적 자료(결재완료)만 집계합니다. 날짜·담당·코드·구분·사업·금액·내용이 같은 행은 어느 칸에 붙였든 한 번만 셉니다(중복 건수는 생성 완료 문구에 표시).</div>
     <div>②③·상세는 업무일지를 <b>활동 1건 = 주 분류 1개</b>로 다시 분류합니다. 활동 1건은 업무일지 상세 1행입니다. 견적 연동 자동일지("일자 : … 업체코드 : … 제목 : [..] 견적서"), 휴가, 내용이 짧은 직출·직퇴 메모(직출·직퇴 표식을 뗀 내용이 20자 미만; 내용이 있으면 그 내용으로 분류), 상세 없는 DRS일괄작성, 첨부파일 행, 담당자 이민승은 제외합니다(휴가·직출은 '제외' 칸에 셉니다).</div>
     <div>주 분류 10개 — 영업: 신규·전환영업 / 기존확대·손익 · 운영: 신규업체확인 / 입고미회수 / 회수 / 재고실사 / 수불·전산 / 클레임 · 관리: 채권·리스크 / 기타업무. 판정 순서는 ⑴ 엔지니어링 방문양식 → 신규·전환영업, ⑵ 담당자가 쓴 활동명("1. 활동명 2. …", "* 활동명", 시간기록 뒤 문구)의 키워드, ⑶ 상세구분 코드 기본값(입고미회수·미입고확인 → 입고미회수, 공파렛트확인 → 회수, 수불관리·실착지오류·사장업체 → 수불·전산, 신규업체 → 신규업체확인, 재고실사 → 재고실사, 미수금/보증·법적대응 → 채권·리스크, 산업자재유통·SCM·물류장비·RRPP·엔지니어링·경쟁사·신규계약 → 신규·전환영업, 재계약협의·단가협의 → 기존확대·손익), ⑷ 본문의 강한 신호(미수금·지급명령 / 견적 제출·제안·영업·계약 협의 / 단가인상·재계약)로 기본값 변경, ⑸ 나머지 본문 키워드, ⑹ 판정 불가 → 확인필요. "영업지원 입고미회수"의 영업지원은 영업이 아닙니다.</div>
     <div>태그: 사업(PPS/산업자재/SCM/지게차/RRPP/엔지니어링), 대상(신규업체/계약처/실수요처/경쟁사/건설현장), 결과(회수완료·회수예정·회수불가·견적·계약·자료수정·입금·약정), 복합(영업·운영·관리 신호가 2개 이상), 비대면(유선·카톡·문자·메일). 태그는 건수에 중복으로 세지 않습니다. 경쟁사·엔지니어링·산업자재는 활동분류가 아니라 태그입니다.</div>
@@ -663,7 +663,9 @@ function build(){const wk=curWeek();
   const inWkQ=q=>!EXCLUDE_EMP.includes(q.emp.replace(/\d+$/,''))&&($('allweeks').checked||!q.date||!wk||(q.date.key>=wk.from&&q.date.key<=wk.to));
   const statTxt=(lbl,Q,n,raw)=>Q.list.length?lbl+' 인식: '+Q.list.length+'건'+(n!==Q.list.length?' 중 기간 내 '+n+'건':'')+' · '+Q.matched.join(' / '):(raw.trim()?lbl+' 형식을 인식하지 못했습니다 · '+diagQuote(raw):'');
   const YN=q=>{const e=EMP2[q.emp]||EMP2[String(q.emp||'').replace(/\d+$/,'')];return !!e||/^(경북|경남|부산)권역$/.test(q.reg||'')||CITY2BR.some(x=>x[1]===q.br)};/* 영남 소속만 */
-  DBOX.forEach(b=>{const raw=$(b.id).value;const Q=parseQuote(raw,b.mode,b.opt);const all=Q.list.length;Q.list=Q.list.filter(YN);if(b.id==='dAllC')V2SRC.contracts=Q.list;if(b.id==='dAllQ')V2SRC.quotes=Q.list;const inn=Q.list.filter(inWkQ);inn.forEach(q=>rows.push(quoteRow(q)));
+  /* 계약·견적 중복 제거: 날짜·담당·코드·구분·사업·금액·내용이 같은 행은 칸이 달라도 한 번만 센다 (같은 자료를 두 칸에 붙이거나 조회 결과에 반복 행이 있을 때) */
+  const qSeen=new Set();let qDup=0;const qKey=q=>[q.kind,q.gubunRaw||'',q.date?q.date.key:q.wkTxt,q.emp,q.code,String(q.name||'').replace(/\s+/g,''),q.biz,Math.round(q.amt||0),String(q.raw||q.memo||'').replace(/\s+/g,'').slice(0,60)].join('|');
+  DBOX.forEach(b=>{const raw=$(b.id).value;const Q=parseQuote(raw,b.mode,b.opt);const all=Q.list.length;Q.list=Q.list.filter(YN).filter(q=>{const k=qKey(q);if(qSeen.has(k)){qDup++;return false}qSeen.add(k);return true});if(b.id==='dAllC')V2SRC.contracts=Q.list;if(b.id==='dAllQ')V2SRC.quotes=Q.list;const inn=Q.list.filter(inWkQ);inn.forEach(q=>rows.push(quoteRow(q)));
     $(b.id+'-stat').textContent=raw.trim()?(all?b.label+' 인식: '+all+'건 → 영남 소속 '+Q.list.length+'건'+(inn.length!==Q.list.length?' 중 기간 내 '+inn.length+'건':'')+' · '+Q.matched.join(' / '):b.label+' 형식을 인식하지 못했습니다 · '+diagQuote(raw)):''});
   {const n=DBOX.filter(b=>!/^dAll/.test(b.id)&&$(b.id).value.trim()).length;$('dItemCnt').textContent=n?'· 붙여넣은 칸 '+n+'개':'';
    const st=id=>($(id+'-stat').textContent.match(/기간 내 (\d+)건/)||$(id+'-stat').textContent.match(/영남 소속 (\d+)건/)||[])[1];const c=st('dAllC'),q=st('dAllQ');$('dLpsCnt').textContent=[c?'· 계약 '+c+'건':'',q?'· 견적 '+q+'건':''].filter(Boolean).join(' ')}
@@ -673,7 +675,7 @@ function build(){const wk=curWeek();
   const sel=$('catf');const cur=sel.value;
   const opts=cs=>cs.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
   sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['주간 전체',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="활동분류 (V2)">'+V2_FILTERS.map(([v,l])=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+esc(l)+'</option>').join('')+'</optgroup><optgroup label="계약구분">'+GCATS.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c.slice(2))+'</option>').join('')+'</optgroup>';
-  render();$('stat').textContent='생성 완료: 업무일지 분류 '+diaryClassified.length+'묶음 · 계약/견적 자료 '+rows.filter(r=>r.q).length+'건'}
+  render();$('stat').textContent='생성 완료: 업무일지 분류 '+diaryClassified.length+'묶음 · 계약/견적 자료 '+rows.filter(r=>r.q).length+'건'+(qDup?' (중복 '+qDup+'건 제외)':'')}
 /* 카드 필터: '주간 전체'는 사업 구분 없이 주간영업현황 계약·견적 전체 */
 const ALL_Q={'주간 전체':[' 계약',' 견적']};
 /* 계약구분(계약 데이터의 계약구분 열, 관리계약 제외) 카드: 'G:구분' */
