@@ -1195,7 +1195,7 @@ const SUM={data:{},out:null};
   <div class="card"><h2>4-1. 금주 실적 표 <span id="sum-stat1" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="sum-val1">값 복사 (D5부터, 금주 4열만)</button><button class="sec" id="sum-copy1">표 전체 값 복사 (A1부터)</button><span class="hint">전체 복사는 A1에 붙여넣기. "값만 복사"는 신규 행의 견적 건수 셀(D5)을 선택하고 붙여넣기 (기존 서식 유지, 숫자로 입력됨). 표의 셀은 클릭해서 직접 수정할 수 있고 복사에 반영됩니다.</span></div><div id="sum-prev1" data-pid="sum-prev1"></div></div>
   <div class="card"><h2>4-2. 금주 상세내역 <span id="sum-stat2" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">값 복사 (D열부터, 텍스트만)</button><button class="sec" id="sum-copy2r">서식 복사 (예상매출 빨간 글씨)</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약 첫 줄(10 건 / 0.4 억)부터 마지막 줄까지 전부 복사됩니다. "값 복사"는 텍스트만 넣어 전체가 확실히 붙습니다. "서식 복사"는 예상매출을 빨간 글씨로 넣지만 일반 붙여넣기(Ctrl+V)여야 하고, 일부만 붙는 경우 "값 복사"를 쓰세요. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
+  <div class="row" style="margin-bottom:10px"><button id="sum-copy2">값 복사 (D열부터, 텍스트만)</button><button class="sec" id="sum-copy2r">서식 복사 (예상매출 빨간 글씨)</button><button class="sec" id="sum-copy2t">표 그대로 복사 (B80에 붙여넣기)</button><span class="hint">건수/금액(D)과 내용(E~N)만, PPS 계약 첫 줄(10 건 / 0.4 억)부터 마지막 줄까지 전부 복사됩니다. "값 복사"는 텍스트만 넣어 전체가 확실히 붙습니다. "서식 복사"는 예상매출을 빨간 글씨로 넣지만 일반 붙여넣기(Ctrl+V)여야 하고, 일부만 붙는 경우 "값 복사"를 쓰세요. 엑셀에서 PPS 계약 첫 줄의 건수/금액 셀(D열)을 선택하고 붙여넣기. 붙여넣기가 일부만 되면 "병합 없음"으로 시도하세요.</span></div><div id="sum-prev2" data-pid="sum-prev2"></div></div>`;
   document.getElementById('sum-inputs').innerHTML=SUMIN.map(([k,l])=>`<div><b style="font-size:13px;color:var(--navy)">${l}</b> <label style="font-size:11px;color:var(--mut)">금액 단위 <select id="sum-unit-${k}" style="font-size:11px"><option value="k"${SUMSPEC[k].unit==='k'?' selected':''}>천원</option><option value="w"${SUMSPEC[k].unit==='w'?' selected':''}>원(÷1000)</option><option value="m12"${SUMSPEC[k].unit==='m12'?' selected':''}>월 임대료 원(×12÷1000)</option><option value="auto">자동</option></select></label>
     <textarea id="sum-src-${k}" style="min-height:70px" placeholder="${l} 리스트를 헤더 포함해서 붙여넣기"></textarea><div class="hint" id="sum-info-${k}"></div></div>`).join('');
   const $=k=>document.getElementById('sum-'+k);
@@ -1215,6 +1215,7 @@ const SUM={data:{},out:null};
     // 미리보기(제목행·A~C열 포함)에서 수정한 값을 내용만 그리드 좌표(행-1, 열-3)로 옮김
     const E=EDITS['sum-prev2']||{};const E2={};Object.keys(E).forEach(k=>{const [r,c]=k.split(',').map(Number);if(c>=3)E2[(r-1)+','+(c-3)]=E[k]});G.pid='sum-prev2d';EDITS['sum-prev2d']=E2;return G};
   $('copy2').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copy('',gridToTsv(G)))?'값 복사됨 ('+G.length+'행, 텍스트만) → PPS 계약 첫 줄의 건수/금액 셀(D열)에 붙여넣기':'복사 실패'};
+  $('copy2t').onclick=async()=>{if(!SUM.out)return;const h=sumDetailHtml();const ok=await writeBoth(XLHTML(h),'');$('stat2').textContent=ok?'표 그대로 복사됨 (구분·계약/견적·건수·내용, 병합·테두리·빨간 글씨 포함) → 엑셀 B80(PPS 칸)을 선택하고 붙여넣기':'복사 실패'};
   $('copy2r').onclick=async()=>{if(!SUM.out)return;const G=g2(false);$('stat2').textContent=(await copyRich(G,gridToTsv(G)))?'서식 복사됨 ('+G.length+'행) → D열 셀 선택 후 일반 붙여넣기(Ctrl+V), 예상매출 빨간 글씨':'복사 실패'};
 })();
 const norm=v=>String(v||'').replace(/\s+/g,'');
@@ -1321,6 +1322,17 @@ function sumGrid1(){
   R();blank();add('MHE','h',M?2:1);if(!M)add('','h');add(m.q.n+' 업체 '+m.q.units+' 대','b c');N(m.q.amt);add(m.c.n+' 업체 '+m.c.units+' 대','b c');N(m.c.amt);add((m.cum[0]+m.c.n)+'업체 '+(m.cum[1]+m.c.units)+'대','b c');N(m.cum[2]+m.c.amt);
   return G;
 }
+/* 금주 상세내역을 원본 표(B~N: 구분·계약/견적·건수/금액·내용 E~N 병합) 그대로 HTML로: 병합 옵션과 무관하게 병합 포함 */
+function sumDetailHtml(){const o=SUM.out;const top=o.top;const RED=/(예상매출\s*[\d.,]+\s*(?:억|천원|만원)[^,\s]*(?:\/년|\/건)?)/g;
+  const cnt=(rs,isM)=>{if(!rs.length)return '금주없음';const a=rs.reduce((s,x)=>s+x.amt,0);const n=isM?rs.reduce((s,x)=>s+x.units,0)+' 대':rs.length+' 건';const e=a/100000;const t=(e>=10?e.toFixed(1):e.toFixed(2)).replace(/\.?0+$/,'');return n+' / '+t+' 억'};
+  const F="font-family:'맑은 고딕';font-size:10pt;vertical-align:middle;border:.5pt solid #000;";const td=(v,st,a)=>'<td style="'+F+(st||'')+'"'+(a||'')+'>'+v+'</td>';
+  const secs=[['PPS',o.f.ppsC,o.f.ppsQ,false],['SCM',o.f.scmC,o.f.scmQ,false],['MHE',o.f.mheC,o.f.mheQ,true],['산업자재유통',o.f.indC,o.f.indQ,false]];let h='<table style="border-collapse:collapse">';
+  secs.forEach(([name,C,Q,isM])=>{[['계약',C,'▶'],['견적',Q,'▷']].forEach(([lab,rs,mk],si)=>{const list=[...rs].sort((a,b)=>b.amt-a.amt).slice(0,top);
+    for(let i=0;i<top;i++){const tb=(si===0&&i===0)?'border-top:1.5pt solid #000;':'';h+='<tr style="height:22.5pt">';
+      if(si===0&&i===0)h+=td(esc(name),tb+'font-weight:700;text-align:center;',' rowspan="'+top*2+'"');
+      if(i===0){h+=td(esc(lab),tb+'font-weight:700;text-align:center;',' rowspan="'+top+'"');h+=td(esc(cnt(rs,isM)),tb+'font-weight:700;text-align:center;',' rowspan="'+top+'"')}
+      const x=list[i];h+=td(esc(x?mk+' '+x.name+' : '+x.memo:mk).replace(RED,'<font color="#ff0000">$1</font>'),tb+'text-align:left;white-space:nowrap;mso-data-placement:same-cell;',' colspan="10"')+'</tr>'}})});
+  return h+'</table>'}
 function sumGrid2(dataOnly){
   const o=SUM.out;const M=cfg.merge==='1';const top=o.top;
   const {G,R,add:add0,blank:blank0,fill}=newGrid(dataOnly?11:14,dataOnly?[110,90,90,90,90,90,90,90,90,90,90]:[20,90,60,110,90,90,90,90,90,90,90,90,90,90]);G.pid=dataOnly?'sum-prev2d':'sum-prev2';
