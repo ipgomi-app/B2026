@@ -806,15 +806,15 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     if(activeRegs.length>1){T.push(['영남영업본부','',...(emp?['']:[]),...stats(units,all,[])]);flags.push('tot')}return {T,flags}};
   const pct=(a,b)=>b?Math.round(100*a/b)+'%':'',rt=(a,b)=>b?a+'/'+b+' ('+Math.round(100*a/b)+'%)':'';
   /* 표② 활동분류 건수 */
-  const showPct=!f||isG(f);/* 세부 분류 하나를 고르면 비중 열은 뺀다 */
+  const showPct=true,selK=f&&!isG(f)?f:'';/* 비중은 항상 담당자 전체 활동 기준, 세부 분류를 고르면 그 분류의 비중 열을 덧붙인다 */
   /* 비중은 카드 필터와 무관하게 그 담당자의 기간 전체 활동 기준 */
   const st2=(L,gAll)=>{const c={};V2K.concat(['X','?']).forEach(k=>c[k]=0);L.forEach(u=>c[u.cat]++);const n=L.length-c['X'];
     const a={};V2K.forEach(k=>a[k]=0);(gAll||L).forEach(u=>{if(a[u.cat]!==undefined)a[u.cat]++});const na=Object.values(a).reduce((x,y)=>x+y,0),s=a['1']+a['2'],o=a['3']+a['M']+a['4']+a['5']+a['6']+a['7'],m=a['8']+a['9'];
-    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...(KW?[L.filter(u=>u.cat!=='X').length,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size]:[]),...V2K.map(k=>c[k]),c['X'],c['?'],...(showPct?[pct(s,na),pct(o,na),pct(m,na)]:[])]};
+    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...(KW?[L.filter(u=>u.cat!=='X').length,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size]:[]),...V2K.map(k=>c[k]),c['X'],c['?'],...(showPct?[pct(s,na),pct(o,na),pct(m,na)]:[]),...(selK?[pct(a[selK]||0,na)]:[])]};
   const S2=rowsOf(st2);const nk=keyH.length;
   const cgw=ws=>'<colgroup>'+ws.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup>',tws=ws=>' style="width:'+ws.reduce((a,b)=>a+b,0)+'px"';
-  const W2=[...keyH.map(()=>72),56,56,...(KW?[64,64]:[]),...V2K.map(()=>68),48,56,...(showPct?[52,52,52]:[])];
-  const head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('활동수',1,2)+hg('업체수',1,2)+(KW?hg('키워드 "'+kwTxt+'"',2,1,';background:#fff2cc'):'')+hg('영업',2,1,';background:#dbe8fb')+hg('운영',6,1,';background:#e2f0d9')+hg('관리',2,1,';background:#fdebd0')+hg('제외',1,2)+hg('확인필요',1,2)+(showPct?hg('비중',3,1):'')+'</tr><tr>'+(KW?hg('건수',1,1,';background:#fff2cc')+hg('업체',1,1,';background:#fff2cc'):'')+V2K.map(k=>hg(V2N[k])).join('')+(showPct?hg('영업')+hg('운영')+hg('관리'):'')+'</tr>';
+  const W2=[...keyH.map(()=>72),56,56,...(KW?[64,64]:[]),...V2K.map(()=>68),48,56,...(showPct?[52,52,52]:[]),...(selK?[72]:[])];
+  const head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('활동수',1,2)+hg('업체수',1,2)+(KW?hg('키워드 "'+kwTxt+'"',2,1,';background:#fff2cc'):'')+hg('영업',2,1,';background:#dbe8fb')+hg('운영',6,1,';background:#e2f0d9')+hg('관리',2,1,';background:#fdebd0')+hg('제외',1,2)+hg('확인필요',1,2)+(showPct?hg('비중',3,1):'')+(selK?hg(V2N[selK]+' 비중',1,2,';background:#fff2cc'):'')+'</tr><tr>'+(KW?hg('건수',1,1,';background:#fff2cc')+hg('업체',1,1,';background:#fff2cc'):'')+V2K.map(k=>hg(V2N[k])).join('')+(showPct?hg('영업')+hg('운영')+hg('관리'):'')+'</tr>';
   const campNote=Object.keys(camp.set).filter(w=>{const k=v2Date(w);const s=ymd(k),e=ymd(new Date(k.getFullYear(),k.getMonth(),k.getDate()+6));return e>=P.from&&s<=P.to}).sort();
   const sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 활동분류 건수 · '+esc(P.label)+ft+(KW?' <span class="tag" style="background:#fff2cc">키워드: '+esc(kwTxt)+'</span>':'')+' <span class="hint" style="margin:0">(활동 1건 = 주 분류 1개, 활동수는 제외를 뺀 분석 대상'+(KW?' · 키워드가 있으면 분류 건수도 키워드에 맞는 활동만':'')+')</span></div>'+
     (campNote.length?'<div class="hint" style="margin:0 0 4px">지시 활동 주: '+campNote.map(w=>fmtMD(v2Date(w))+'주'+(camp.auto[w]?'('+V2N[camp.auto[w].cat]+' '+camp.auto[w].n+'/'+camp.auto[w].of+'명)':'(수동)')).join(', ')+' — 개인 쏠림 신호에서 제외</div>':'')+
