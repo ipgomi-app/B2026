@@ -1166,13 +1166,13 @@ const SUM={data:{},out:null};
   el.innerHTML=`<div class="card"><details id="sum-inputs-wrap"><summary style="cursor:pointer"><h2 style="display:inline;margin:0">1. 금주 데이터 붙여넣기 (헤더 포함, 각 칸 따로)</h2> <span class="hint" style="margin:0">▶ 펼치기/접기 · 비워 두면 작성 시 데이터 탭 자료를 가져올지 물어봅니다</span></summary>
   <div class="grid" id="sum-inputs" style="margin-top:8px"></div></details>
   <div class="row" style="margin-top:10px">
-    <label>주차 <input type="text" id="sum-week" placeholder="9월3주" style="min-width:90px"></label>
+    <label>주차 (복수 선택: 쉼표) <input type="text" id="sum-week" placeholder="9월4주, 9월5주, 10월1주" style="min-width:200px"></label>
     <label>기간 문구 <input type="text" id="sum-range" placeholder="9월 11일~ 9월 17일까지" style="min-width:180px"></label>
     <label>영남 지점만 <select id="sum-only"><option value="1">예 (경북·경남·부산 권역/지점)</option><option value="0">아니오 (전체)</option></select></label>
     <label>상세 업체 수 <input type="number" id="sum-top" value="3"></label>
     <button id="sum-run">금주요약 작성</button></div>
   <div class="hint">단가인상 행은 "단가인상" 탭에 붙여넣은 데이터에서 자동 집계됩니다. 글로벌비즈는 아래에 수기 입력.</div>
-  <div class="hint" id="sum-detect"></div></div>
+  <div id="sum-wklist" style="margin-top:6px"></div><div class="hint" id="sum-detect"></div></div>
   <div class="grid"><div class="card"><h2>2. 전주 누계 (26년 누계 = 전주 누계 + 금주 계약)</h2>
   <table class="cfg" id="sum-cum"><tr><th>구분</th><th>건수</th><th>매출액(천원)</th></tr>
   ${[['pps신규','PPS 신규'],['pps재전환','PPS 재전환/점유율확대'],['pps단가인상','PPS 단가인상'],['scm','SCM'],['ind','산업자재유통'],['glb','글로벌비즈']].map(([k,l])=>`<tr><td>${l}</td><td><input type="number" data-k="${k}" data-i="0" value="${SUMCUM_DEF[k][0]}"></td><td><input type="number" data-k="${k}" data-i="1" value="${SUMCUM_DEF[k][1]}"></td></tr>`).join('')}
@@ -1265,14 +1265,20 @@ function sumRun(){
   EDITS['sum-prev1']={};EDITS['sum-prev2']={};const only=$('only').value==='1';
   const all={};SUMIN.forEach(([k])=>{const p=sumParse(k);all[k]=p.recs;$('info-'+k).textContent=p.info});
   // 주차: 입력 없으면 PPS 견적 최빈값
-  let wk=weekOf($('week').value);
-  if(!wk){const cnt={};Object.values(all).flat().forEach(x=>{if(x.week){const key=(x.week.m||'')+'월'+x.week.w+'주';cnt[key]=(cnt[key]||0)+1}});const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];if(best){wk=weekOf(best);$('week').value=best.replace(/^월/,'')}}
-  const keep=x=>(!only||!x.region||x.region!=='기타')&&(!wk||!x.week||(x.week.w===wk.w&&(!wk.m||!x.week.m||x.week.m===wk.m)));
+  /* 주차 복수 선택: '9월4주, 9월5주, 10월1주' → 그중 하나에 해당하면 집계. 데이터에 있는 주차는 아래 체크 칩으로 선택 */
+  const wcnt={};Object.values(all).flat().forEach(x=>{if(x.week){const key=(x.week.m?x.week.m+'월':'')+x.week.w+'주';wcnt[key]=(wcnt[key]||0)+1}});
+  let wks=$('week').value.split(/[,，\/]+/).map(v=>weekOf(v.trim())).filter(Boolean);
+  if(!wks.length){const best=Object.keys(wcnt).sort((a,b)=>wcnt[b]-wcnt[a])[0];if(best){wks=[weekOf(best)];$('week').value=best}}
+  const wkKey=w=>(w.m?w.m+'월':'')+w.w+'주';const sel=new Set(wks.map(wkKey));
+  {const box=$('wklist');const ord=k=>{const m=k.match(/(\d+)월(\d+)주/);return m?(+m[1])*10+(+m[2]):+k.replace(/\D/g,'')};box.innerHTML=Object.keys(wcnt).sort((a,b)=>ord(a)-ord(b)).map(k=>'<label style="margin-right:10px;font-size:13px;white-space:nowrap"><input type="checkbox" data-wk="'+k+'"'+(sel.has(k)?' checked':'')+'> '+k+' ('+wcnt[k]+')</label>').join('')||'';
+    box.querySelectorAll('input[data-wk]').forEach(cb=>cb.onchange=()=>{$('week').value=[...box.querySelectorAll('input[data-wk]:checked')].map(c=>c.dataset.wk).join(', ');sumRun()})}
+  const inW=w=>!wks.length||!w||wks.some(k=>w.w===k.w&&(!k.m||!w.m||w.m===k.m));const wk=wks[0]||null;
+  const keep=x=>(!only||!x.region||x.region!=='기타')&&inW(x.week);
   const f={};SUMIN.forEach(([k])=>{f[k]=all[k].filter(keep).filter(x=>!(k.startsWith('scm')&&x.glb))});
   const agg=rs=>({n:rs.length,amt:rs.reduce((a,x)=>a+x.amt,0),units:rs.reduce((a,x)=>a+x.units,0)});
   const ppsQn=f.ppsQ.filter(x=>x.kind==='신규'),ppsQr=f.ppsQ.filter(x=>x.kind==='재전환'),ppsCn=f.ppsC.filter(x=>x.kind==='신규'),ppsCr=f.ppsC.filter(x=>x.kind==='재전환');
   // 단가인상: 단가인상 탭
-  const pr=(PR.out||[]).filter(x=>{const w=weekOf(x.week);return !wk||!w||(w.w===wk.w&&(!wk.m||!w.m||w.m===wk.m))});
+  const pr=(PR.out||[]).filter(x=>inW(weekOf(x.week)));
   const price={n:pr.length,amt:pr.reduce((a,x)=>a+x.amt,0)};
   const cum={};document.querySelectorAll('#sum-cum input').forEach(i=>{(cum[i.dataset.k]=cum[i.dataset.k]||[])[+i.dataset.i]=+i.value||0});
   const glb={Qn:+$('glbQn').value||0,Qa:+$('glbQa').value||0,Cn:+$('glbCn').value||0,Ca:+$('glbCa').value||0};
@@ -1285,9 +1291,9 @@ function sumRun(){
     {l:'글로벌비즈',q:{n:glb.Qn,amt:glb.Qa},c:{n:glb.Cn,amt:glb.Ca},cum:cum.glb}];
   rows.forEach(r=>{r.cumN=r.cum[0]+r.c.n;r.cumA=r.cum[1]+r.c.amt});
   const mhe={q:agg(f.mheQ),c:agg(f.mheC),cum:cum.mhe};
-  SUM.out={rows,mhe,f,range:$('range').value,top:+$('top').value||3,wk};
+  SUM.out={rows,mhe,f,range:$('range').value,top:+$('top').value||3,wk,wks};
   sumPreview();
-  $('detect').textContent='주차 '+(wk?(wk.m?wk.m+'월':'')+wk.w+'주':'전체')+' · 필터 후 건수: '+SUMIN.map(([k,l])=>l+' '+f[k].length).join(', ')+' · 단가인상 '+price.n+'건'+(PR.out?'':' (단가인상 탭 데이터 없음)');
+  $('detect').textContent='주차 '+(wks.length?wks.map(wkKey).join(', '):'전체')+' · 필터 후 건수: '+SUMIN.map(([k,l])=>l+' '+f[k].length).join(', ')+' · 단가인상 '+price.n+'건'+(PR.out?'':' (단가인상 탭 데이터 없음)');
   $('stat1').textContent='작성 완료';$('stat2').textContent='작성 완료';
 }
 function sumGrid1(){
