@@ -163,7 +163,7 @@ table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb 
 </div>
 <div class="card" id="mt-card" style="display:none">
   <h2>주간회의 작성시트 <span class="tag" id="mt-wk"></span></h2>
-  <div class="hint">업무일지·3번 LPS 계약·견적 데이터로 만든 초안입니다. 모든 칸을 여기서 고친 뒤 위 <b>엑셀시트 생성</b>을 누르세요. 금주 운영관리 현황은 한 줄에 한 건(▶)이고, 회수예측은 엑셀처럼 칸에 입력하거나 엑셀에서 복사해 붙여넣을 수 있습니다.</div>
+  <div class="hint">업무일지·3번 LPS 계약 데이터로 만든 초안입니다(운영관리 현황의 계약은 재출고개선·재출고·타용도 계약만). 모든 칸을 여기서 고친 뒤 위 <b>엑셀시트 생성</b>을 누르세요. 금주 운영관리 현황은 한 줄에 한 건(▶)이고, 회수예측은 엑셀처럼 칸에 입력하거나 엑셀에서 복사해 붙여넣을 수 있습니다.</div>
   <div id="mt-out"></div>
 </div>
 </div>
@@ -1189,15 +1189,22 @@ function lstRender(){let h='';
     const ok=await copyText(t.map(r=>r.map(cellTsv).join('\t')).join('\r\n'));$('lst-stat').textContent=ok?x.label+(b.dataset.cp==='add'?' 추가 열 '+R.length+'행 복사됨':' 표 전체 '+R.length+'행 복사됨'):'복사 실패'})}
 document.querySelectorAll('button[data-gen]').forEach(b=>b.onclick=()=>lstGen(b.dataset.gen));
 /* ===== 주간회의 작성시트: 금주 운영관리 현황 · 회수예측 · 회수율 및 실물회수 달성계획 ===== */
-/* 금주 운영관리 현황 키워드: 재출고개선 계약 → 재입고(추가 재입고·재입고 협의·재입고 청구) → 법조치(법무·곽기활 파트장 동행 등) → 차량(결차·차량 특이사항) */
+/* 금주 운영관리 현황(KPP 운영 소관): 재출고개선·재출고·타용도 계약 → 재입고(재고증가 재입고 협의·추가 재입고·재입고 청구) → 법조치(법무팀·법무파트·공문·내용증명 등) → 차량(결차·용차·증차·배차 등 차량 운영).
+   계약·견적 자료는 재출고개선·재출고·타용도 계약만 쓰고, 신규·경쟁사 전환·점유율 확대 등 영업 계약과 견적은 모두 뺀다. */
 const MT_KW=[['재출고개선',/재출고\s*개선|재입고\s*개선|재출고\s*계약/],
-  ['재입고',/추가\s*재입고|재입고\s*(협의|청구|예정|진행|처리|요청|완료|누락|안내)|(청구|전량|추가)\s*(시\s*)?(전량\s*)?재입고|재입고.{0,20}청구|청구.{0,20}재입고/],
-  ['법조치',/법\s*조치|법적\s*(조치|대응)|법무|내용\s*증명|가압류|가처분|분실\s*변상|변상\s*(청구|요청|조치)|곽기활/],
-  ['차량',/결차|차량\s*(고장|사고|결행|미운행|부족|교체|문제|특이)|배차\s*(문제|지연|누락|클레임)|배차클레임|차량\s*미방문/]];
+  ['타용도',/타용도\s*(사용\s*|단발성\s*)?(출고\s*)?계약/],
+  ['재입고',/추가\s*재입고|재입고\s*(협의|청구|예정|진행|처리|요청|완료|누락|안내)|(청구|전량|추가)\s*(시\s*)?(전량\s*)?재입고|재입고.{0,20}청구|청구.{0,20}재입고|재고\s*(증가|과다|누적).{0,40}재입고/],
+  ['법조치',/법\s*조치|법적\s*(조치|대응)|법무\s*(팀|파트)?|공문|내용\s*증명|가압류|가처분|지급\s*명령|분실\s*변상|변상\s*(청구|요청|조치)|곽기활/],
+  ['차량',/결차|(?<![가-힣])용차|용차\s*(투입|사용|운영|운행|배차|추가)|(?<![가-힣])(증차|감차)|차량\s*(운영|운행|배치|추가|고장|사고|결행|미운행|부족|교체|문제|특이|투입|구인)|배차\s*(문제|지연|누락|클레임)|배차클레임|차량\s*미방문/]];
+/* 계약 자료 중 운영관리로 올리는 계약: 08-재출고개선·재출고 계약·타용도 계약 */
+const MT_CONTRACT=q=>{if(q.kind==='견적')return '';const g=String(q.gubunRaw||q.gubun||''),t=[q.memo,q.notes].filter(Boolean).join(' ');
+  if(/재출고/.test(g)||/재출고\s*(개선\s*)?계약/.test(t))return '재출고개선';if(/타용도/.test(g)||/타용도\s*(사용\s*|단발성\s*)?(출고\s*)?계약/.test(t))return '타용도';return ''};
 const MT_NOTFIRM=/^(법적|법무|재입고|재고|건설|미수금|경쟁사|산업자재|엔지니어링|영업|운영|주요|지게차|차주|대형|권역|본부|업무)|업체|차량|미방문|회의|요청|현황|지점|확인$/;
-const MT_ORDER=['재입고','재출고개선','법조치','차량'],MT_NOQTY=['법조치','차량'],MT_MIN=80,MT_MAX=5;
+const MT_ORDER=['재입고','재출고개선','타용도','법조치','차량'],MT_NOQTY=['재출고개선','타용도','법조치','차량'],MT_MIN=80,MT_MAX=5;
 const mtQty=t=>Math.max(0,...[...String(t).matchAll(/(\d[\d,]*)\s*매/g)].map(m=>+m[1].replace(/,/g,'')).filter(n=>n<1e6));
-const mtKind=t=>{const k=MT_KW.find(([,re])=>re.test(t));return k?k[0]:''};
+/* 영업 내용(견적·신규·경쟁사 전환·점유율 확대)과 섞인 재입고·계약 언급은 운영관리에서 뺀다 (법조치·차량은 그대로) */
+const MT_SALES=/견적|신규\s*(계약|거래|업체\s*계약)|경쟁사|전환|점유율|예상\s*매출|\d\s*억\s*\/\s*년/;
+const mtKind=t=>{const k=MT_KW.find(([,re])=>re.test(t));if(!k)return '';if(['재입고','재출고개선','타용도'].includes(k[0])&&MT_SALES.test(t))return '';if(k[0]==='차량'&&(MT_SALES.test(t)||/영업|니즈|납기|지게차|견인차|C\/B/i.test(t)))return '';/* 고객사 증차·지게차 판매는 영업 */return k[0]};
 const mtClean=t=>String(t||'').replace(/0\d{1,2}-\d{3,4}-\d{4}/g,'').replace(/^\s*\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}(:\d{2})?/,'').replace(/(?<![\d.])\d\s*\.\s*[가-힣*][^,]{0,24}$/,'').replace(/\s+/g,' ').replace(/^[\s,.:*·▷-]+|[\s,.:*·▷-]+$/g,'').trim();
 const mtSplit=t=>splitBullets(String(t).replace(/(\s)-(?=\d)/g,'$1\u2212')).map(x=>x.replace(/\u2212/g,'-'));/* " -198매" 같은 음수는 글머리로 나누지 않음 */
 const mtCut=(t,n)=>t.length>n?t.slice(0,n-1)+'…':t;
@@ -1210,7 +1217,7 @@ function mtBrOf(firm,text,emp){const e=EMP2[emp]||EMP2[String(emp||'').replace(/
   let best=null;[...CITY2BR,...MT_CITY].forEach(([re,br,reg])=>{const m=String(text).match(re);if(m&&(!best||m.index<best.i))best={i:m.index,br,reg}});return best||{br:'',reg:''}}
 /* 후보 항목 모으기: 업무일지(권역장 일지 포함) · 계약/견적 데이터 */
 function mtItems(){const wk=curWeek(),all=$('allweeks').checked;const inWk=d=>all||(d.date&&wk&&d.date.key>=wk.from&&d.date.key<=wk.to);const out=[];
-  const push=(br,firm,text,qty,kind,src,date)=>{if(!br||!br.br||!kind)return;if(qty<MT_MIN&&!(MT_NOQTY.includes(kind)&&!qty))return;out.push({br:br.br,reg:br.reg,firm:mtClean(firm).replace(/^\(주\)|^주식회사\s*/,''),text,qty,kind,src,date})};
+  const push=(br,firm,text,qty,kind,src,date)=>{if(!br||!br.br||!kind)return;if(qty<MT_MIN&&!MT_NOQTY.includes(kind))return;out.push({br:br.br,reg:br.reg,firm:mtClean(firm).replace(/^\(주\)|^주식회사\s*/,''),text,qty,kind,src,date})};
   ALL.filter(d=>d.dtl.length&&inWk(d)).forEach(d=>{const lines=d.dtl.filter(x=>!AUTO_QUOTE_RE.test(x.text)&&!/^\s*휴가|반차|연차/.test(x.text));if(!lines.length)return;
     const text=lines.map(x=>x.text).join(' ');const multi=String(d.code).trim()==='600000'||/^업무일지$/.test(String(d.name).trim());
     if(multi){/* 여러 업체를 적은 일지(권역장·지점 요약): "* 운영 관리 1. 제목- 업체, 내용- 업체 : 내용" 구조를 나눠 업체 한 곳씩 */
@@ -1223,8 +1230,8 @@ function mtItems(){const wk=curWeek(),all=$('allweeks').checked;const inWk=d=>al
           push(brOf(firm,block),firm,mtClean([head.slice(firm.length),...det].join(', ')),mtQty(block),k,'일지 '+d.emp,d.date)}})}
     else{const k=mtKind(text);if(!k)return;const q=mtQty(text);const segs=mtSplit(text).map(mtClean).filter(x=>x&&!WHO_RE.test(x)&&(MT_KW.some(([,re])=>re.test(x))||(q&&x.includes(String(q))&&/매/.test(x))));
       push(mtBrOf(d.name,d.addr+' '+text,d.emp),d.name,segs.join(', ')||mtClean(text),q,k,'일지 '+d.emp,d.date)}});
-  (OUT||[]).filter(r=>r.q&&r.qd).forEach(r=>{const q=r.qd;const text=[q.memo,q.notes].filter(Boolean).join(' ');const k=mtKind(text);if(!k)return;
-    push({br:r.br,reg:r.reg},q.name,mtClean(q.memo)+(q.kind==='단가인상'?' (단가인상 계약)':''),mtQty(text),k,'계약·견적 '+q.emp,q.date)});
+  (OUT||[]).filter(r=>r.q&&r.qd).forEach(r=>{const q=r.qd;const k=MT_CONTRACT(q);if(!k)return;const text=[q.memo,q.notes].filter(Boolean).join(' ');
+    push({br:r.br,reg:r.reg},q.name,mtClean(q.memo)+' ('+(k==='타용도'?'타용도 계약':'재출고개선 계약')+')',mtQty(text),k,'계약 '+q.emp,q.date)});
   /* 같은 지점·업체·항목은 매수가 큰 한 건만 */
   const g={};out.forEach(x=>{const key=x.br+'|'+normName(x.firm).slice(0,4)+'|'+x.kind;if(!g[key]||x.qty>g[key].qty||(x.qty===g[key].qty&&x.text.length>g[key].text.length))g[key]=x});return Object.values(g)}
 /* 달성계획 한 줄 요약: 운영관리 일지를 일반(코드 H 아님·건자재/건설현장 내용 없음)과 건자재로 나눠 활동별 업체·매수 */
