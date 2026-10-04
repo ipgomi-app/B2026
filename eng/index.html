@@ -131,6 +131,7 @@
       <span class="muted" id="weekHint"></span>
       <button class="primary blue" id="previewBtn" disabled>자료생성</button>
     </div>
+    <div class="flagwarn" id="weekWarn"></div>
     <div id="mergeLog" class="log" style="margin-top:10px"></div>
     <div id="checkWrap" hidden style="margin-top:12px"></div>
     <div id="candWrap" hidden style="margin-top:12px">
@@ -211,7 +212,7 @@
     msg($('buildMsg'), '', '');
     const hasPaste = $('p_sum').value.trim() && $('p_pool').value.trim();
     ['sum', 'pool', 'third'].forEach((k) => { const v = $('p_' + k).value.trim(); $('box_' + k).classList.toggle('filled', !!v); status('s_' + k, '', v ? lines(v) + '행 붙여넣음' : ''); });
-    if (!hasPaste) { state.tpl = null; state.tplRows = null; state.tplL = null; REG.forEach(markRegion); $('tplInfo').innerHTML = ''; changed(); return; }
+    if (!hasPaste) { state.tpl = null; state.tplRows = null; state.tplL = null; state.tplWeek = null; checkWeek(); REG.forEach(markRegion); $('tplInfo').innerHTML = ''; changed(); return; }
     state.tpl = { type: 'paste' };
     await showTemplate();
   }
@@ -230,7 +231,11 @@
         '';
       if (state.tpl.type === 'paste') { status('s_sum', 'ok', '✓ ' + lines($('p_sum').value) + '행 · 기준 ' + w); status('s_pool', 'ok', '✓ 업체 ' + rows.length + '개'); }
       if (noFlags) boxWarn('s_pool', '솔루션 사업구분(G~P) O 표시가 없습니다. 원본에서 G~P 열이 그룹으로 접혀 있으면 복사되지 않습니다. 열 위쪽 [+]로 G~P를 펼친 뒤 다시 복사해 붙여넣으세요. 그대로 진행하면 권역 자료의 O 표시로 채웁니다.');
+      // 지난주 제출본이 바뀌면(기준 주차가 달라지면) 직접 고친 주차도 다음 주로 다시 맞춤
+      if (state.tplWeek !== w) delete $('week').dataset.touched;
+      state.tplWeek = w;
       if (!$('week').dataset.touched) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
+      checkWeek();
       REG.forEach(markRegion);
       changed();
     } catch (e) {
@@ -373,8 +378,22 @@
   const engineOpts = async () => ({ week: week(), inputs: await engineInputs(), thirdInputs: Object.assign({}, state.reRegions), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
   const keyOfForm = (f) => String(f.code == null ? '' : f.code).trim() + '|' + String(f.name || '').trim();
 
+  // 보고 주차가 지난주 제출본 주차보다 뒤인지 (12월 → 1월 넘어가는 경우 포함)
+  function weekAfter(a, b) {
+    const p = (w) => { const m = /^(\d{1,2})월\s*(\d)주$/.exec(String(w).trim()); return m ? [+m[1], +m[2]] : null; };
+    const x = p(a), y = p(b); if (!x || !y) return true;
+    let ma = x[0]; if (ma < y[0] && y[0] - ma > 6) ma += 12;
+    return ma * 10 + x[1] > y[0] * 10 + y[1];
+  }
+  function checkWeek() {
+    const W = E.wk($('week').value), T = state.tplWeek;
+    const bad = T && E.isWeek(W) && !weekAfter(W, T);
+    $('weekWarn').textContent = bad ? '⚠ 보고 주차(' + W + ')가 지난주 제출본(' + T + ')과 같거나 이전입니다. 주차 열·합계가 ' + T + ' 그대로 나옵니다. 보고 주차를 ' + E.nextWeek(T) + '로 고치세요.' : '';
+    return !bad;
+  }
   async function refreshCtx() {
     if (!E.isWeek($('week').value)) throw new Error('보고 주차를 "9월 4주" 형식으로 입력하세요.');
+    if (!checkWeek() && !confirm('보고 주차(' + E.wk($('week').value) + ')가 지난주 제출본(' + state.tplWeek + ')과 같거나 이전입니다.\n그대로 만들까요?')) throw new Error('보고 주차를 확인하세요.');
     const tpl = await templateWorkbook();
     const ctx = E.prepare(ExcelJS, tpl, await engineOpts());
     state.ctx = ctx;
@@ -666,7 +685,7 @@
   ['p_sum', 'p_pool', 'p_third'].forEach((id) => $(id).addEventListener('input', debounce(refreshTemplate, 400)));
   document.querySelectorAll('[data-reset]').forEach((el) => el.addEventListener('click', () => { $(el.dataset.reset).value = ''; refreshTemplate(); }));
   $('fixText').addEventListener('change', () => { state.cands = []; $('candWrap').hidden = true; $('checkWrap').hidden = true; });
-  $('week').addEventListener('change', () => { $('week').dataset.touched = '1'; $('weekHint').textContent = ''; state.cands = []; $('candWrap').hidden = true; });
+  $('week').addEventListener('change', () => { $('week').dataset.touched = '1'; $('weekHint').textContent = ''; checkWeek(); state.cands = []; $('candWrap').hidden = true; });
   $('previewBtn').addEventListener('click', doPreview);
   $('buildBtn').addEventListener('click', onBuild);
   $('confirmBtn').addEventListener('click', doConfirm);
