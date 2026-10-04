@@ -76,7 +76,7 @@
   th { background: #f2f4f8; font-weight: 600; color: #394256; position: sticky; top: 0; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .tablewrap { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
-  .log { font-size: 12.5px; } .log div { margin: 3px 0; }
+  .log { font-size: 12.5px; } .log div { margin: 3px 0; } .log .warn { color: #8a5a00; }
   .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; white-space: pre-wrap; }
   .msg.err { background: #fdecea; color: var(--warn); } .msg.ok { background: #e6f4ec; color: var(--ok); } .msg.warn { background: #fff5d6; color: #7a5600; }
   .muted { color: var(--sub); }
@@ -222,7 +222,9 @@
       state.tplRows = rows;
       const w = E.wk(E.text(sum.getCell('X1').value));
       const cnt = {}; rows.forEach((r) => { cnt[r.region] = (cnt[r.region] || 0) + 1; });
-      $('tplInfo').innerHTML = '<span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>';
+      const noFlags = L.flags.length && !rows.some((sn) => L.flags.some((c) => String(E.text(sn.cells[c - 1].v)).trim()));
+      $('tplInfo').innerHTML = '<span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>' +
+        (noFlags ? '<div class="msg warn" style="margin-top:6px">⚠ 붙여넣은 수주풀에 <b>솔루션 사업구분(G~P) O 표시</b>가 없습니다. 원본에서 G~P 열이 그룹으로 접혀(숨겨져) 있으면 복사되지 않습니다. 엑셀에서 열 위쪽 <b>[+]</b>로 G~P를 펼친 뒤 다시 복사해 붙여넣으세요. 그대로 진행하면 권역 자료에 있는 O 표시로 채웁니다.</div>' : '');
       if (state.tpl.type === 'paste') { status('s_sum', 'ok', '✓ ' + lines($('p_sum').value) + '행 · 기준 ' + w); status('s_pool', 'ok', '✓ 업체 ' + rows.length + '개'); }
       if (!$('week').dataset.touched) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
       changed();
@@ -297,7 +299,10 @@
   }
   const week = () => E.wk($('week').value);
 
-  function renderLog(log, tlog) {
+  function renderLog(log, tlog, fi) {
+    let fl = '';
+    if (fi && fi.tplMissing) fl += '<div class="warn">⚠ 지난주 수주풀에 솔루션 사업구분 O 표시가 없어 권역 자료로 ' + fi.filled + '개 업체를 채웠습니다.' + (fi.regionMissing.length ? ' (' + esc(fi.regionMissing.join(', ')) + ' 자료에도 G~P가 없어 그 권역은 비어 있습니다 — G~P를 펼쳐 다시 복사하세요)' : '') + '</div>';
+    else if (fi && fi.regionMissing.length) fl += '<div class="warn">⚠ ' + esc(fi.regionMissing.join(', ')) + ' 붙여넣기에 솔루션 사업구분(G~P) O 표시가 없습니다 — 기존 업체는 지난주 O 표시를 유지하지만 새 업체는 비게 됩니다. G~P를 펼쳐 다시 복사하세요.</div>';
     const tl = (tlog || []).map((l) => {
       const parts = ['<b>' + l.region + ' 재영업·창고이슈</b>', '변경 ' + l.updated.length, '그대로 ' + l.same];
       if (l.skipped) parts.push('<span class="muted">보고 주차 외 ' + l.skipped + '행은 지난주 그대로</span>');
@@ -312,7 +317,7 @@
       if (l.removed.length) parts.push('<span class="badge le">삭제 ' + l.removed.length + '</span> ' + esc(l.removed.map((a) => a.name).join(', ')));
       if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.slice(0, 8).map((u) => u.name).join(', ') + (l.updated.length > 8 ? ' …' : '')) + '</span>');
       return '<div>' + parts.join(' · ') + '</div>';
-    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>') + tl;
+    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>') + tl + fl;
   }
 
   function checkCell(issues) {
@@ -362,7 +367,7 @@
     if (!state.listsBase) state.listsBase = E.readLists(ctx);
     state.back = {}; Object.keys(ctx.edit.renamed).forEach((o) => { state.back[ctx.edit.renamed[o]] = o; });
     state.addKeys = state.adds.map(keyOfForm);
-    renderLog(ctx.log, ctx.thirdLog);
+    renderLog(ctx.log, ctx.thirdLog, ctx.flagInfo);
     state.cands = E.preview(ctx, week());
     renderCands();
     if (!$('p2').hidden) renderEditor();

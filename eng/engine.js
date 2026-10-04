@@ -209,7 +209,10 @@
       if (!REGIONS.includes(reg)) vals[TL.reg] = region;
       rows.push({ vals, region: vals[TL.reg], name: trim(vals[TL.name]), code: trim(text(vals[TL.code])), get key() { return this.code + '|' + this.name; }, pasted: true });
     }
-    return { rows };
+    // 솔루션 사업구분(G~P) 열이 붙여넣기에 있는지 (엑셀에서 접힌 그룹은 복사되지 않을 수 있음)
+    const flagCols = new Set(TL.flags);
+    const hasFlags = Object.values(map).some((c) => flagCols.has(c)) && rows.some((r) => TL.flags.some((c) => trim(text(r.vals[c]))));
+    return { rows, hasFlags };
   }
 
   // 올린 권역 파일이 어느 권역을 수정했는지 추정 (템플릿과 달라진 행 수)
@@ -1175,7 +1178,7 @@
     const rows = p.rows.map((r) => applyPaste(L.month && isOldMonth(r.vals[L.month]) ? oldBase : base, r, L, true));
     if (!rows.length) throw new Error('수주풀 붙여넣기에서 업체 행을 찾지 못했습니다.');
     writePool(ws, L, rows, kit.lastRow, formulaPatterns(kit.rows, L));
-    return rows.length;
+    return { n: rows.length, hasFlags: p.hasFlags };
   }
 
   // 3번째 시트(재영업 등): 붙여넣은 표를 틀의 헤더/데이터행 서식으로 (표가 여러 개면 두 번째 표 서식 사용)
@@ -1225,7 +1228,7 @@
     const wb = await loadWorkbook(ExcelJS, JSZip, kitBytes);
     const { pool, sum } = findSheets(wb);
     const L = poolLayout(pool);
-    const n = fillPool(pool, L, p.pool);
+    const fp = fillPool(pool, L, p.pool); const n = fp.n;
     const maxCol = sumMaxCol(sum);
     const kitInfo = readSections(sum, maxCol);
     const grid = parseTSV(p.summary);
@@ -1240,7 +1243,7 @@
     const third = wb.worksheets.find((s) => s.state === 'visible' && s !== pool && s !== sum);
     let thirdRows = 0;
     if (third) thirdRows = fillThird(third, trim(p.third) ? parseTSV(p.third) : null);
-    return { wb, info: { poolRows: n, thirdRows, thirdName: third ? third.name : null, week: wk(text(sum.getCell('X1').value)) } };
+    return { wb, info: { poolRows: n, flagsMissing: !fp.hasFlags, thirdRows, thirdName: third ? third.name : null, week: wk(text(sum.getCell('X1').value)) } };
   }
 
 
@@ -1517,8 +1520,19 @@
     Object.keys(opts.inputs || {}).forEach((region) => {
       const inp = opts.inputs[region]; if (!inp) return;
       if (inp.type === 'file') { const r = readRegionWorkbook(inp.wb); inputs[region] = { mode: 'file', rows: r.rows, L: r.L }; }
-      else if (inp.type === 'paste' && trim(inp.text)) { const r = readRegionPaste(inp.text, region, TL); inputs[region] = { mode: 'paste', rows: r.rows }; }
+      else if (inp.type === 'paste' && trim(inp.text)) { const r = readRegionPaste(inp.text, region, TL); inputs[region] = { mode: 'paste', rows: r.rows, hasFlags: r.hasFlags }; }
     });
+    // 지난주 수주풀에 솔루션 사업구분 O 표시가 하나도 없으면(G~P가 접힌 채 복사됨) 권역 자료의 O 표시로 채운다
+    const flagInfo = { tplMissing: false, filled: 0, regionMissing: [] };
+    if (TL.flags.length && !tpl.rows.some((sn) => TL.flags.some((c) => trim(text(sn.cells[c - 1].v))))) {
+      flagInfo.tplMissing = true;
+      const at = {}; tpl.rows.forEach((sn) => { (at[sn.key] = at[sn.key] || []).push(sn); });
+      Object.keys(inputs).forEach((region) => {
+        const inp = inputs[region];
+        if (inp.mode !== 'paste' || !inp.hasFlags) { flagInfo.regionMissing.push(region); return; }
+        inp.rows.forEach((r) => { if (r.region !== region) return; (at[r.key] || []).forEach((sn) => { TL.flags.forEach((c) => { sn.cells[c - 1].v = r.vals[c] == null ? null : r.vals[c]; }); flagInfo.filled++; }); });
+      });
+    } else Object.keys(inputs).forEach((region) => { if (inputs[region].mode === 'paste' && !inputs[region].hasFlags) flagInfo.regionMissing.push(region); });
     // 권역 자료는 보고 주차(금주)에 방문(신규/재방문/LE동행)한 행만 반영 — 나머지는 지난주 제출본 그대로
     const W0 = opts.week && isWeek(wk(opts.week)) ? wk(opts.week) : null;
     if (W0) Object.keys(inputs).forEach((region) => {
@@ -1550,7 +1564,7 @@
       const f = fields(sn, TL); [f.newv, f.rev, f.le].forEach((w) => { if (isWeek(w) && (!latest || weekOrder(w) > weekOrder(latest))) latest = w; });
     }));
     const suggested = latest && weekOrder(latest) > weekOrder(tplWeek) ? latest : nextWeek(tplWeek);
-    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog };
+    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog, flagInfo };
   }
 
   // 본부 니즈/견적 리스트(재영업 대상)에 이미 있는 업체
