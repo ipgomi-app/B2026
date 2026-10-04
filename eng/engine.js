@@ -881,7 +881,6 @@
   function bonbuLists(secs, third, rows, L, W, opts, log) {
     const byKey = {}; rows.forEach((sn) => { if (!byKey[sn.key]) byKey[sn.key] = sn; });
     const F = (sn) => fields(sn, L);
-    const bonbuSel = new Set(opts.bonbu || []);
     const titleSec = secs.find((s) => s.kind === 'bonbuList');
     let reSec = secs.find((s) => s.kind === 'reList');
     let whSec = secs.find((s) => s.kind === 'whList');
@@ -906,24 +905,18 @@
         sn.key = k;
       });
     });
-    // '본부' 체크 업체: 재영업 표에 있으면 주차/추가 진행현황 갱신, 없으면 (니즈확인·견적·계약 자동 포함) 맨 아래에 권역 순·매출 순 추가
+    // 재영업 표는 지난주 3번째 시트 + 권역 재영업 붙여넣기 기준. '본부' 체크는 금주 주요 업체(▶본부 주요업체)에만 쓰고 여기엔 넣지 않는다
+    // (옵션) 새로 니즈확인·견적·계약이 된 업체만 맨 아래에 권역 순·매출 순 추가
     const have = new Set(T1.rows.map((sn) => sn.key));
-    T1.rows.forEach((sn) => {
-      const p = byKey[sn.key]; if (!p || !bonbuSel.has(sn.key)) return;
-      const f = F(p);
-      setField(sn, T1.cols, 'addWeek', W); setField(sn, T1.cols, 'addText', clone(f.needs));
-      log.bonbuUpdated.push(f.name);
-    });
     const adds = [];
     rows.forEach((sn) => {
       if (have.has(sn.key)) return;
       const f = F(sn);
-      const auto = opts.addBonbu !== false && !isOldRow(f) && KEY_STAGES.includes(f.stage);
-      if (!auto && !bonbuSel.has(sn.key)) return;
-      have.add(sn.key); adds.push({ f, key: sn.key, picked: bonbuSel.has(sn.key) });
+      if (!(opts.addBonbu !== false && !isOldRow(f) && KEY_STAGES.includes(f.stage))) return;
+      have.add(sn.key); adds.push({ f, key: sn.key });
     });
     adds.sort((a, b) => (REGION_ORDER[a.f.region] ?? 9) - (REGION_ORDER[b.f.region] ?? 9) || (b.f.amt || 0) - (a.f.amt || 0));
-    adds.forEach(({ f, key, picked }) => {
+    adds.forEach(({ f, key }) => {
       const base = T1.rows[T1.rows.length - 1];
       const nr = base ? clone(base) : plainFrom(T1.header);
       nr.hidden = false; nr.outline = 0;
@@ -931,7 +924,6 @@
       const vals = { region: f.region, mgr: f.mgr, grp: f.grp || null, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period,
         plan: f.plan || null, newv: f.newv || null, rev: f.rev || null, le: f.le || null,
         revYN: !f.newv && !f.rev ? '미방문' : f.newv && !f.rev ? '신규방문' : '재방문', leYN: f.le ? '동행방문' : 'X', text: clone(f.needs) };
-      if (picked) vals.addWeek = W;
       Object.keys(vals).forEach((k) => setField(nr, T1.cols, k, vals[k]));
       nr.key = key; T1.rows.push(nr);
       log.bonbuAdded.push(f.name);

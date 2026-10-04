@@ -166,7 +166,7 @@
     <h2><span class="step">✓</span>엑셀 제출본 만들기</h2>
     <div class="row">
       <button class="primary" id="buildBtn" disabled>엑셀 제출본 만들기</button>
-      <label style="font-size:13px"><input type="checkbox" id="addBonbu" checked> 새로 니즈확인/견적/계약이 된 업체를 본부 리스트 맨 아래에 추가(권역·매출순)</label>
+      <label style="font-size:13px"><input type="checkbox" id="addBonbu" checked> 새로 니즈확인/견적/계약이 된 업체를 재영업 대상 표 맨 아래에 추가(권역·매출순)</label>
       <label style="font-size:13px"><input type="checkbox" id="fixText" checked> 오탈자·띄어쓰기 자동 수정</label>
     </div>
     <div id="buildMsg"></div>
@@ -463,7 +463,7 @@
       const out = ['완료: ' + name];
       const ed = editSummary(); if (ed.length) out.push('업체 수정 반영 ' + ed.length + '건');
       if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) out.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
-      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('본부 리스트 맨 아래 추가: ' + res.bonbu.bonbuAdded.join(', '));
+      if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('재영업 대상 맨 아래 추가(니즈확인·견적·계약): ' + res.bonbu.bonbuAdded.join(', '));
       const nfix = Object.keys(ctx.fixes).length; if (nfix) out.push('오탈자·띄어쓰기 수정: 수주풀 ' + nfix + '행' + (res.bonbu.sheetFixes ? ', 앞시트 ' + res.bonbu.sheetFixes + '칸' : ''));
       res.warn.forEach((w) => out.push('⚠ ' + w));
       msg($('buildMsg'), res.warn.length ? 'warn' : 'ok', out.join('\n'));
