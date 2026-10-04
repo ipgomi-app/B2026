@@ -97,7 +97,7 @@ table.xl.dett.one tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.g
   <div id="diarystat" class="hint"></div>
 </div>
 <div class="card">
-  <details id="dCarBox" open><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">2. 차량운영 붙여넣기 <span class="tag">회수량 · 예측량 · 업체수 · 회전수 (월 조회 결과)</span> <span id="dCarCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
+  <details id="dCarBox" open><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">2. 차량운영 붙여넣기 <span class="tag">차량별 회수량 · 업체수 · 회전수 (월 조회 결과, 예측량은 무시)</span> <span id="dCarCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
   <div class="hint">차량운영 조회 결과를 머리글(SEQ…) 포함 그대로 붙여넣으세요. 한 달 단위 자료라 회의 기간이 두 달에 걸치면(예: 9/25~10/2) 전월분 뒤에 당월분을 <b>이어 붙이면</b> 됩니다. 마지막에 붙인 자료가 회의 종료일이 속한 달, 그 앞이 전월로 잡히며, 전월 합계가 이어지는지 자동 확인합니다. 담당자 행만 쓰고 소계·권역계 행은 다시 계산합니다.</div>
   <textarea id="dCar" style="min-height:110px" placeholder="차량운영 조회 결과(SEQ SEQ2 DPT_COD DPT_NAM MNG_EMP EMP_NAM GU CST_QTY00 … CST_QTY31 CST_QTY N_AVG B_AVG)를 그대로 붙여넣기"></textarea><div id="dCar-stat" class="hint"></div>
   </details>
@@ -635,67 +635,127 @@ const MHE_PREF=k=>({amt:k==='q'?/견적\s*금액/:/확정\s*금액|계약\s*금�
 const DBOX=[{id:'dAllC',label:'계약 데이터',mode:'contract',opt:{all:1}},{id:'dAllQ',label:'견적 데이터',mode:'quote',opt:{}}];
 /* ===== 차량운영(회수량·예측량·업체수·회전수) =====
    월 단위 조회 결과: CST_QTY00 = 전월 합계, CST_QTY01~31 = 일자별, CST_QTY = 당월 합계, B_AVG = 전월 일평균.
-   여러 달을 이어 붙이면 머리글(SEQ…) 또는 같은 담당자·구분 행의 반복으로 달을 나눈다. 마지막 자료 = 회의 종료일이 속한 달. */
+   차량별 자료(CAR_NUM·CAR_WGT_TYP·CAR_OWN_NAM 열)는 차량 1대 = 1행 묶음, 담당자 자료는 담당자 1명 = 1행 묶음으로 읽는다.
+   여러 달을 이어 붙이면 머리글(SEQ…) 또는 같은 차량·구분 행의 반복으로 달을 나눈다. 마지막 자료 = 회의 종료일이 속한 달. */
 let CAR=null;const CAR_GU=['회수량','예측량','업체수','회전수'];
 function carParse(raw,wk,regOK){if(!String(raw||'').trim())return null;
   const num=x=>{const v=parseFloat(String(x||'').replace(/,/g,''));return isFinite(v)?v:0};
-  let H=null;const blocks=[];let cur=null;const newB=()=>{cur={E:{},txt:[]};blocks.push(cur)};
+  const POS_EMP={SEQ:0,DPT_NAM:3,EMP_NAM:5,GU:6,Q0:7},POS_CAR={SEQ:0,DPT_NAM:3,CAR_NUM:5,CAR_WGT_TYP:6,CAR_OWN_NAM:7,EMP_NAM:8,GU:9,Q0:10};
+  let H=null,hasCar=false;const blocks=[];let cur=null;const newB=()=>{cur={E:{},txt:[]};blocks.push(cur)};
   String(raw).split(/\r?\n/).forEach(line=>{if(!line.trim())return;let c=line.split('\t');if(c.length<10)c=line.trim().split(/\s+/);c=c.map(x=>String(x).trim());
-    if(/^SEQ$/i.test(c[0])){H=c;if(!cur||Object.keys(cur.E).length)newB();return}
-    const col=n=>{if(H){const i=H.findIndex(h=>h.toUpperCase()===n);if(i>=0)return i}return {SEQ:0,DPT_NAM:3,EMP_NAM:5,GU:6,CST_QTY:39,N_AVG:40,B_AVG:41}[n]};
-    const q=n=>{const i=H?H.findIndex(h=>h.toUpperCase()==='CST_QTY'+String(n).padStart(2,'0')):-1;return i>=0?i:7+n};
+    if(/^SEQ$/i.test(c[0])){H=c.map(h=>h.toUpperCase());if(!cur||Object.keys(cur.E).length)newB();return}
+    const P=H?null:(c.length>=45?POS_CAR:POS_EMP);
+    const col=n=>{if(H){const i=H.indexOf(n);return i}return n in P?P[n]:-1};
+    const q=n=>{if(H){const i=H.indexOf('CST_QTY'+String(n).padStart(2,'0'));if(i>=0)return i}return (H?H.indexOf('GU')+1:P.Q0)+n};
+    const qi=H?H.indexOf('CST_QTY'):P.Q0+32,bi=H?H.indexOf('B_AVG'):P.Q0+34;
     if(c[col('SEQ')]!=='1')return;const emp=String(c[col('EMP_NAM')]||'').replace(/\s+/g,''),gu=c[col('GU')];if(!emp||!CAR_GU.includes(gu))return;
-    if(!cur||(cur.E[emp]&&cur.E[emp].G[gu]))newB();/* 같은 담당자·구분이 또 나오면 다음 달 자료 */
-    const dpt=c[col('DPT_NAM')]||'';const e=cur.E[emp]=cur.E[emp]||{emp,br:dpt,G:{}};
-    e.G[gu]={prev:num(c[q(0)]),d:Array.from({length:32},(_,i)=>i?num(c[q(i)]):0),tot:num(c[col('CST_QTY')]),bavg:num(c[col('B_AVG')])};cur.txt.push(line.trim())});
+    const ci=col('CAR_NUM'),car=ci>=0?String(c[ci]||'').trim():'';if(car)hasCar=true;const key=emp+'|'+car;
+    if(!cur||(cur.E[key]&&cur.E[key].G[gu]))newB();/* 같은 차량·구분이 또 나오면 다음 달 자료 */
+    const g=n=>{const i=col(n);return i>=0?String(c[i]||'').trim():''};
+    const e=cur.E[key]=cur.E[key]||{key,emp,car,wgt:g('CAR_WGT_TYP'),own:g('CAR_OWN_NAM'),br:g('DPT_NAM'),G:{}};
+    e.G[gu]={prev:num(c[q(0)]),d:Array.from({length:32},(_,i)=>i?num(c[q(i)]):0),tot:num(c[qi]),bavg:num(c[bi])};cur.txt.push(line.trim())});
   let B=blocks.filter(b=>Object.keys(b.E).length);const seen=new Set();B=B.filter(b=>{const k=b.txt.join('\n');if(seen.has(k))return false;seen.add(k);return true});/* 같은 달을 두 번 붙인 경우 */
-  if(!B.length)return {months:[],err:'차량운영 형식을 인식하지 못했습니다 (SEQ=1 담당자 행, GU=회수량/예측량/업체수/회전수)'};
+  if(!B.length)return {months:[],err:'차량운영 형식을 인식하지 못했습니다 (SEQ=1 행, GU=회수량/업체수/회전수)'};
   const tot=(b,f)=>Object.values(b.E).reduce((s,e)=>s+(e.G['회수량']?e.G['회수량'][f]:0),0);
   if(B.length===2&&tot(B[0],'tot')!==tot(B[1],'prev')&&tot(B[1],'tot')===tot(B[0],'prev'))B.reverse();/* 당월을 먼저 붙인 경우 */
   const chain=B.slice(1).every((b,i)=>tot(B[i],'tot')===tot(b,'prev'));
   const end=wk?v2Date(wk.to):new Date();const months=B.map((b,i)=>{const d=new Date(end.getFullYear(),end.getMonth()-(B.length-1-i),1);return {y:d.getFullYear(),m:d.getMonth()+1,E:b.E}});
   const brReg=br=>{for(const r of Object.keys(ORG))if(ORG[r][br])return r;return ''};
-  months.forEach(M=>{Object.keys(M.E).forEach(k=>{const e=M.E[k],o=EMP2[k];e.br=o?o.br:e.br;e.reg=o?o.reg:brReg(e.br);if(!regOK(e.reg))delete M.E[k]})});
+  months.forEach(M=>{Object.keys(M.E).forEach(k=>{const e=M.E[k],o=EMP2[e.emp];e.br=o?o.br:e.br;e.reg=o?o.reg:brReg(e.br);if(!regOK(e.reg))delete M.E[k]})});
   let last='';months.forEach(M=>{const nd=new Date(M.y,M.m,0).getDate();for(let d=1;d<=nd;d++)if(Object.values(M.E).some(e=>e.G['회수량']&&e.G['회수량'].d[d]>0)){const k=M.y+String(M.m).padStart(2,'0')+String(d).padStart(2,'0');if(k>last)last=k}});
   const warn=[];months.forEach(M=>{const nd=new Date(M.y,M.m,0).getDate();for(let d=nd+1;d<=31;d++)if(Object.values(M.E).some(e=>e.G['회수량']&&e.G['회수량'].d[d]>0)){warn.push(M.m+'월에는 '+d+'일이 없는데 회수량이 있습니다 (붙인 순서 확인)');break}});
   if(B.length>1&&!chain)warn.push('전월 합계가 이어지지 않습니다 (붙인 순서·달 확인)');
-  return {months,last,chain,warn}}
+  return {months,last,chain,warn,hasCar}}
 function carStat(){const el=$('dCar-stat');if(!el)return;if(!CAR){el.textContent='';$('dCarCnt').textContent='';return}
   if(CAR.err){el.textContent=CAR.err;$('dCarCnt').textContent='';return}
-  const ms=CAR.months.map(M=>M.m+'월 '+Object.keys(M.E).length+'명').join(' · ');
-  el.innerHTML=esc('인식: '+ms+(CAR.last?' · 마지막 회수일 '+(+CAR.last.slice(4,6))+'/'+(+CAR.last.slice(6))+'':'')+(CAR.months.length>1&&CAR.chain?' · 전월 합계 일치':''))+(CAR.warn.length?'<br><span style="color:#b00020">'+esc(CAR.warn.join(' / '))+'</span>':'');
+  const ms=CAR.months.map(M=>{const V=Object.values(M.E);return M.m+'월 '+new Set(V.map(e=>e.emp)).size+'명'+(CAR.hasCar?' · 차량 '+V.filter(e=>e.car).length+'대':'')}).join(' / ');
+  el.innerHTML=esc('인식: '+ms+(CAR.last?' · 마지막 회수일 '+(+CAR.last.slice(4,6))+'/'+(+CAR.last.slice(6)):'')+(CAR.months.length>1&&CAR.chain?' · 전월 합계 일치':''))+(CAR.warn.length?'<br><span style="color:#b00020">'+esc(CAR.warn.join(' / '))+'</span>':'');
   $('dCarCnt').textContent='· '+CAR.months.map(M=>M.m+'월').join('+')}
-/* 회의 기간 집계 (마지막 회수일까지만 예측량도 비교) */
+/* ===== 차량관리 계산 =====
+   금주 = 회의 기간(마지막 회수일까지), 전주 = 회의 시작 전 7일. 예측량은 쓰지 않는다.
+   미운행 = 일요일·권역 전체 휴무일(공휴일)을 뺀 날 중 회수·회전이 없는 날. 결차 = 금주 내내 회수·회전이 없는 차량.
+   전일대비 급변 = 회수량이 직전 운행일(일요일 제외) 대비 ±50% 이상이고 30매 이상 차이 나는 날. */
+const CAR_SPIKE={pct:0.5,min:30};
 function carCalc(){if(!CAR||!CAR.months||!CAR.months.length)return null;const wk=curWeek();const L=CAR.months[CAR.months.length-1];
   const from=wk?wk.from:L.y+String(L.m).padStart(2,'0')+'01',to0=wk?wk.to:L.y+String(L.m).padStart(2,'0')+'31',to=CAR.last&&CAR.last<to0?CAR.last:to0;
-  const mOf=(y,m)=>CAR.months.find(M=>M.y===y&&M.m===m);const R={},miss=new Set();let op=0;const emps=new Set();CAR.months.forEach(M=>Object.keys(M.E).forEach(k=>emps.add(k)));
-  const add=(o,k,v)=>o[k]=(o[k]||0)+v;
-  for(let d=v2Date(from);ymd(d)<=to;d.setDate(d.getDate()+1)){const M=mOf(d.getFullYear(),d.getMonth()+1);if(!M){miss.add((d.getMonth()+1)+'월');continue}const day=d.getDate();let any=0;
-    Object.values(M.E).forEach(e=>{const o=R[e.emp]=R[e.emp]||{emp:e.emp,br:e.br,reg:e.reg};CAR_GU.forEach(g=>{const v=e.G[g]?e.G[g].d[day]:0;add(o,g,v);if(g==='회수량'&&v>0)any=1})});if(any)op++}
+  const pfD=v2Date(from);pfD.setDate(pfD.getDate()-7);const pf=ymd(pfD),pt=ymd(new Date(v2Date(from).getTime()-864e5));
+  const mOf=(y,m)=>CAR.months.find(M=>M.y===y&&M.m===m);const R={},miss=new Set();
+  const unit=e=>R[e.key]=R[e.key]||{key:e.key,emp:e.emp,car:e.car,wgt:e.wgt,own:e.own,br:e.br,reg:e.reg,cur:{rec:0,firm:0,trip:0,days:0,idle:[]},prev:{rec:0,firm:0,trip:0,days:0,idle:[],ok:true},bavg:0,mRec:0,daily:{},spikes:[]};
+  CAR.months.forEach(M=>Object.values(M.E).forEach(unit));
+  const days=[];let op=0;
+  for(let d=v2Date(pf);ymd(d)<=to;d.setDate(d.getDate()+1)){const k=ymd(d),inCur=k>=from,M=mOf(d.getFullYear(),d.getMonth()+1),sun=d.getDay()===0,lab=(d.getMonth()+1)+'/'+d.getDate();
+    days.push({k,lab,dow:'일월화수목금토'[d.getDay()],sun,cur:inCur,has:!!M});
+    if(!M){if(inCur)miss.add((d.getMonth()+1)+'월');else Object.values(R).forEach(o=>o.prev.ok=false);continue}
+    const day=d.getDate();let any=0;
+    Object.values(M.E).forEach(e=>{const o=unit(e),S=inCur?o.cur:o.prev;const v=g=>e.G[g]?e.G[g].d[day]:0;const rec=v('회수량'),firm=v('업체수'),trip=v('회전수');
+      o.daily[k]={rec,firm,trip};S.rec+=rec;S.firm+=firm;S.trip+=trip;const ran=rec>0||trip>0;if(ran)S.days++;if(ran)any=1});
+    days[days.length-1].run=!!any;if(inCur&&any)op++}
+  /* 미운행: 일요일과 권역 전체가 쉰 날(공휴일)은 빼고, 그날 회수·회전이 없는 차량 */
+  Object.values(R).forEach(o=>days.forEach(D=>{const x=o.daily[D.k];if(!x||D.sun||!D.run||x.rec>0||x.trip>0)return;x.idle=1;(D.cur?o.cur:o.prev).idle.push(D.lab)}));
+  /* 전일대비 급변: 금주 날짜만, 직전 비일요일과 비교 */
+  Object.values(R).forEach(o=>{let pv=null;days.forEach(D=>{if(D.sun||!D.has)return;const x=o.daily[D.k];if(!x)return;
+      if(D.cur&&pv!==null&&pv>0&&x.rec>0){const ch=(x.rec-pv)/pv;if(Math.abs(ch)>=CAR_SPIKE.pct&&Math.abs(x.rec-pv)>=CAR_SPIKE.min){o.spikes.push({k:D.k,lab:D.lab,pv,v:x.rec,ch});x.spike=ch}}
+      if(x.rec>0)pv=x.rec});o.dead=o.car&&!o.cur.days?1:0});
   const lm=mOf(+String(to0).slice(0,4),+String(to0).slice(4,6))||L,lastD=CAR.last&&CAR.last.slice(0,6)===lm.y+String(lm.m).padStart(2,'0')?+CAR.last.slice(6):new Date(lm.y,lm.m,0).getDate();
-  [...emps].forEach(k=>{const e=lm.E[k];const o=R[k]=R[k]||{emp:k,br:(e||{}).br,reg:(e||{}).reg};if(!e)return;o.bavg=e.G['회수량']?e.G['회수량'].bavg:0;
-    o.mRec=0;o.mFc=0;for(let d=1;d<=lastD;d++){o.mRec+=e.G['회수량']?e.G['회수량'].d[d]:0;o.mFc+=e.G['예측량']?e.G['예측량'].d[d]:0}});
-  return {R:Object.values(R),from,to,op,miss:[...miss],lm,lastD}}
-function carRender(){const C=carCalc();if(!C)return '';const f0=n=>Math.round(n).toLocaleString('en-US'),f1=n=>(Math.round(n*10)/10).toLocaleString('en-US');
-  const pct=(a,b)=>b?Math.round(100*a/b)+'%':'-';
-  const sum=L=>{const o={};['회수량','예측량','업체수','회전수','bavg','mRec','mFc'].forEach(k=>o[k]=L.reduce((s,x)=>s+(x[k]||0),0));return o};
-  const cells=(o,cls)=>{const avg=C.op?o['회수량']/C.op:0,chg=o.bavg?(avg-o.bavg)/o.bavg:null;const ach=o['예측량']?o['회수량']/o['예측량']:null,mAch=o.mFc?o.mRec/o.mFc:null;
-    const red=v=>v!==null&&v<1?';color:#b00020':'';
-    return '<td class="n" style="font-weight:700">'+f0(o['회수량'])+'</td><td class="n">'+f0(o['예측량'])+'</td><td class="n" style="font-weight:700'+red(ach)+'">'+pct(o['회수량'],o['예측량'])+'</td><td class="n">'+f0(o['업체수'])+'</td><td class="n">'+f0(o['회전수'])+'</td>'+
-      '<td class="n">'+(o['회전수']?f0(o['회수량']/o['회전수']):'-')+'</td><td class="n">'+(o['회전수']?f1(o['업체수']/o['회전수']):'-')+'</td>'+
-      '<td class="n">'+f0(avg)+'</td><td class="n">'+(o.bavg?f0(o.bavg):'-')+'</td><td class="n" style="'+(chg===null?'':chg<0?'color:#b00020':'color:#0b4fb3')+'">'+(chg===null?'-':(chg<0?'▼':'▲')+Math.abs(Math.round(100*chg))+'%')+'</td>'+
-      '<td class="n">'+f0(o.mRec)+'</td><td class="n" style="'+red(mAch).slice(1)+'">'+pct(o.mRec,o.mFc)+'</td>'};
-  const regs=[...new Set(C.R.map(x=>x.reg))].sort((a,b)=>Object.keys(ORG).indexOf(a)-Object.keys(ORG).indexOf(b));let body='';
-  regs.forEach(rg=>{const RL=C.R.filter(x=>x.reg===rg);const brs=[...new Set(RL.map(x=>x.br))].sort((a,b)=>brIdx(a)-brIdx(b));
-    brs.forEach((br,bi)=>{const L=RL.filter(x=>x.br===br).sort((a,b)=>empIdx(a.emp)-empIdx(b.emp));
-      L.forEach((x,i)=>body+='<tr'+(i===0&&bi>0?' style="border-top:2px solid #5b6b80"':'')+'><td class="c"'+(i||bi?' style="color:#9aa3ad"':'')+'>'+esc(rg)+'</td><td class="c"'+(i?' style="color:#9aa3ad"':'')+'>'+esc(br)+'</td><td class="c" style="font-weight:700">'+esc(x.emp)+'</td>'+cells(x)+'</tr>');
-      if(L.length>1)body+='<tr style="background:#fff2cc"><td class="c">'+esc(rg)+'</td><td class="c">'+esc(br)+'</td><td class="c" style="font-weight:700">소계</td>'+cells(sum(L))+'</tr>'});
-    body+='<tr style="background:#dbe8fb;font-weight:700"><td class="c" colspan="3">'+esc(rg||'기타')+' 계</td>'+cells(sum(RL))+'</tr>'});
-  const md=k=>(+k.slice(4,6))+'/'+(+k.slice(6));const hg=(t,cs,rs,st)=>'<td class="hg"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+(st?' style="'+st+'"':'')+'>'+t+'</td>';
-  const head='<tr>'+hg('권역',1,2)+hg('지점',1,2)+hg('담당자',1,2)+hg('회의 기간 '+md(C.from)+'~'+md(C.to)+' (회수일 '+C.op+'일)',10,1,'background:#dbe8fb')+hg(C.lm.m+'월 누계 (~'+C.lm.m+'/'+C.lastD+')',2,1,'background:#e2f0d9')+'</tr><tr>'+
-    ['회수량','예측량','달성률','업체수','회전수','회전당 회수','회전당 업체','일평균 회수','전월 일평균','증감','회수량','달성률'].map(h=>hg(h)).join('')+'</tr>';
-  const note=(C.miss.length?'<div class="hint" style="color:#b00020;margin:2px 0">'+esc(C.miss.join('·')+' 자료가 없어 그 날짜는 빠졌습니다. 전월분을 이어 붙이세요.')+'</div>':'')+'<div class="hint" style="margin:2px 0">달성률 = 회수량 ÷ 예측량(마지막 회수일까지). 일평균 = 기간 회수량 ÷ 권역 회수일수, 전월 일평균은 자료의 B_AVG. 회전당 = 회전수 1회당.</div>';
-  return '<details open><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:10px 0 4px">차량관리 <span class="hint" style="margin:0">단위: 매</span></summary>'+note+'<table class="xl sumt" style="width:1140px"><colgroup><col style="width:70px"><col style="width:70px"><col style="width:64px">'+'<col style="width:78px">'.repeat(12)+'</colgroup>'+head+body+'</table></details>'}
+  Object.values(lm.E).forEach(e=>{const o=unit(e);o.bavg=e.G['회수량']?e.G['회수량'].bavg:0;o.bavgF=e.G['업체수']?e.G['업체수'].bavg:0;o.bavgT=e.G['회전수']?e.G['회전수'].bavg:0;for(let d=1;d<=lastD;d++)o.mRec+=e.G['회수량']?e.G['회수량'].d[d]:0});
+  return {R:Object.values(R),from,to,pf,pt,op,days,miss:[...miss],lm,lastD}}
+const carCount=()=>CAR&&CAR.months&&CAR.months.length?Object.keys(CAR.months[CAR.months.length-1].E).length:0;
+function carCard(selCat){const n=carCount();if(!CAR)return '';
+  return '<section class="card-group"><h3>차량관리 <small>차량운영 자료 · 누르면 차량별 표</small></h3><div class="biz-groups"><section class="biz-group"><h4>차량</h4><div class="metric-cards"><button type="button" class="metric-card all'+(selCat==='CAR'?' active':'')+'" data-cat="CAR" aria-pressed="'+(selCat==='CAR')+'"><span>차량관리</span><strong>'+n+'</strong></button></div></section></div></section>'}
+/* 차량관리 표: 담당자 / 차량번호 · 톤수 · 기사명, 금주 값 옆에 전주 대비 증감 */
+function carRender(){const C=carCalc();if(!C)return '<div class="hint">2번 차량운영 칸에 자료를 붙여넣으세요</div>';
+  const f0=n=>Math.round(n).toLocaleString('en-US'),md=k=>(+k.slice(4,6))+'/'+(+k.slice(6));
+  const hg=(t,cs,rs,st)=>'<td class="hg"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+(st?' style="'+st+'"':'')+'>'+t+'</td>';
+  const sumU=L=>{const o={n:L.length,dead:0,cur:{rec:0,firm:0,trip:0,days:0,idle:[]},prev:{rec:0,firm:0,trip:0,days:0,ok:L.every(x=>x.prev.ok)},bavg:0,mRec:0,spikes:[]};
+    o.idleCars=0;L.forEach(x=>{['rec','firm','trip','days'].forEach(k=>{o.cur[k]+=x.cur[k];o.prev[k]+=x.prev[k]});o.bavg+=x.bavg;o.mRec+=x.mRec;o.dead+=x.dead;if(!x.dead){o.cur.idle.push(...x.cur.idle);o.spikes.push(...x.spikes);if(x.cur.idle.length)o.idleCars++}});return o};
+  /* 금주 값 + 전주 대비: 감소는 빨강, 20% 이상 감소는 배경 강조 */
+  const cmp=(cur,prev,ok,kind)=>{let d='';let bg='';if(ok&&(prev||cur)){if(kind==='day'){const x=cur-prev;d=x?(x>0?'▲':'▼')+Math.abs(x)+'일':'';if(x<0)bg=x<=-2?'background:#fde2e2;':''}
+      else if(prev){const x=(cur-prev)/prev;const p=Math.round(100*x);d=p?(p>0?'▲':'▼')+Math.abs(p)+'%':'';if(x<=-0.2)bg='background:#fde2e2;'}else if(cur)d='▲신규'}
+    const col=d.startsWith('▼')?'#b00020':'#0b4fb3';
+    return '<td class="n" style="'+bg+'" title="전주 '+(ok?(kind==='day'?prev+'일':f0(prev)):'자료 없음')+'">'+(kind==='day'?cur:f0(cur))+(d?' <small style="color:'+col+'">'+d+'</small>':'')+'</td>'};
+  const avgCmp=o=>{const avg=C.op?o.cur.rec/C.op:0;if(!o.bavg)return '<td class="n">-</td>';const x=(avg-o.bavg)/o.bavg,p=Math.round(100*x);return '<td class="n" title="금주 일평균 '+f0(avg)+' / 전월 일평균 '+f0(o.bavg)+'">'+f0(avg)+' <small style="color:'+(p<0?'#b00020':'#0b4fb3')+'">'+(p<0?'▼':'▲')+Math.abs(p)+'%</small></td>'};
+  const idleTd=o=>'<td class="txt"'+(o.cur.idle.length?' style="color:#b00020" title="'+esc(o.cur.idle.join(', '))+'"':'')+'>'+(o.cur.idle.length?o.cur.idle.length+'일 ('+esc(o.cur.idle.slice(0,4).join(',')+(o.cur.idle.length>4?'…':''))+')':'')+'</td>';
+  const spikeTd=o=>{const S=o.spikes;if(!S.length)return '<td class="txt"></td>';const t=S.map(s=>s.lab+' '+f0(s.pv)+'→'+f0(s.v)+' ('+(s.ch>0?'▲':'▼')+Math.abs(Math.round(100*s.ch))+'%)');
+    return '<td class="txt" title="'+esc(t.join('\n'))+'">'+S.slice(0,2).map((s,i)=>'<span style="color:'+(s.ch<0?'#b00020':'#0b4fb3')+'">'+esc(t[i])+'</span>').join(' · ')+(S.length>2?' 외 '+(S.length-2):'')+'</td>'};
+  const cells=o=>o.n?cmp(o.cur.days,o.prev.days,o.prev.ok,'day')+cmp(o.cur.trip,o.prev.trip,o.prev.ok)+cmp(o.cur.firm,o.prev.firm,o.prev.ok)+cmp(o.cur.rec,o.prev.rec,o.prev.ok).replace('<td class="n" style="','<td class="n" style="font-weight:700;')+
+    '<td class="n">'+(o.cur.trip?f0(o.cur.rec/o.cur.trip):'-')+'</td>'+avgCmp(o)+'<td class="c"'+(o.idleCars?' style="color:#b00020"':'')+'>'+(o.idleCars?o.idleCars+'대 · '+o.cur.idle.length+'일':'')+'</td><td class="c">'+[o.spikes.filter(x=>x.ch<0).length?'<span style="color:#b00020">급감 '+o.spikes.filter(x=>x.ch<0).length+'</span>':'',o.spikes.filter(x=>x.ch>0).length?'<span style="color:#0b4fb3">급증 '+o.spikes.filter(x=>x.ch>0).length+'</span>':''].filter(Boolean).join(' · ')+'</td><td class="n">'+f0(o.mRec)+'</td>':cmp(o.cur.days,o.prev.days,o.prev.ok,'day')+cmp(o.cur.trip,o.prev.trip,o.prev.ok)+cmp(o.cur.firm,o.prev.firm,o.prev.ok)+cmp(o.cur.rec,o.prev.rec,o.prev.ok).replace('<td class="n" style="','<td class="n" style="font-weight:700;')+
+    '<td class="n">'+(o.cur.trip?f0(o.cur.rec/o.cur.trip):'-')+'</td>'+avgCmp(o)+idleTd(o)+spikeTd(o)+'<td class="n">'+f0(o.mRec)+'</td>';
+  const regs=[...new Set(C.R.map(x=>x.reg))].sort((a,b)=>Object.keys(ORG).indexOf(a)-Object.keys(ORG).indexOf(b));
+  const brsOf=RL=>[...new Set(RL.map(x=>x.br))].sort((a,b)=>brIdx(a)-brIdx(b)),empsOf=L=>[...new Set(L.map(x=>x.emp))].sort((a,b)=>empIdx(a)-empIdx(b));
+  let body='';regs.forEach(rg=>{const RL=C.R.filter(x=>x.reg===rg);brsOf(RL).forEach((br,bi)=>{const BL=RL.filter(x=>x.br===br),EM=empsOf(BL);
+      EM.forEach((emp,ei)=>{const VL=BL.filter(x=>x.emp===emp);
+        VL.forEach((v,i)=>{const line=i===0?(ei===0&&bi>0?'border-top:2.5px solid #1f3a93':ei>0?'border-top:2px solid #5b6b80':''):'';
+          body+='<tr style="'+line+'"><td class="c"'+(i||ei?' style="color:#9aa3ad"':'')+'>'+esc(br)+'</td><td class="c" style="font-weight:700'+(i?';color:#9aa3ad':'')+'">'+esc(emp)+'</td><td class="c">'+esc(v.car||'-')+'</td><td class="c">'+esc(v.wgt||'')+'</td><td class="c">'+esc(v.own||'')+'</td>'+
+            (v.dead?'<td class="c" colspan="8" style="color:#b00020;font-weight:700;background:#fde2e2" title="전주 회수 '+f0(v.prev.rec)+'매">결차차량 (금주 회수·회전 없음)</td><td class="n">'+f0(v.mRec)+'</td>':cells(v))+'</tr>'});
+        if(VL.length>1){const o=sumU(VL);body+='<tr style="background:#fff2cc"><td class="c">'+esc(br)+'</td><td class="c" style="font-weight:700">'+esc(emp)+'</td><td class="c" colspan="3">소계 '+o.n+'대'+(o.dead?' · 결차 '+o.dead:'')+'</td>'+cells(o)+'</tr>'}});
+      if(EM.length>1){const o=sumU(BL);body+='<tr style="background:#fdebd0"><td class="c">'+esc(br)+'</td><td class="c" style="font-weight:700">지점 계</td><td class="c" colspan="3">'+o.n+'대'+(o.dead?' · 결차 '+o.dead:'')+'</td>'+cells(o)+'</tr>'}});
+    const o=sumU(RL);body+='<tr style="background:#dbe8fb;font-weight:700"><td class="c" colspan="2">'+esc(rg||'기타')+' 계</td><td class="c" colspan="3">'+o.n+'대'+(o.dead?' · 결차 '+o.dead:'')+'</td>'+cells(o)+'</tr>'});
+  const dead=C.R.filter(x=>x.dead).length,idle=C.R.filter(x=>!x.dead&&x.cur.idle.length).length,sp=C.R.filter(x=>!x.dead&&x.spikes.some(s=>s.ch<0)).length,
+    dn=C.R.filter(x=>!x.dead&&x.prev.ok&&x.prev.rec&&(x.cur.rec-x.prev.rec)/x.prev.rec<=-0.2).length;
+  const summary='<div style="margin:4px 0 6px;font-size:13px">'+[['결차',dead],['미운행 있는 차량',idle],['회수량 20%↓ (전주 대비)',dn],['전일대비 급감 있는 차량',sp]].map(([l,n])=>'<span class="tag" style="margin-right:6px;'+(n?'background:#fde2e2;color:#b00020':'')+'">'+l+' '+n+'대</span>').join('')+'</div>';
+  const note=(C.miss.length?'<div class="hint" style="color:#b00020;margin:2px 0">'+esc(C.miss.join('·')+' 자료가 없어 그 날짜는 빠졌습니다. 전월분을 이어 붙이세요.')+'</div>':'')+
+    '<div class="hint" style="margin:2px 0">금주 = '+md(C.from)+'~'+md(C.to)+' (회수일 '+C.op+'일), 전주 = '+md(C.pf)+'~'+md(C.pt)+'. 숫자 옆 ▲▼ = 전주 대비(마우스 올리면 전주 값), 20% 이상 감소·운행일 2일 이상 감소는 분홍. 미운행 = 일요일·권역 전체 휴무일을 뺀 날 중 회수·회전 없는 날. 소계 운행일 = 차량별 운행일 합. 결차 = 금주 내내 회수·회전 없음. 전일대비 급변 = 직전 운행일 대비 회수량 ±50% 이상(30매 이상 차이). 예측량은 쓰지 않습니다.</div>';
+  const head='<tr>'+hg('지점',1,2)+hg('담당자',1,2)+hg('차량번호',1,2)+hg('톤수',1,2)+hg('기사명',1,2)+hg('금주 '+md(C.from)+'~'+md(C.to)+' (전주 대비)',4,1,'background:#dbe8fb')+hg('회전당<br>회수',1,2)+hg('일평균 회수<br>(전월 대비)',1,2)+hg('미운행<br>(일요일·휴무 제외)',1,2)+hg('전일대비 급변<br>(회수량)',1,2)+hg(C.lm.m+'월 누계<br>(~'+C.lm.m+'/'+C.lastD+')',1,2,'background:#e2f0d9')+'</tr><tr>'+['운행일','회전수','업체수','회수량'].map(h=>hg(h)).join('')+'</tr>';
+  return '<div style="font-weight:700;color:var(--navy);margin:4px 0">차량관리 <span class="hint" style="margin:0">단위: 매 · '+C.R.filter(x=>x.car).length+'대</span></div>'+summary+note+
+    '<table class="xl sumt" style="width:1430px"><colgroup><col style="width:66px"><col style="width:58px"><col style="width:62px"><col style="width:46px"><col style="width:56px"><col style="width:70px"><col style="width:84px"><col style="width:84px"><col style="width:100px"><col style="width:58px"><col style="width:100px"><col style="width:150px"><col style="width:260px"><col style="width:74px"></colgroup>'+head+body+'</table>'}
+/* 일자별 상세: 전주~금주 날짜 × (회수량·업체수·회전수), 일요일 회색, 미운행 분홍, 급변 ▲▼ */
+function carDaily(){const C=carCalc();if(!C)return '';const f0=n=>Math.round(n).toLocaleString('en-US'),f1=n=>(Math.round(n*10)/10).toLocaleString('en-US');
+  const D=C.days;const GU=[['rec','회수량','bavg'],['firm','업체수','bavgF'],['trip','회전수','bavgT']];
+  const regs=[...new Set(C.R.map(x=>x.reg))].sort((a,b)=>Object.keys(ORG).indexOf(a)-Object.keys(ORG).indexOf(b));
+  let h='<h3 class="det-h">차량별 일자 상세 <span class="hint" style="margin:0">'+(+C.pf.slice(4,6))+'/'+(+C.pf.slice(6))+'~'+(+C.to.slice(4,6))+'/'+(+C.to.slice(6))+' · 굵은 세로선 오른쪽이 금주 · 회색 = 일요일·권역 휴무일 · 분홍 = 미운행 · ▲▼ = 전일대비 급변</span></h3>';
+  const dh=D.map((d,i)=>'<td class="hg" style="'+(d.sun||(d.has&&!d.run)?'background:#bfbfbf;':'')+(d.cur&&(i===0||!D[i-1].cur)?'border-left:2.5px solid #1f3a93;':'')+'">'+d.lab+'<br>('+d.dow+')</td>').join('');
+  regs.forEach(rg=>{const RL=C.R.filter(x=>x.reg===rg);[...new Set(RL.map(x=>x.br))].sort((a,b)=>brIdx(a)-brIdx(b)).forEach(br=>{const BL=RL.filter(x=>x.br===br).sort((a,b)=>empIdx(a.emp)-empIdx(b.emp));
+    h+='<details open class="det-br"><summary>'+esc(rg+' · '+br)+' <span class="hint" style="margin:0">'+BL.length+'대</span></summary><div class="prev" style="padding:6px"><table class="xl" style="font-size:9pt"><colgroup><col style="width:56px"><col style="width:62px"><col style="width:42px"><col style="width:52px"><col style="width:48px"><col style="width:52px">'+D.map(()=>'<col style="width:44px">').join('')+'<col style="width:60px"><col style="width:52px"></colgroup>'+
+      '<tr><td class="hg">담당자</td><td class="hg">차량번호</td><td class="hg">톤수</td><td class="hg">기사명</td><td class="hg">구분</td><td class="hg">전월<br>평균</td>'+dh+'<td class="hg">금주<br>합계</td><td class="hg">금주<br>일평균</td></tr>';
+    let pe=null;BL.forEach(v=>{GU.forEach(([k,lab,bk],gi)=>{const first=gi===0;const top=first?(pe!==null&&pe!==v.emp?'border-top:2px solid #5b6b80;':'border-top:1.5px solid #9aa3ad;'):'';
+        h+='<tr>'+(first?'<td class="c" rowspan="3" style="font-weight:700;'+top+'">'+esc(v.emp)+'</td><td class="c" rowspan="3" style="'+top+'">'+esc(v.car||'-')+'</td><td class="c" rowspan="3" style="'+top+'">'+esc(v.wgt||'')+'</td><td class="c" rowspan="3" style="'+top+'">'+esc(v.own||'')+(v.dead?'<br><b style="color:#b00020">결차</b>':'')+'</td>':'')+
+          '<td class="c" style="'+top+'">'+lab+'</td><td class="n" style="'+top+'">'+(v[bk]?f1(v[bk]):'-')+'</td>'+
+          D.map((d,i)=>{const x=v.daily[d.k];const bl=d.cur&&(i===0||!D[i-1].cur)?'border-left:2.5px solid #1f3a93;':'';if(!d.has||!x)return '<td class="c" style="'+top+bl+'color:#bbb">·</td>';
+            const idle=!!x.idle;let st=top+bl+(d.sun||!d.run?'background:#eee;':idle?'background:#fde2e2;':'');let t=x[k]?f0(x[k]):'0';
+            if(k==='rec'&&x.spike!==undefined){st+='color:'+(x.spike<0?'#b00020':'#0b4fb3')+';font-weight:700;';t=(x.spike<0?'▼':'▲')+t}
+            return '<td class="n" style="'+st+'"'+(idle&&first?' title="미운행"':'')+'>'+(idle&&!x[k]?'':t)+'</td>'}).join('')+
+          '<td class="n" style="font-weight:700;'+top+'">'+f0(v.cur[k])+'</td><td class="n" style="'+top+'">'+(C.op?f1(v.cur[k]/C.op):'-')+'</td></tr>'});pe=v.emp});
+    h+='</table></div></details>'})});return h}
 /* ===== 실행 ===== */
 let ALL=[],OUT=null;
 const regOf=d=>{const e=EMP2[d.emp]||EMP2[String(d.emp||'').replace(/\d+$/,'')];return e?e.reg:(guessBr(d.addr||'').reg||'')};
@@ -745,7 +805,7 @@ function build(){const wk=curWeek();const REG=$('regsel').value;const regOK=r=>!
   const review=$('review');review.style.display=unclassified.length?'':'none';review.innerHTML=unclassified.length?'<summary style="cursor:pointer">분류 보류 '+unclassified.length+'업체 · 원문 확인</summary><div class="prev"><table class="xl"><tr><td class="hg">담당자</td><td class="hg">업체</td><td class="hg">원문 분류</td><td class="hg">내용</td></tr>'+unclassified.map(d=>'<tr><td>'+esc(d.emp)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.dtl.map(x=>x.code+' '+x.typ).join(' / '))+'</td><td class="txt">'+esc(d.dtl.map(x=>x.text).join(' / '))+'</td></tr>').join('')+'</table></div>':'';
   const sel=$('catf');const cur=sel.value;
   const opts=cs=>cs.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
-  sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['주간 전체',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="활동분류 (V2)">'+V2_FILTERS.map(([v,l])=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+esc(l)+'</option>').join('')+'</optgroup><optgroup label="계약구분">'+GCATS.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c.slice(2))+'</option>').join('')+'</optgroup>';
+  sel.innerHTML='<option value="">전체</option><optgroup label="주간영업현황">'+opts(['주간 전체',...BIZ.flatMap(b=>[b+' 계약',b+' 견적'])])+'</optgroup><optgroup label="활동분류 (V2)">'+V2_FILTERS.map(([v,l])=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+esc(l)+'</option>').join('')+'</optgroup><optgroup label="계약구분">'+GCATS.map(c=>'<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c.slice(2))+'</option>').join('')+'</optgroup>'+(CAR?'<option value="CAR"'+(cur==='CAR'?' selected':'')+'>차량관리</option>':'');
   render();$('stat').textContent='생성 완료: 업무일지 분류 '+diaryClassified.length+'묶음 · 계약/견적 자료 '+rows.filter(r=>r.q).length+'건'+(qDup?' (중복 '+qDup+'건 제외)':'')}
 /* 카드 필터: '주간 전체'는 사업 구분 없이 주간영업현황 계약·견적 전체 */
 const ALL_Q={'주간 전체':[' 계약',' 견적']};
@@ -935,8 +995,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
         const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text,act=(u.lab||(PF.act&&PF.form!=='일반'?PF.act:'')||'').replace(/^\[경쟁사\]$/,'경쟁사 등록')||v2ActName(u.cat,'',V2_OUT.test(u.text)?v2Clean(u.text):u.text);
         return '<tr><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c">'+esc(u.emp)+'</td><td class="c"><span class="tag" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt" title="'+esc(u.name)+'">'+esc(nmShort(u.name))+'</td><td class="txt">'+esc(act)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
   /* 신호·주차별 표는 기간이 '전체'일 때만 표시 */
-  const secCar=carRender();
-  return {sum:(P.p==='all'?[sec2,secKw,secCar,sec3,secSig,secTr]:[sec2,secKw,secCar,sec3]).filter(Boolean).join('<div style="height:12px"></div>'),detail:det}}
+  return {sum:(P.p==='all'?[sec2,secKw,sec3,secSig,secTr]:[sec2,secKw,sec3]).filter(Boolean).join('<div style="height:12px"></div>'),detail:det}}
 /* 목표 진척도(3번)에서 새 분류명을 쓰면 V2 활동으로 센다 */
 function v2GoalKey(t){const M=[['입고미회수','M'],['신규업체확인','3'],['신규·전환영업','1'],['신규전환영업','1'],['기존확대','2'],['수불·전산','6'],['수불전산','6'],['채권','8'],['기타업무','9'],['영업활동','영업'],['운영활동','운영'],['관리활동','관리'],['클레임','7']];for(const [n,k] of M)if(t.includes(n))return {k:'v2:'+k,lbl:'V2 '+(V2N[k]||k)};return null}
 function v2GoalCount(sel,f){const wk=curWeek();const isG=f==='영업'||f==='운영'||f==='관리';const emp=sel.emp?String(sel.emp).replace(/\d+$/,''):'';
@@ -950,9 +1009,11 @@ function render(){if(!OUT)return;const rows=visible();
   const bizGroup=b=>'<section class="biz-group"><h4>'+esc(b==='글로벌비즈'?'글로비즈':b)+'</h4><div class="metric-cards">'+metric(b+' 계약','계약')+metric(b+' 견적','견적')+'</div></section>';
   $('cards').innerHTML='<section class="card-group"><h3>주간영업현황</h3><div class="biz-groups">'+'<section class="biz-group"><h4>전체</h4><div class="metric-cards">'+metric('주간 전체','계약·견적','all')+'</div></section>'+weekly.map(bizGroup).join('')+'<section class="biz-group"><h4>단가인상</h4><div class="metric-cards">'+metric('G:단가인상','계약')+'</div></section></div>'+
     '<details class="gubun-box"'+(GUBUN_OPEN?' open':'')+'><summary>계약구분별 <span class="hint" style="margin:0">계약 데이터 '+GCATS.reduce((a,c)=>a+cnt[c],0)+'건 · 관리계약 제외</span></summary><div class="metric-cards" style="flex-wrap:wrap;margin-top:6px">'+GUBUN.map(g=>metric('G:'+g,g,'sm')).join('')+'</div></details></section>'+
-    v2Cards(selCat);
+    v2Cards(selCat)+carCard(selCat);
   {const gb=$('cards').querySelector('.gubun-box');if(gb)gb.ontoggle=()=>{GUBUN_OPEN=gb.open}}
   $('cards').querySelectorAll('.metric-card').forEach(el=>el.onclick=()=>{$('catf').value=$('catf').value===el.dataset.cat?'':el.dataset.cat;render()});
+  /* 차량관리 카드: 차량 표·일자 상세만 띄운다 */
+  if(selCat==='CAR'){$('sum').innerHTML=carRender();$('detail').innerHTML=carDaily();return}
   /* 집계표 */
   const key=r=>$('mode').value==='emp'?[r.reg,r.br,r.d.emp]:[r.reg,r.br];const groups={};
   /* 지점/담당자 행은 내장 명단 전체를 먼저 깔고, 데이터에만 있는 키를 뒤에 추가 (필터와 무관하게 전체 행 유지) */
