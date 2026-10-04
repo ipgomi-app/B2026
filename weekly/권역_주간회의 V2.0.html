@@ -74,6 +74,8 @@ header{display:flex;align-items:center;flex-wrap:wrap}
 .det-h{margin:14px 0 6px;font-size:15px;color:var(--navy)}
 .det-br{margin-bottom:8px}.det-br>summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:14px;margin-bottom:4px}
 table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2px 4px;vertical-align:top;white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all;overflow-wrap:anywhere}
+table.xl.dett.one td{height:22px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+table.xl.dett.one tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb td{border-top:2.5px solid #1f3a93}
 </style>
 </head>
 <body>
@@ -963,11 +965,15 @@ function render(){if(!OUT)return;const rows=visible();
   const CQ=rows.filter(r=>r.q&&r.qd&&catMatch(r,selCat)).sort((a,b)=>gNo(a)-gNo(b)||sortKey({reg:a.reg,br:a.br,emp:a.d.emp},{reg:b.reg,br:b.br,emp:b.d.emp})||(a.d.date?a.d.date.key:'').localeCompare(b.d.date?b.d.date.key:''));
   if(secQ){h+='<h3 class="det-h">계약·견적 상세 <span class="hint" style="margin:0">'+CQ.length+'건</span></h3>';
     if(!CQ.length)h+='<div class="hint">표시할 자료가 없습니다</div>';
-    else{const W=[100,96,80,90,76,60,64,190,0],HD=['계약구분/형태','계약형태',(selCat==='손익개선'||/^G:(단가|재출고개선)/.test(selCat)?'효과금액':'예상매출')+'(천원)','날짜','지점','담당자','코드','업체','내용'];
-      h+='<div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
+    else{/* 한 줄 표시 · 업체명 괄호 내용 생략(원문은 마우스 올리면 표시) · 담당자 바뀔 때 구분선, 계약구분 바뀔 때 굵은 선 */
+      const nmShort=s=>{const t=String(s||'').replace(/[(（][^)）]*[)）]|㈜/g,' ').replace(/\s+/g,' ').trim();return t||String(s||'')};
+      let pg=null,pe=null;const sepOf=r=>{const g=gNo(r),e=r.br+'|'+r.d.emp,c=pg===null?'':g!==pg?' class="grpb"':e!==pe?' class="empb"':'';pg=g;pe=e;return c};
+      const W=[100,96,100,90,76,60,64,190,0],HD=['계약구분/형태','계약형태',(selCat==='손익개선'||/^G:(단가|재출고개선)/.test(selCat)?'효과금액':'예상매출')+'(천원)','날짜','지점','담당자','코드','업체','내용'];
+      h+='<div class="prev" style="padding:6px"><table class="xl dett one"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
         CQ.map(r=>{const q=r.qd,amt=/^(계약|견적|단가인상|기타계약)$/.test(q.kind)&&q.amt?Math.round(q.amt).toLocaleString('en-US'):'';
           const cb=q.kind!=='견적'?' style="color:#0b4fb3;font-weight:700"':'';/* 계약은 파란색 강조 */
-          return '<tr><td class="txt"'+cb+'>'+esc(gOf(r))+'</td><td class="txt">'+esc(formOf(r))+'</td><td class="n" style="font-weight:700'+(cb?';color:#0b4fb3':'')+'">'+esc(amt)+'</td><td class="c">'+esc(ymdOf(q.date)||q.wkTxt||'')+'</td><td class="c">'+esc(r.br)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td><td class="txt">'+esc(String(q.raw||q.memo||'').replace(/\s+/g,' ').trim())+'</td></tr>'}).join('')+'</table></div>'}}
+          const memo=String(q.raw||q.memo||'').replace(/\s+/g,' ').trim();
+          return '<tr'+sepOf(r)+'><td class="txt"'+cb+'>'+esc(gOf(r))+'</td><td class="txt">'+esc(formOf(r))+'</td><td class="n" style="font-weight:700'+(cb?';color:#0b4fb3':'')+'">'+esc(amt)+'</td><td class="c">'+esc(ymdOf(q.date)||q.wkTxt||'')+'</td><td class="c">'+esc(r.br)+'</td><td class="c" style="font-weight:700">'+esc(r.d.emp)+'</td><td class="c">'+esc(r.d.code)+'</td><td class="txt" title="'+esc(r.d.name)+'">'+esc(nmShort(r.d.name))+'</td><td class="txt" title="'+esc(memo)+'">'+esc(memo)+'</td></tr>'}).join('')+'</table></div>'}}
   if(!secQ)h+=V2R.detail;
   $('detail').innerHTML=h}
 const LIST_HDR=['날짜','분류','품목','단계','권역','지점','담당자','코드','업체명','금액(천원)','요약'];
