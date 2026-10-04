@@ -247,7 +247,7 @@
       const occ2 = {}; const matched = new Set();
       const replacement = {}; const newRows = [];
       mine.forEach((r) => {
-        const n = (occ2[r.key] = (occ2[r.key] || 0) + 1);
+        const n = (occ2[r.key] = (occ2[r.key] || 0) + 1, r.occ || occ2[r.key]);
         const i = tplIdx[r.key + '#' + n];
         if (i != null) { matched.add(i); replacement[i] = r; } else newRows.push(r);
       });
@@ -1537,8 +1537,9 @@
     const W0 = opts.week && isWeek(wk(opts.week)) ? wk(opts.week) : null;
     if (W0) Object.keys(inputs).forEach((region) => {
       const inp = inputs[region]; const L = inp.L || TL;
-      const keep = []; let skipped = 0;
-      inp.rows.forEach((r) => { if (r.region !== region) return; if (visitWeeks(r, L).includes(W0)) keep.push(r); else skipped++; });
+      const keep = []; let skipped = 0; const occ = {};
+      // 같은 업체(코드+업체명)가 여러 행이면 거르기 전 순번을 기억 — 거른 뒤 순번이 당겨져 다른 행을 덮어쓰지 않게
+      inp.rows.forEach((r) => { if (r.region !== region) return; r.occ = (occ[r.key] = (occ[r.key] || 0) + 1); if (visitWeeks(r, L).includes(W0)) keep.push(r); else skipped++; });
       inp.rows = keep; inp.partial = true; inp.skipped = skipped; inp.week = W0;
     });
     const merged = mergeRows(tpl.rows, inputs, TL);
