@@ -194,6 +194,8 @@ table.xl.dett.one tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.g
 <script>
 /* ===== 공통 ===== */
 const $=id=>document.getElementById(id);
+/* 업체명 표시용: 괄호 안 내용·㈜ 생략(원문은 title로) */
+const nmShort=s=>{const t=String(s||'').replace(/[(（][^)）]*[)）]|㈜/g,' ').replace(/\s+/g,' ').trim();return t||String(s||'')};
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n};
 function parseTSV(s){
@@ -840,7 +842,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     const L=Object.values(F).sort((a,b)=>b.n-a.n||b.last.localeCompare(a.last));
     secKw='<div style="font-weight:700;color:var(--navy);margin:10px 0 4px">키워드 "'+esc(kwTxt)+'" 관련 업체 <span class="hint" style="margin:0">'+L.length+'곳 · '+units.filter(u=>u.cat!=='X').length+'건 · '+esc(P.label)+'</span></div>'+
       (L.length?'<div class="prev" style="padding:6px"><table class="xl dett" style="min-width:900px"><colgroup><col style="width:64px"><col style="width:200px"><col style="width:90px"><col style="width:44px"><col style="width:60px"><col style="width:150px"><col></colgroup><tr>'+['코드','업체','담당자','건수','최근','분류','최근 내용'].map(h=>'<td class="hg">'+h+'</td>').join('')+'</tr>'+
-        L.slice(0,300).map(o=>'<tr><td class="c">'+esc(o.code)+'</td><td class="txt">'+esc(o.name)+'</td><td class="c">'+esc([...o.emps].join(','))+'</td><td class="n">'+o.n+'</td><td class="c">'+o.last.slice(4,6).replace(/^0/,'')+'/'+o.last.slice(6).replace(/^0/,'')+'</td><td class="c">'+Object.entries(o.cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<span class="tag" style="margin:1px">'+esc(V2N[k])+' '+v+'</span>').join('')+'</td><td class="txt" title="'+esc(o.lastTxt)+'">'+esc(o.lastTxt.length>120?o.lastTxt.slice(0,120)+'…':o.lastTxt)+'</td></tr>').join('')+'</table></div>'+(L.length>300?'<div class="hint">상위 300곳만 표시</div>':''):'<div class="hint">해당 업체가 없습니다</div>')}
+        L.slice(0,300).map(o=>'<tr><td class="c">'+esc(o.code)+'</td><td class="txt" title="'+esc(o.name)+'">'+esc(nmShort(o.name))+'</td><td class="c">'+esc([...o.emps].join(','))+'</td><td class="n">'+o.n+'</td><td class="c">'+o.last.slice(4,6).replace(/^0/,'')+'/'+o.last.slice(6).replace(/^0/,'')+'</td><td class="c">'+Object.entries(o.cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<span class="tag" style="margin:1px">'+esc(V2N[k])+' '+v+'</span>').join('')+'</td><td class="txt" title="'+esc(o.lastTxt)+'">'+esc(o.lastTxt.length>120?o.lastTxt.slice(0,120)+'…':o.lastTxt)+'</td></tr>').join('')+'</table></div>'+(L.length>300?'<div class="hint">상위 300곳만 표시</div>':''):'<div class="hint">해당 업체가 없습니다</div>')}
   /* 표③ 성과 연결 · 기록 품질 */
   const st3=(L,gAll,k)=>{const M=v2Metrics(gAll,empsOf(k,gAll),P,IX);/* 카드 필터와 무관: 기간 안 전체 활동 기준 */return [M.S.length,M.firms,M.Qp.length,M.qf,M.N.length,M.amtN,M.Uq.length?(M.camps<M.Uq.length?M.Uq.length+' (일괄 '+M.camps+')':M.Uq.length):0,M.amtU,rt(M.linked,M.firms),rt(M.q2c,M.qf),rt(M.N.length-M.noDiary.length,M.N.length),pct(M.boiler,M.n),pct(M.qty,M.n),pct(M.res,M.n)]};
   const S3=rowsOf(st3);const W3=[...keyH.map(()=>72),56,56,56,56,56,80,96,80,92,88,92,56,56,56];
@@ -874,7 +876,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
       L.map(u=>{const tags=[u.biz!=='PPS'||u.cat==='1'||u.cat==='2'?u.biz:'',u.tgt,u.res,u.multi?'복합':'',u.remote?'비대면':''].filter(Boolean);
         /* 내용은 V1 작성 규칙(parseForm·lineSummary): 일자·업체코드·면담자·전화번호 제거, 경쟁사 등록형은 경쟁사 구분·단가·물동량·비고, 번호형은 지역·업종·내용만. 원문은 마우스 올리면 표시 */
         const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text,act=(u.lab||(PF.act&&PF.form!=='일반'?PF.act:'')||'').replace(/^\[경쟁사\]$/,'경쟁사 등록')||v2ActName(u.cat,'',V2_OUT.test(u.text)?v2Clean(u.text):u.text);
-        return '<tr><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c">'+esc(u.emp)+'</td><td class="c"><span class="tag" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt">'+esc(u.name)+'</td><td class="txt">'+esc(act)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
+        return '<tr><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c">'+esc(u.emp)+'</td><td class="c"><span class="tag" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt" title="'+esc(u.name)+'">'+esc(nmShort(u.name))+'</td><td class="txt">'+esc(act)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
   /* 신호·주차별 표는 기간이 '전체'일 때만 표시 */
   return {sum:(P.p==='all'?[sec2,secKw,sec3,secSig,secTr]:[sec2,secKw,sec3]).filter(Boolean).join('<div style="height:12px"></div>'),detail:det}}
 /* 목표 진척도(3번)에서 새 분류명을 쓰면 V2 활동으로 센다 */
@@ -955,7 +957,7 @@ function render(){if(!OUT)return;const rows=visible();
       o+='<details open class="det-br"><summary>'+esc(G.reg+' · '+G.br)+' <span class="hint" style="margin:0">'+items.length+'개 업체 · '+emps.size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>';
       items.forEach(({r,lines})=>lines.forEach(ln=>{const P=ln.P,ak=amtKindOf(ln.cats,selC),amt=lineAmtK(ln,ak);
         o+='<tr><td class="c">'+esc(ln.day)+'</td><td class="c">'+esc(r.d.emp)+'</td><td class="c">'+ln.cats.map(c=>'<span class="tag" style="margin:1px">'+esc(c==='기타'&&ln.etc?'기타·'+ln.etc:c.replace('신규영업 ','신규·').replace('글로벌비즈','글로비즈'))+'</span>').join('')+'</td>'+
-          '<td class="txt">'+esc(withAmt&&!r.q?salesAct(ln):P.act)+'</td>'+(withAmt?'<td class="n" style="font-weight:700" title="'+ak+'">'+esc(amt)+'</td>':'')+'<td class="c">'+esc(r.d.code)+'</td><td class="txt">'+esc(r.d.name)+'</td>'+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P,withAmt&&!r.q&&/번호형|하이픈형/.test(P.form)?P.act:''))+'</td></tr>'}));
+          '<td class="txt">'+esc(withAmt&&!r.q?salesAct(ln):P.act)+'</td>'+(withAmt?'<td class="n" style="font-weight:700" title="'+ak+'">'+esc(amt)+'</td>':'')+'<td class="c">'+esc(r.d.code)+'</td><td class="txt" title="'+esc(r.d.name)+'">'+esc(nmShort(r.d.name))+'</td>'+'<td class="txt" title="'+esc(ln.text)+'">'+esc(lineSummary(P,withAmt&&!r.q&&/번호형|하이픈형/.test(P.form)?P.act:''))+'</td></tr>'}));
       o+='</table></div></details>'});return o};
   let h='';
   /* 계약·견적 상세: 계약구분/형태 · 계약형태 · 예상매출 · 날짜 · 지점 · 담당자 · 코드 · 업체 · 내용(원문) */
@@ -966,7 +968,6 @@ function render(){if(!OUT)return;const rows=visible();
   if(secQ){h+='<h3 class="det-h">계약·견적 상세 <span class="hint" style="margin:0">'+CQ.length+'건</span></h3>';
     if(!CQ.length)h+='<div class="hint">표시할 자료가 없습니다</div>';
     else{/* 한 줄 표시 · 업체명 괄호 내용 생략(원문은 마우스 올리면 표시) · 담당자 바뀔 때 구분선, 계약구분 바뀔 때 굵은 선 */
-      const nmShort=s=>{const t=String(s||'').replace(/[(（][^)）]*[)）]|㈜/g,' ').replace(/\s+/g,' ').trim();return t||String(s||'')};
       let pg=null,pe=null;const sepOf=r=>{const g=gNo(r),e=r.br+'|'+r.d.emp,c=pg===null?'':g!==pg?' class="grpb"':e!==pe?' class="empb"':'';pg=g;pe=e;return c};
       const W=[100,96,100,90,76,60,64,190,0],HD=['계약구분/형태','계약형태',(selCat==='손익개선'||/^G:(단가|재출고개선)/.test(selCat)?'효과금액':'예상매출')+'(천원)','날짜','지점','담당자','코드','업체','내용'];
       h+='<div class="prev" style="padding:6px"><table class="xl dett one"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
