@@ -193,6 +193,8 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const msg = (el, cls, text) => { el.innerHTML = text ? '<div class="msg ' + cls + '">' + esc(text) + '</div>' : ''; };
   const status = (id, cls, text) => { const el = $(id); el.className = 'st ' + (cls || ''); el.textContent = text || ''; };
+  // 붙여넣기 칸 바로 밑 빨간 경고 (기존 상태 문구 아래에 붙임)
+  const boxWarn = (id, text) => { const el = $(id); if ([...el.querySelectorAll('.flagwarn')].some((d) => d.textContent === '⚠ ' + text)) return; el.insertAdjacentHTML('beforeend', '<div class="flagwarn">⚠ ' + esc(text) + '</div>'); };
   const lines = (t) => E.parseTSV(t).filter((r) => r.some((c) => String(c).trim())).length;
   function unb64(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
   const KIT = window.ENG_KIT ? unb64(window.ENG_KIT) : null;
@@ -225,15 +227,17 @@
       const cnt = {}; rows.forEach((r) => { cnt[r.region] = (cnt[r.region] || 0) + 1; });
       const noFlags = L.flags.length && !rows.some((sn) => L.flags.some((c) => String(E.text(sn.cells[c - 1].v)).trim()));
       $('tplInfo').innerHTML = '<span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>' +
-        (noFlags ? '<div class="msg err" style="margin-top:6px">⚠ 붙여넣은 수주풀에 <b>솔루션 사업구분(G~P) O 표시</b>가 없습니다. 원본에서 G~P 열이 그룹으로 접혀(숨겨져) 있으면 복사되지 않습니다. 엑셀에서 열 위쪽 <b>[+]</b>로 G~P를 펼친 뒤 다시 복사해 붙여넣으세요. 그대로 진행하면 권역 자료에 있는 O 표시로 채웁니다.</div>' : '');
+        '';
       if (state.tpl.type === 'paste') { status('s_sum', 'ok', '✓ ' + lines($('p_sum').value) + '행 · 기준 ' + w); status('s_pool', 'ok', '✓ 업체 ' + rows.length + '개'); }
+      if (noFlags) boxWarn('s_pool', '솔루션 사업구분(G~P) O 표시가 없습니다. 원본에서 G~P 열이 그룹으로 접혀 있으면 복사되지 않습니다. 열 위쪽 [+]로 G~P를 펼친 뒤 다시 복사해 붙여넣으세요. 그대로 진행하면 권역 자료의 O 표시로 채웁니다.');
       if (!$('week').dataset.touched) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
       REG.forEach(markRegion);
       changed();
     } catch (e) {
       console.error(e);
       state.tplRows = null; state.tplL = null; $('tplInfo').innerHTML = '';
-      msg($('buildMsg'), 'err', '지난주 제출본 오류: ' + e.message);
+      if (e.box && $('s_' + e.box)) { boxWarn('s_' + e.box, e.message); $('s_' + e.box).className = 'st'; }
+      else msg($('buildMsg'), 'err', '지난주 제출본 오류: ' + e.message);
       changed(true);
     }
   }
@@ -266,6 +270,7 @@
     if (t.trim()) state.reRegions[r] = t; else delete state.reRegions[r];
     $('rebox_' + r).classList.toggle('filled', !!state.reRegions[r]);
     status('res_' + r, '', state.reRegions[r] ? lines(t) + '행 붙여넣음' : '비어 있음 — 지난주 내용 유지');
+    if (state.reRegions[r]) { try { E.parseThirdPaste(t); } catch (e) { boxWarn('res_' + r, e.message); } }
     changed();
   }
   function markRegion(r) {
@@ -278,7 +283,7 @@
       try { if (!E.readRegionPaste(i.text, r, state.tplL).hasFlags) warn = '⚠ ' + r + ' 붙여넣기에 솔루션 사업구분(G~P) O 표시가 없습니다 — 기존 업체는 지난주 O 표시를 유지하지만 새 업체는 비게 됩니다. G~P를 펼쳐 다시 복사하세요.'; }
       catch (e) { warn = '⚠ ' + e.message; }
     }
-    $('rs_' + r).innerHTML = esc(base) + (warn ? '<div class="flagwarn">' + esc(warn) + '</div>' : '');
+    status('rs_' + r, '', base); if (warn) boxWarn('rs_' + r, warn.replace(/^⚠ /, ''));
   }
 
   function changed(keepMsg) {

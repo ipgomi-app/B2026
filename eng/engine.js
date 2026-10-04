@@ -1215,12 +1215,17 @@
 
   // kitBytes: 서식 틀 xlsx, p: { summary, pool, third } 붙여넣기 문자열
   async function templateFromPaste(ExcelJS, JSZip, kitBytes, p) {
-    if (!trim(p.summary)) throw new Error('지난주 영남영업본부 시트를 붙여넣어 주세요.');
-    if (!trim(p.pool)) throw new Error('지난주 영남대상업체(수주풀) 시트를 붙여넣어 주세요.');
+    // 오류에 어느 붙여넣기 칸(sum/pool/third)인지 표시 → 화면에서 그 칸 바로 밑에 보여 줌
+    const at = (box, fn) => { try { return fn(); } catch (e) { if (!e.box) e.box = box; throw e; } };
+    if (!trim(p.summary)) at('sum', () => { throw new Error('지난주 영남영업본부 시트를 붙여넣어 주세요.'); });
+    if (!trim(p.pool)) at('pool', () => { throw new Error('지난주 영남대상업체(수주풀) 시트를 붙여넣어 주세요.'); });
     const wb = await loadWorkbook(ExcelJS, JSZip, kitBytes);
     const { pool, sum } = findSheets(wb);
     const L = poolLayout(pool);
-    const fp = fillPool(pool, L, p.pool); const n = fp.n;
+    const fp = at('pool', () => fillPool(pool, L, p.pool)); const n = fp.n;
+    return at('sum', () => fillTemplateRest(wb, pool, sum, p, n, fp, at));
+  }
+  function fillTemplateRest(wb, pool, sum, p, n, fp, at) {
     const maxCol = sumMaxCol(sum);
     const kitInfo = readSections(sum, maxCol);
     const grid = parseTSV(p.summary);
@@ -1234,7 +1239,7 @@
     fillSummarySections(sum, grid, off, kitInfo, maxCol);
     const third = wb.worksheets.find((s) => s.state === 'visible' && s !== pool && s !== sum);
     let thirdRows = 0;
-    if (third) thirdRows = fillThird(third, trim(p.third) ? parseTSV(p.third) : null);
+    if (third) thirdRows = at('third', () => fillThird(third, trim(p.third) ? parseTSV(p.third) : null));
     return { wb, info: { poolRows: n, flagsMissing: !fp.hasFlags, thirdRows, thirdName: third ? third.name : null, week: wk(text(sum.getCell('X1').value)) } };
   }
 
@@ -1614,7 +1619,7 @@
 
   return {
     REGIONS, loadWorkbook, saveWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
-    templateFromPaste, rowForm, readLists, readRegionPaste, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
+    templateFromPaste, rowForm, readLists, readRegionPaste, parseThirdPaste, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
     // 틀(kit) 생성 도구용
     _i: { readSections, snapRow, writeRow, unmergeRows, rowMergeMap, writePool, formulaPatterns, writeSections, sumMaxCol, stripResults },
   };
