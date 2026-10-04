@@ -75,7 +75,7 @@ header{display:flex;align-items:center;flex-wrap:wrap}
 .det-br{margin-bottom:8px}.det-br>summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:14px;margin-bottom:4px}
 table.xl.dett{width:100%;min-width:1100px}table.xl.dett td{height:auto;padding:2px 4px;vertical-align:top;white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all;overflow-wrap:anywhere}
 table.xl.dett.one td{height:22px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
-table.xl.dett.one tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb td{border-top:2.5px solid #1f3a93}
+table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb td{border-top:2.5px solid #1f3a93}
 </style>
 </head>
 <body>
@@ -988,12 +988,15 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
   const D=units.filter(u=>f?true:u.cat!=='X').sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.emp},{reg:b.reg,br:b.br,emp:b.emp})||empIdx(a.emp)-empIdx(b.emp)||a.key.localeCompare(b.key));const CAP=1500;
   let det='<h3 class="det-h">활동 상세 · '+esc(P.label)+ft+(KW?' <span class="tag" style="background:#fff2cc">키워드: '+esc(kwTxt)+'</span>':'')+' <span class="hint" style="margin:0">'+D.length+'건'+(D.length>CAP?' 중 '+CAP+'건 표시 (카드나 기간으로 좁히세요)':'')+'</span></h3>';
   if(!D.length)det+='<div class="hint">표시할 활동이 없습니다</div>';
-  else{const bg={};D.slice(0,CAP).forEach(u=>{const k=u.reg+'|'+u.br;(bg[k]=bg[k]||[]).push(u)});const W=[52,60,96,150,64,170,150,0],HD=['날짜','담당자','분류','태그','코드','업체','활동명','내용'];
-    Object.keys(bg).forEach(k=>{const L=bg[k];det+='<details open class="det-br"><summary>'+esc(k.replace('|',' · '))+' <span class="hint" style="margin:0">'+L.length+'건 · '+new Set(L.map(u=>u.emp)).size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
+  else{const bg={};D.slice(0,CAP).forEach(u=>{const k=u.reg+'|'+u.br;(bg[k]=bg[k]||[]).push(u)});const W=[52,60,108,150,64,170,150,0],HD=['날짜','담당자','분류','태그','코드','업체','활동명','내용'];
+    /* 활동명 짧게: 끝의 '방문·관련·건'을 떼되 3글자 미만이 되면 그대로 (요청·진행은 뜻이 있어 남김) */
+    const actShort=a=>{let t=String(a||'').trim(),m;while((m=t.match(/^(.*?)\s*(?:방문|관련|의\s*건|건)$/))&&m[1].replace(/\s/g,'').length>=3)t=m[1].trim();return t};
+    Object.keys(bg).forEach(k=>{const L=bg[k];let pe=null;det+='<details open class="det-br"><summary>'+esc(k.replace('|',' · '))+' <span class="hint" style="margin:0">'+L.length+'건 · '+new Set(L.map(u=>u.emp)).size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
       L.map(u=>{const tags=[u.biz!=='PPS'||u.cat==='1'||u.cat==='2'?u.biz:'',u.tgt,u.res,u.multi?'복합':'',u.remote?'비대면':''].filter(Boolean);
         /* 내용은 V1 작성 규칙(parseForm·lineSummary): 일자·업체코드·면담자·전화번호 제거, 경쟁사 등록형은 경쟁사 구분·단가·물동량·비고, 번호형은 지역·업종·내용만. 원문은 마우스 올리면 표시 */
         const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text,act=(u.lab||(PF.act&&PF.form!=='일반'?PF.act:'')||'').replace(/^\[경쟁사\]$/,'경쟁사 등록')||v2ActName(u.cat,'',V2_OUT.test(u.text)?v2Clean(u.text):u.text);
-        return '<tr><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c">'+esc(u.emp)+'</td><td class="c"><span class="tag" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt" title="'+esc(u.name)+'">'+esc(nmShort(u.name))+'</td><td class="txt">'+esc(act)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
+        const sep=pe!==null&&pe!==u.emp?' class="empb"':'';pe=u.emp;const a2=actShort(act);
+        return '<tr'+sep+'><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c" style="font-weight:700">'+esc(u.emp)+'</td><td class="c"><span class="tag" style="white-space:nowrap" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt" title="'+esc(u.name)+'">'+esc(nmShort(u.name))+'</td><td class="txt" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(act)+'">'+esc(a2)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
   /* 신호·주차별 표는 기간이 '전체'일 때만 표시 */
   return {sum:(P.p==='all'?[sec2,secKw,sec3,secSig,secTr]:[sec2,secKw,sec3]).filter(Boolean).join('<div style="height:12px"></div>'),detail:det}}
 /* 목표 진척도(3번)에서 새 분류명을 쓰면 V2 활동으로 센다 */
