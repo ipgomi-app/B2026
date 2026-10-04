@@ -56,6 +56,7 @@
   .box h3 .opt { font-weight: 400; color: var(--sub); font-size: 12px; }
   .st { font-size: 12px; color: var(--sub); min-height: 18px; margin-top: 4px; word-break: break-all; }
   .st.ok { color: var(--ok); } .st.err { color: var(--warn); }
+  .flagwarn { color: var(--warn); font-weight: 600; margin-top: 2px; }
   textarea { width: 100%; height: 64px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; background: #fff; }
   textarea::placeholder { color: #9aa3b2; }
   label.btn, button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8c2d3; background: #fff; color: var(--ink); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
@@ -208,7 +209,7 @@
     msg($('buildMsg'), '', '');
     const hasPaste = $('p_sum').value.trim() && $('p_pool').value.trim();
     ['sum', 'pool', 'third'].forEach((k) => { const v = $('p_' + k).value.trim(); $('box_' + k).classList.toggle('filled', !!v); status('s_' + k, '', v ? lines(v) + '행 붙여넣음' : ''); });
-    if (!hasPaste) { state.tpl = null; state.tplRows = null; $('tplInfo').innerHTML = ''; changed(); return; }
+    if (!hasPaste) { state.tpl = null; state.tplRows = null; state.tplL = null; REG.forEach(markRegion); $('tplInfo').innerHTML = ''; changed(); return; }
     state.tpl = { type: 'paste' };
     await showTemplate();
   }
@@ -219,18 +220,19 @@
       const { pool, sum } = E.findSheets(wb);
       const L = E.poolLayout(pool);
       const rows = E.readPool(pool, L).rows;
-      state.tplRows = rows;
+      state.tplRows = rows; state.tplL = L;
       const w = E.wk(E.text(sum.getCell('X1').value));
       const cnt = {}; rows.forEach((r) => { cnt[r.region] = (cnt[r.region] || 0) + 1; });
       const noFlags = L.flags.length && !rows.some((sn) => L.flags.some((c) => String(E.text(sn.cells[c - 1].v)).trim()));
       $('tplInfo').innerHTML = '<span>기준 주차 <b>' + esc(w) + '</b></span><span>수주풀 <b>' + rows.length + '</b>개 업체 (' + REG.map((r) => r.slice(0, 2) + ' ' + (cnt[r] || 0)).join(' · ') + ')</span>' +
-        (noFlags ? '<div class="msg warn" style="margin-top:6px">⚠ 붙여넣은 수주풀에 <b>솔루션 사업구분(G~P) O 표시</b>가 없습니다. 원본에서 G~P 열이 그룹으로 접혀(숨겨져) 있으면 복사되지 않습니다. 엑셀에서 열 위쪽 <b>[+]</b>로 G~P를 펼친 뒤 다시 복사해 붙여넣으세요. 그대로 진행하면 권역 자료에 있는 O 표시로 채웁니다.</div>' : '');
+        (noFlags ? '<div class="msg err" style="margin-top:6px">⚠ 붙여넣은 수주풀에 <b>솔루션 사업구분(G~P) O 표시</b>가 없습니다. 원본에서 G~P 열이 그룹으로 접혀(숨겨져) 있으면 복사되지 않습니다. 엑셀에서 열 위쪽 <b>[+]</b>로 G~P를 펼친 뒤 다시 복사해 붙여넣으세요. 그대로 진행하면 권역 자료에 있는 O 표시로 채웁니다.</div>' : '');
       if (state.tpl.type === 'paste') { status('s_sum', 'ok', '✓ ' + lines($('p_sum').value) + '행 · 기준 ' + w); status('s_pool', 'ok', '✓ 업체 ' + rows.length + '개'); }
       if (!$('week').dataset.touched) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
+      REG.forEach(markRegion);
       changed();
     } catch (e) {
       console.error(e);
-      state.tplRows = null; $('tplInfo').innerHTML = '';
+      state.tplRows = null; state.tplL = null; $('tplInfo').innerHTML = '';
       msg($('buildMsg'), 'err', '지난주 제출본 오류: ' + e.message);
       changed(true);
     }
@@ -269,7 +271,14 @@
   function markRegion(r) {
     const i = state.regions[r];
     $('rbox_' + r).classList.toggle('filled', !!i);
-    status('rs_' + r, '', !i ? '비어 있음 — 지난주 내용 유지' : i.type === 'file' ? '📄 ' + i.name : lines(i.text) + '행 붙여넣음');
+    const base = !i ? '비어 있음 — 지난주 내용 유지' : i.type === 'file' ? '📄 ' + i.name : lines(i.text) + '행 붙여넣음';
+    // 솔루션 사업구분(G~P) O 표시가 빠졌으면 칸 바로 밑에 빨간 경고
+    let warn = '';
+    if (i && i.type === 'paste' && state.tplL) {
+      try { if (!E.readRegionPaste(i.text, r, state.tplL).hasFlags) warn = '⚠ ' + r + ' 붙여넣기에 솔루션 사업구분(G~P) O 표시가 없습니다 — 기존 업체는 지난주 O 표시를 유지하지만 새 업체는 비게 됩니다. G~P를 펼쳐 다시 복사하세요.'; }
+      catch (e) { warn = '⚠ ' + e.message; }
+    }
+    $('rs_' + r).innerHTML = esc(base) + (warn ? '<div class="flagwarn">' + esc(warn) + '</div>' : '');
   }
 
   function changed(keepMsg) {
@@ -301,8 +310,8 @@
 
   function renderLog(log, tlog, fi) {
     let fl = '';
-    if (fi && fi.tplMissing) fl += '<div class="warn">⚠ 지난주 수주풀에 솔루션 사업구분 O 표시가 없어 권역 자료로 ' + fi.filled + '개 업체를 채웠습니다.' + (fi.regionMissing.length ? ' (' + esc(fi.regionMissing.join(', ')) + ' 자료에도 G~P가 없어 그 권역은 비어 있습니다 — G~P를 펼쳐 다시 복사하세요)' : '') + '</div>';
-    else if (fi && fi.regionMissing.length) fl += '<div class="warn">⚠ ' + esc(fi.regionMissing.join(', ')) + ' 붙여넣기에 솔루션 사업구분(G~P) O 표시가 없습니다 — 기존 업체는 지난주 O 표시를 유지하지만 새 업체는 비게 됩니다. G~P를 펼쳐 다시 복사하세요.</div>';
+    if (fi && fi.tplMissing) fl += '<div class="flagwarn">⚠ 지난주 수주풀에 솔루션 사업구분 O 표시가 없어 권역 자료로 ' + fi.filled + '개 업체를 채웠습니다.' + (fi.regionMissing.length ? ' (' + esc(fi.regionMissing.join(', ')) + ' 자료에도 G~P가 없어 그 권역은 비어 있습니다 — G~P를 펼쳐 다시 복사하세요)' : '') + '</div>';
+    else if (fi && fi.regionMissing.length) fl += '<div class="flagwarn">⚠ ' + esc(fi.regionMissing.join(', ')) + ' 붙여넣기에 솔루션 사업구분(G~P) O 표시가 없습니다 — 기존 업체는 지난주 O 표시를 유지하지만 새 업체는 비게 됩니다. G~P를 펼쳐 다시 복사하세요.</div>';
     const tl = (tlog || []).map((l) => {
       const parts = ['<b>' + l.region + ' 재영업·창고이슈</b>', '변경 ' + l.updated.length, '그대로 ' + l.same];
       if (l.skipped) parts.push('<span class="muted">보고 주차 외 ' + l.skipped + '행은 지난주 그대로</span>');

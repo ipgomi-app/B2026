@@ -1622,7 +1622,7 @@
 
   return {
     REGIONS, loadWorkbook, saveWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
-    templateFromPaste, rowForm, readLists, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
+    templateFromPaste, rowForm, readLists, readRegionPaste, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
     // 틀(kit) 생성 도구용
     _i: { readSections, snapRow, writeRow, unmergeRows, rowMergeMap, writePool, formulaPatterns, writeSections, sumMaxCol, stripResults },
   };
