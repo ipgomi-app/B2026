@@ -85,6 +85,7 @@ table.xl.dett.one tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.g
   <div class="row">
     <b style="color:var(--navy)">주차 선택</b>
     <label>날짜 <input type="date" id="wkdate"></label>
+    <label title="회의 기간이 금~목과 다르면 종료일을 바꾸세요(예: 9/25~10/2). 날짜를 고르면 그 주 목요일로 자동 입력됩니다">~ 종료일 <input type="date" id="wkend"></label>
     <span id="wkrange" class="hint" style="margin:0"></span>
     <label>주차 표기 <input type="text" id="wklabel" style="width:90px"></label>
     <label><input type="checkbox" id="allweeks"> 기간 무시(붙여넣은 전체)</label>
@@ -226,8 +227,14 @@ function weekLabel(y,m,d){const {fri,thu}=weekOf(new Date(y,m-1,d));const M=fri.
   if(thu.getMonth()!==M)n++;return (M+1)+'월'+n+'주'}
 const fmtMD=d=>(d.getMonth()+1)+'/'+d.getDate();
 const ymd=d=>d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
-function curWeek(){const v=$('wkdate').value;if(!v)return null;const [y,m,d]=v.split('-').map(Number);const w=weekOf(new Date(y,m-1,d));return {from:ymd(w.fri),to:ymd(w.thu),label:$('wklabel').value.trim()||weekLabel(y,m,d),text:fmtMD(w.fri)+'~'+fmtMD(w.thu)}}
-function onWeekChange(auto){const w=curWeek();if(!w){$('wkrange').textContent='';return}$('wkrange').textContent='기간 '+w.text+' (금~목)';if(auto){const v=$('wkdate').value.split('-').map(Number);$('wklabel').value=weekLabel(v[0],v[1],v[2])}
+/* 회의 기간: 시작 = 고른 날짜가 속한 주 금요일, 종료 = 종료일 칸(비었거나 시작보다 앞이거나 14일을 넘으면 그 주 목요일) */
+function curWeek(){const v=$('wkdate').value;if(!v)return null;const [y,m,d]=v.split('-').map(Number);const w=weekOf(new Date(y,m-1,d));let end=w.thu;
+  const ev=($('wkend')||{}).value;if(ev){const [ey,em,ed]=ev.split('-').map(Number);const e=new Date(ey,em-1,ed);if(e>=w.fri&&(e-w.fri)/864e5<=13)end=e}
+  const days=Math.round((end-w.fri)/864e5)+1;return {from:ymd(w.fri),to:ymd(end),label:$('wklabel').value.trim()||weekLabel(y,m,d),text:fmtMD(w.fri)+'~'+fmtMD(end),days}}
+/* 주차별 추이용 주 구분: 회의 기간은 한 칸, 그 밖은 금~목. 회의 기간 뒤 첫 주는 종료일 다음날부터 */
+function v2WkOf(key,w){if(w&&key>=w.from&&key<=w.to)return w.from;const fri=ymd(weekOf(v2Date(key)).fri);if(w&&key>w.to&&fri<=w.to){const n=v2Date(w.to);n.setDate(n.getDate()+1);return ymd(n)}return fri}
+function onWeekChange(auto){const w=curWeek();if(!w){$('wkrange').textContent='';return}if(auto){const v=$('wkdate').value.split('-').map(Number);$('wklabel').value=weekLabel(v[0],v[1],v[2]);const t=weekOf(new Date(v[0],v[1]-1,v[2])).thu;$('wkend').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
+  {const x=curWeek();$('wkrange').textContent='기간 '+x.text+(x.days===7&&v2Date(x.to).getDay()===4?' (금~목)':' ('+x.days+'일)')}
   /* 주차가 바뀌면 이전 주차로 만든 주간회의 작성시트는 비운다 */if(window.MT_READY&&MT&&(MT.label||MT.ym)!==(w.label||'')){MT=null;const c=$('mt-card');if(c)c.style.display='none';const st=$('lst-stat');if(st)st.textContent='주차가 바뀌어 작성시트를 비웠습니다. 다시 생성하세요'}if(OUT)build()}
 function parseDate(s){const m=String(s||'').match(/(\d{4})[\/\-.]?(\d{1,2})[\/\-.]?(\d{1,2})/);if(!m)return null;const y=+m[1],mo=+m[2],d=+m[3];const dt=new Date(y,mo-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;/* 2/31 같은 날짜는 없음 */return {y,m:mo,d,key:m[1]+String(mo).padStart(2,'0')+String(d).padStart(2,'0')}}
 
@@ -748,10 +755,10 @@ const v2Days=(k1,k2)=>Math.round((v2Date(k2)-v2Date(k1))/86400000);
 const v2Dk=x=>x.date&&x.date.key?x.date.key:'';
 let V2U=[],V2TC={},V2SRC={contracts:[],quotes:[]};
 /* 업무일지 → 활동 목록 (권역장·견적 연동 자동일지·첨부파일 행 제외, 중복 제거) */
-function v2Units(diaries){const U=[];diaries.forEach(d=>{if(!d.date||EXCLUDE_EMP.includes(String(d.emp).replace(/\d+$/,'')))return;const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);
+function v2Units(diaries){const U=[],CW=curWeek();diaries.forEach(d=>{if(!d.date||EXCLUDE_EMP.includes(String(d.emp).replace(/\d+$/,'')))return;const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);
     d.dtl.forEach(x=>{if(!/^\d{2}$/.test(x.code))return;const t=x.text;if(AUTO_QUOTE_RE.test(t))return;const [cat,src]=v2Main(x.code,x.typ,t);const tc=V2_OUT.test(t)?v2Clean(t):t;const tg=v2Tags(x.typ,tc);
       const groups=new Set(Object.keys(V2_STRONG).filter(c=>V2_STRONG[c].test(t)).concat([cat]).map(c=>V2G[c]||'').filter(Boolean));
-      U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:ymd(weekOf(new Date(d.date.y,d.date.m-1,d.date.d)).fri),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:v2Label(tc),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
+      U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:v2WkOf(d.date.key,CW),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:v2Label(tc),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
   const seen=new Map(),out=U.filter(u=>{const k1='n|'+u.num+'|'+v2Norm(u.text),k2='e|'+u.emp+'|'+u.key+'|'+u.code+'|'+u.cat;if(seen.has(k1))return false;const first=seen.get(k2);if(first){/* 같은 날·담당·업체·분류: 건수는 1, 내용과 결과는 합쳐 보존 */first.text+=' ‖ '+u.text;first.res=first.res||u.res;first.remote=first.remote||u.remote;first.merged=(first.merged||1)+1;seen.set(k1,first);return false}seen.set(k1,u);seen.set(k2,u);return true});
   V2TC={};out.forEach(u=>{const k=u.emp+'|'+v2Norm(u.text);V2TC[k]=(V2TC[k]||0)+1});return out}
 /* 활동명 세분화: 담당자가 쓴 활동명이 없으면 내용 키워드로 분류별 세부 활동명을 붙인다 */
@@ -863,7 +870,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
   const secSig='<details open><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:10px 0 4px">신호 '+sig.length+'명 <span class="hint" style="margin:0">(사실 표시만, 판단은 권역장 · 쏠림·연결률·반복은 4주 누적/월간/전체에서만 계산)</span></summary>'+(sig.length?'<table class="xl" style="width:900px"><colgroup><col style="width:80px"><col></colgroup><tr><td class="hg">담당자</td><td class="hg">신호</td></tr>'+sig.join('')+'</table>':'<div class="hint">표시할 신호가 없습니다</div>')+'</details>';
   /* 주차별 추이 + 지시 주 토글 */
   let weeks=[...new Set(V2U.map(u=>u.wk))].sort();if(P.p!=='all'){const wk=curWeek();if(wk){const end=wk.from;weeks=weeks.filter(w=>w<=end).slice(-8)}}
-  const trH='<tr><td class="hg">담당자</td>'+weeks.map(w=>'<td class="hg">'+fmtMD(v2Date(w))+'주<br><label style="font-weight:400"><input type="checkbox" class="v2camp" data-wk="'+w+'"'+(camp.set[w]?' checked':'')+'> 지시</label></td>').join('')+'</tr>';
+  const CWK=curWeek();const trH='<tr><td class="hg">담당자</td>'+weeks.map(w=>'<td class="hg">'+(CWK&&w===CWK.from&&CWK.days!==7?CWK.text:fmtMD(v2Date(w))+'주')+'<br><label style="font-weight:400"><input type="checkbox" class="v2camp" data-wk="'+w+'"'+(camp.set[w]?' checked':'')+'> 지시</label></td>').join('')+'</tr>';
   const trR=emps.map(e=>'<tr><td class="c" style="font-weight:700">'+esc(e)+'</td>'+weeks.map(w=>{const L=V2U.filter(u=>u.emp===e&&u.wk===w&&u.cat!=='X'&&u.cat!=='?');if(!L.length)return '<td></td>';const c={};L.forEach(u=>c[u.cat]=(c[u.cat]||0)+1);const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];const sh=Math.round(100*top[1]/L.length);
     return '<td class="c" style="'+(sh>=60&&!camp.set[w]?'background:#fde2e2;':camp.set[w]?'background:#eee;':'')+'" title="'+esc(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>V2N[k]+' '+v).join(', '))+'">'+esc(V2N[top[0]])+'<br>'+sh+'% / '+L.length+'건</td>'}).join('')+'</tr>').join('');
   const secTr='<details><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:10px 0 4px">주차별 최다 분류 <span class="hint" style="margin:0">(담당자가 그 주에 가장 많이 한 활동과 그 비율/활동수 · 60% 이상은 분홍, 지시 활동 주는 회색 · 칸에 마우스를 올리면 분류별 건수)</span></summary><table class="xl sumt" style="width:'+(80+weeks.length*96)+'px"><colgroup><col style="width:80px">'+weeks.map(()=>'<col style="width:96px">').join('')+'</colgroup>'+trH+trR+'</table></details>';
@@ -985,7 +992,7 @@ const cellTsv=v=>{let x=String(v??'').replace(/\t/g,' ').replace(/\r\n?/g,'\n');
 $('run').onclick=()=>{$('catf').value='';$('v2kw').value='';GUBUN_OPEN=false;V2SRC={contracts:[],quotes:[]};$('sum').innerHTML='';$('detail').innerHTML='';build();window.scrollTo({top:$('cards').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'})};['catf','mode','v2period'].forEach(id=>$(id).onchange=render);$('regsel').onchange=()=>{try{localStorage.setItem('v2_reg',$('regsel').value)}catch(e){}if(OUT)build()};(()=>{try{const v=localStorage.getItem('v2_reg');if(v!==null&&$('regsel').querySelector('option[value="'+v+'"]'))$('regsel').value=v}catch(e){}})();{let kwT;$('v2kw').addEventListener('input',()=>{clearTimeout(kwT);kwT=setTimeout(()=>{if(OUT)render()},300)});$('v2kw').addEventListener('search',()=>{if(OUT)render()})}$('v2period').addEventListener('change',()=>{try{localStorage.setItem('v2_period',$('v2period').value)}catch(e){}});(()=>{try{const v=localStorage.getItem('v2_period');if(v&&$('v2period').querySelector('option[value="'+v+'"]'))$('v2period').value=v}catch(e){}})();$('allweeks').onchange=()=>{if(OUT)build()};
 let dataUpdateTimer;DBOX.forEach(b=>{const el=$(b.id);el.addEventListener('input',()=>{clearTimeout(dataUpdateTimer);dataUpdateTimer=setTimeout(()=>build(),250)});el.addEventListener('cleared',()=>build())});
 $('diary').addEventListener('cleared',()=>build());$('diary').addEventListener('input',()=>{OUT=null;$('stat').textContent='업무일지가 바뀌었습니다. 대시보드 생성을 다시 누르세요';$('stat').className='bad'});
-$('wkdate').onchange=()=>onWeekChange(true);$('wklabel').onchange=()=>onWeekChange(false);
+$('wkdate').onchange=()=>onWeekChange(true);$('wkend').onchange=()=>onWeekChange(false);$('wklabel').onchange=()=>onWeekChange(false);
 (()=>{const t=new Date();$('wkdate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');onWeekChange(true)})();
 addClearButtons();
 /* ===== 탭 ===== */
