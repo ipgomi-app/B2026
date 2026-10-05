@@ -665,9 +665,11 @@ function carParse(raw,wk,regOK){if(!String(raw||'').trim())return null;
   if(Object.keys(learn).length)carInfoSave(learn);
   if(!rows.length)return Object.keys(learn).length?{learned:Object.keys(learn).length,cars:{},err:''}:{cars:{},err:'상차 상세 형식을 인식하지 못했습니다 (PNT_DPT … CAR_NUM … ROUTE_OX D_DATE D_DT PRD_COD QNT)'};
   const INFO=carInfoLoad();const brReg=br=>{for(const r of Object.keys(ORG))if(ORG[r][br])return r;return ''};
+  /* 기사가 담당자 본인이거나 직원 명단에 있는 사람이면(담당자 차량) 차량관리에서 뺀다 */
+  const staffCar=(drv,emp)=>{const d=String(drv||'').replace(/\s+/g,'');return !!d&&(d===emp||!!EMP2[d])};const skipped=new Set();
   const seen=new Set(),cars={};let dup=0;
   rows.forEach(r=>{const k=[r.car,r.date,r.time,r.rc||r.pc,r.prd,r.qty,r.ox].join('|');if(r.date&&seen.has(k)){dup++;return}seen.add(k);
-    const reg=r.reg&&/권역$/.test(r.reg)?r.reg:brReg(r.br);if(!regOK(reg))return;
+    const reg=r.reg&&/권역$/.test(r.reg)?r.reg:brReg(r.br);if(!regOK(reg))return;if(staffCar(r.drv||(INFO[r.car]||[])[1],r.emp)){skipped.add(r.car);return}
     const C=cars[r.car]=cars[r.car]||{car:r.car,br:r.br,reg,emp:r.emp,drv:r.drv,ton:(INFO[r.car]||[])[0]||'',stops:{},unl:[],plan:new Set(),visited:new Set()};
     if(!C.drv&&r.drv)C.drv=r.drv;if(r.pc&&r.ox!=='▼'&&!/하차/.test(r.prd))C.plan.add(r.pc);
     if(!r.date||!tmin(r.time))return;/* 날짜 없는 계획 행 */
@@ -675,13 +677,13 @@ function carParse(raw,wk,regOK){if(!String(raw||'').trim())return null;
     if(r.ox==='▼'||/하차/.test(r.prd)){C.unl.push({key,t:tmin(r.time),qty:r.qty});return}
     const sk=key+'|'+r.time+'|'+(r.rc||r.pc);const s=C.stops[sk]=C.stops[sk]||{key,t:tmin(r.time),code:r.rc||r.pc,name:r.rn||r.pn,own:r.own,ox:r.ox,qty:0,prd:{},flag:r.flag};
     s.qty+=r.qty;s.prd[r.prd]=(s.prd[r.prd]||0)+r.qty;if(r.rc)C.visited.add(r.rc)});
-  const brs=new Set(Object.values(cars).map(c=>c.br));Object.entries(INFO).forEach(([car,v])=>{if(cars[car]||!v[3]||!brs.has(v[3]))return;const reg=brReg(v[3]);if(!regOK(reg))return;cars[car]={car,br:v[3],reg,emp:v[2],drv:v[1],ton:v[0],stops:{},unl:[],plan:new Set(),visited:new Set(),roster:1}});
+  const brs=new Set(Object.values(cars).map(c=>c.br));Object.entries(INFO).forEach(([car,v])=>{if(cars[car]||!v[3]||!brs.has(v[3])||staffCar(v[1],v[2])){if(!cars[car]&&v[3]&&brs.has(v[3]))skipped.add(car);return}const reg=brReg(v[3]);if(!regOK(reg))return;cars[car]={car,br:v[3],reg,emp:v[2],drv:v[1],ton:v[0],stops:{},unl:[],plan:new Set(),visited:new Set(),roster:1}});
   const keys=[];Object.values(cars).forEach(C=>Object.values(C.stops).forEach(s=>keys.push(s.key)));keys.sort();
-  return {cars,dup,from:keys[0]||'',to:keys[keys.length-1]||'',learned:Object.keys(learn).length,err:''}}
+  return {cars,dup,skipped:[...skipped],from:keys[0]||'',to:keys[keys.length-1]||'',learned:Object.keys(learn).length,err:''}}
 function carStat(){const el=$('dCar-stat');if(!el)return;if(!CAR){el.textContent='';$('dCarCnt').textContent='';return}
   if(CAR.err){el.textContent=CAR.err;$('dCarCnt').textContent='';return}
   const V=Object.values(CAR.cars),md=k=>k?(+k.slice(4,6))+'/'+(+k.slice(6)):'';const noTon=V.filter(c=>!c.ton).map(c=>c.car);
-  el.innerHTML=esc('인식: 차량 '+V.length+'대 · 상차 '+V.reduce((s,c)=>s+Object.keys(c.stops).length,0)+'곳 · '+md(CAR.from)+'~'+md(CAR.to)+(CAR.dup?' · 중복 '+CAR.dup+'행 제외':'')+(CAR.learned?' · 톤수 '+CAR.learned+'대 기억':''))+(noTon.length?'<br><span style="color:#b00020">'+esc('톤수 모르는 차량: '+noTon.join(', ')+' (차량운영 자료를 한 번 붙이면 기억합니다)')+'</span>':'');
+  el.innerHTML=esc('인식: 차량 '+V.length+'대 · 상차 '+V.reduce((s,c)=>s+Object.keys(c.stops).length,0)+'곳 · '+md(CAR.from)+'~'+md(CAR.to)+(CAR.dup?' · 중복 '+CAR.dup+'행 제외':'')+(CAR.skipped&&CAR.skipped.length?' · 담당자 운전 차량 '+CAR.skipped.length+'대 제외('+CAR.skipped.join(', ')+')':'')+(CAR.learned?' · 톤수 '+CAR.learned+'대 기억':''))+(noTon.length?'<br><span style="color:#b00020">'+esc('톤수 모르는 차량: '+noTon.join(', ')+' (차량운영 자료를 한 번 붙이면 기억합니다)')+'</span>':'');
   $('dCarCnt').textContent=V.length?'· '+V.length+'대':''}
 const carCount=()=>CAR&&CAR.cars?Object.keys(CAR.cars).length:0;
 const carRange=()=>{let f=CAR_RANGE&&CAR_RANGE.from||CAR.from,t=CAR_RANGE&&CAR_RANGE.to||CAR.to;if(t<f)[f,t]=[t,f];if(CAR.from>f)f=CAR.from;if(CAR.to<t)t=CAR.to;return {f,t}};
