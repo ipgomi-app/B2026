@@ -97,18 +97,18 @@ table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb 
   <div id="diarystat" class="hint"></div>
 </div>
 <div class="card">
-  <details id="dCarBox" open><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">2. 차량운영 붙여넣기 <span class="tag">차량별 회수량 · 업체수 · 회전수 (월 조회 결과, 예측량은 무시)</span> <span id="dCarCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
-  <div class="hint">차량운영 조회 결과를 머리글(SEQ…) 포함 그대로 붙여넣으세요. 한 달 단위 자료라 회의 기간이 두 달에 걸치면(예: 9/25~10/2) 전월분 뒤에 당월분을 <b>이어 붙이면</b> 됩니다. 마지막에 붙인 자료가 회의 종료일이 속한 달, 그 앞이 전월로 잡히며, 전월 합계가 이어지는지 자동 확인합니다. 담당자 행만 쓰고 소계·권역계 행은 다시 계산합니다.</div>
-  <textarea id="dCar" style="min-height:110px" placeholder="차량운영 조회 결과(SEQ SEQ2 DPT_COD DPT_NAM MNG_EMP EMP_NAM GU CST_QTY00 … CST_QTY31 CST_QTY N_AVG B_AVG)를 그대로 붙여넣기"></textarea><div id="dCar-stat" class="hint"></div>
-  </details>
-</div>
-<div class="card">
-  <details id="dLpsBox"><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">3. LPS 계약·견적 붙여넣기 <span class="tag">계약 데이터 · 견적 데이터 조회 결과</span> <span id="dLpsCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
-  <div class="hint">전 사업이 섞인 조회 행을 그대로 붙이면 계약형태 열로 사업을 나눕니다. 머리글이 없어도 되고 뒤쪽 열이 잘려도 됩니다(결재상태 열이 잘리면 반려 건도 포함).</div>
+  <details id="dLpsBox"><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">2. LPS 계약·견적 붙여넣기 <span class="tag">계약 데이터 · 견적 데이터 조회 결과</span> <span id="dLpsCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
+  <div class="hint" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">전 사업이 섞인 조회 행을 그대로 붙여넣기 · 계약형태 열로 사업 구분 · 머리글 없어도 되고 뒤쪽 열이 잘려도 됨</div>
   <div class="grid2">
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">계약 데이터 <span style="font-size:11px;color:var(--mut);font-weight:400">전 사업 · 계약형태 열로 사업 구분 · 금액 원(÷1000)</span></h3><textarea id="dAllC" style="min-height:110px" placeholder="계약 데이터 시트 행을 그대로 붙여넣기 (머리글 없어도 되고, 뒤쪽 열이 잘려도 됩니다)"></textarea><div id="dAllC-stat" class="hint"></div></div>
   <div><h3 style="margin:8px 0 4px;font-size:14px;color:var(--navy)">견적 데이터 <span style="font-size:11px;color:var(--mut);font-weight:400">전 사업 · 계약형태 열로 사업 구분 · 금액 원(÷1000)</span></h3><textarea id="dAllQ" style="min-height:110px" placeholder="견적 데이터 시트 행을 그대로 붙여넣기 (머리글 없어도 되고, 뒤쪽 열이 잘려도 됩니다)"></textarea><div id="dAllQ-stat" class="hint"></div></div>
   </div>
+  </details>
+</div>
+<div class="card">
+  <details id="dCarBox" open><summary style="cursor:pointer;font-size:15px;font-weight:700;color:var(--navy)">3. 차량운영 붙여넣기 <span class="tag">차량별 회수량·업체수·회전수 월 조회 결과</span> <span id="dCarCnt" class="hint" style="margin:0;font-weight:400"></span></summary>
+  <div class="hint" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">조회 결과를 머리글(SEQ…) 포함 그대로 붙여넣기 · 두 달에 걸친 기간은 전월분 뒤에 당월분을 이어 붙이기 · 예측량·소계 행은 무시</div>
+  <textarea id="dCar" style="min-height:110px" placeholder="차량운영 조회 결과(SEQ SEQ2 DPT_COD DPT_NAM MNG_EMP EMP_NAM GU CST_QTY00 … CST_QTY31 CST_QTY N_AVG B_AVG)를 그대로 붙여넣기"></textarea><div id="dCar-stat" class="hint"></div>
   </details>
 </div>
 </div>
@@ -132,7 +132,7 @@ table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb 
     <div>주 분류 10개 — 영업: 신규·전환영업 / 기존확대·손익 · 운영: 신규업체확인 / 입고미회수 / 회수 / 재고실사 / 수불·전산 / 클레임 · 관리: 채권·리스크 / 기타업무. 판정 순서는 ⑴ 엔지니어링 방문양식 → 신규·전환영업, ⑵ 담당자가 쓴 활동명("1. 활동명 2. …", "* 활동명", 시간기록 뒤 문구)의 키워드, ⑶ 상세구분 코드 기본값(입고미회수·미입고확인 → 입고미회수, 공파렛트확인 → 회수, 수불관리·실착지오류·사장업체 → 수불·전산, 신규업체 → 신규업체확인, 재고실사 → 재고실사, 미수금/보증·법적대응 → 채권·리스크, 산업자재유통·SCM·물류장비·RRPP·엔지니어링·경쟁사·신규계약 → 신규·전환영업, 재계약협의·단가협의 → 기존확대·손익), ⑷ 본문의 강한 신호(미수금·지급명령 / 견적 제출·제안·영업·계약 협의 / 단가인상·재계약)로 기본값 변경, ⑸ 나머지 본문 키워드, ⑹ 판정 불가 → 확인필요. "영업지원 입고미회수"의 영업지원은 영업이 아닙니다.</div>
     <div>태그: 사업(PPS/산업자재/SCM/지게차/RRPP/엔지니어링), 대상(신규업체/계약처/실수요처/경쟁사/건설현장), 결과(회수완료·회수예정·회수불가·견적·계약·자료수정·입금·약정), 복합(영업·운영·관리 신호가 2개 이상), 비대면(유선·카톡·문자·메일). 태그는 건수에 중복으로 세지 않습니다. 경쟁사·엔지니어링·산업자재는 활동분류가 아니라 태그입니다.</div>
     <div>중복 제거: 같은 일지번호의 같은 문장은 1건. 같은 날·같은 담당자·같은 업체·같은 주 분류의 상세 여러 행은 1건으로 세되 내용과 결과 태그는 합쳐 보존합니다(상세에 "‖"로 이어 표시). 엑셀 셀 안의 줄바꿈은 앞 줄에 이어 붙이고, 부모 일지가 없는 상세 행은 제외합니다. 본문 중간의 "연차·휴가" 언급(상대방 부재)은 제외하지 않습니다.</div>
-    <div>③ 성과 연결: 3번 칸의 계약·견적 자료(결재완료만, 결재중·대기·반려·상태 없음은 제외)를 <b>같은 담당자</b> + 업체코드(또는 괄호·주식회사 등을 뺀 업체명이 완전히 같은 업체)로 연결합니다. 영업→견적·계약 = 영업활동 업체 중 어느 활동이든 30일 안(계약은 7일 전부터)에 견적·계약이 있는 업체, 견적→계약 = 견적 업체 중 이후 신규계약이 있는 업체, 계약 근거일지 = 신규계약 중 계약 전 30일 안에 같은 업체 일지가 있는 건. 단가인상은 같은 담당자·같은 날·같은 내용의 일괄 품의를 묶어 "(n건 일괄)"로 표시합니다. 연결은 붙여넣은 자료 전체에서 찾고, 표에는 선택한 기간의 활동·계약·견적만 셉니다. 금액은 천원입니다.</div>
+    <div>③ 성과 연결: 2번 칸의 계약·견적 자료(결재완료만, 결재중·대기·반려·상태 없음은 제외)를 <b>같은 담당자</b> + 업체코드(또는 괄호·주식회사 등을 뺀 업체명이 완전히 같은 업체)로 연결합니다. 영업→견적·계약 = 영업활동 업체 중 어느 활동이든 30일 안(계약은 7일 전부터)에 견적·계약이 있는 업체, 견적→계약 = 견적 업체 중 이후 신규계약이 있는 업체, 계약 근거일지 = 신규계약 중 계약 전 30일 안에 같은 업체 일지가 있는 건. 단가인상은 같은 담당자·같은 날·같은 내용의 일괄 품의를 묶어 "(n건 일괄)"로 표시합니다. 연결은 붙여넣은 자료 전체에서 찾고, 표에는 선택한 기간의 활동·계약·견적만 셉니다. 금액은 천원입니다.</div>
     <div>기록 품질: 반복문구 = 같은 담당자가 같은 문장을 3회 이상 쓴 활동 비율, 수량기재 = 매·대·박스·롤 수량이 있는 비율, 결과기재 = 결과 태그가 있는 비율.</div>
     <div>신호(사실만 표시, 판단은 권역장): 쏠림(한 분류 60% 이상, 지시 활동 주 제외, 8건 이상), 영업 연결률 30% 미만(영업 업체 10곳 이상, 30일 기준), 견적→계약 10% 이하(견적 업체 10곳 이상), 기록 누락(신규계약은 있는데 30일 안 일지 없음), 반복 업체(같은 업체·같은 분류 3주 이상, 결과 없음), 형식문구 반복 50% 이상(20건 이상), 견적 중복(같은 업체·사업 2회 이상). 쏠림·연결률·반복은 4주 누적·월간·전체에서만 계산하고 주간은 추이만 봅니다. 건수는 업무량이 아닙니다(짧은 확인 방문 1건과 협상 1건은 같은 1건).</div>
     <div>지시 활동 주: 한 주에 담당자 40% 이상(4명 이상)이 같은 분류에 60% 넘게 몰리면 '지시 활동 주(추정)'로 표시하고 개인 쏠림에서 뺍니다. 주차별 표의 '지시' 체크로 직접 켜고 끌 수 있습니다(이 브라우저에 기억).</div>
@@ -163,7 +163,7 @@ table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb 
 </div>
 <div class="card" id="mt-card" style="display:none">
   <h2>주간회의 작성시트 <span class="tag" id="mt-wk"></span></h2>
-  <div class="hint">업무일지·3번 LPS 계약 데이터로 만든 초안입니다(운영관리 현황의 계약은 재출고개선·재출고·타용도 계약만). 모든 칸을 여기서 고친 뒤 위 <b>엑셀시트 생성</b>을 누르세요. 금주 운영관리 현황은 한 줄에 한 건(▶)이고, 회수예측은 엑셀처럼 칸에 입력하거나 엑셀에서 복사해 붙여넣을 수 있습니다.</div>
+  <div class="hint">업무일지·2번 LPS 계약 데이터로 만든 초안입니다(운영관리 현황의 계약은 재출고개선·재출고·타용도 계약만). 모든 칸을 여기서 고친 뒤 위 <b>엑셀시트 생성</b>을 누르세요. 금주 운영관리 현황은 한 줄에 한 건(▶)이고, 회수예측은 엑셀처럼 칸에 입력하거나 엑셀에서 복사해 붙여넣을 수 있습니다.</div>
   <div id="mt-out"></div>
 </div>
 </div>
@@ -703,7 +703,7 @@ const carCount=()=>CAR&&CAR.months&&CAR.months.length?Object.keys(CAR.months[CAR
 function carCard(selCat){const n=carCount();if(!CAR)return '';
   return '<section class="card-group"><h3>차량관리 <small>차량운영 자료 · 누르면 차량별 표</small></h3><div class="biz-groups"><section class="biz-group"><h4>차량</h4><div class="metric-cards"><button type="button" class="metric-card all'+(selCat==='CAR'?' active':'')+'" data-cat="CAR" aria-pressed="'+(selCat==='CAR')+'"><span>차량관리</span><strong>'+n+'</strong></button></div></section></div></section>'}
 /* 차량관리 표: 담당자 / 차량번호 · 톤수 · 기사명, 금주 값 옆에 전주 대비 증감 */
-function carRender(){const C=carCalc();if(!C)return '<div class="hint">2번 차량운영 칸에 자료를 붙여넣으세요</div>';
+function carRender(){const C=carCalc();if(!C)return '<div class="hint">3번 차량운영 칸에 자료를 붙여넣으세요</div>';
   const f0=n=>Math.round(n).toLocaleString('en-US'),md=k=>(+k.slice(4,6))+'/'+(+k.slice(6));
   const hg=(t,cs,rs,st)=>'<td class="hg"'+(cs>1?' colspan="'+cs+'"':'')+(rs>1?' rowspan="'+rs+'"':'')+(st?' style="'+st+'"':'')+'>'+t+'</td>';
   const sumU=L=>{const o={n:L.length,dead:0,cur:{rec:0,firm:0,trip:0,days:0,idle:[]},prev:{rec:0,firm:0,trip:0,days:0,ok:L.every(x=>x.prev.ok)},bavg:0,mRec:0,spikes:[]};
@@ -795,7 +795,7 @@ function build(){const wk=curWeek();const REG=$('regsel').value;const regOK=r=>!
   const YN=q=>{const e=EMP2[q.emp]||EMP2[String(q.emp||'').replace(/\d+$/,'')];return !!e||/^(경북|경남|부산)권역$/.test(q.reg||'')||CITY2BR.some(x=>x[1]===q.br)};/* 영남 소속만 */
   /* 계약·견적 중복 제거: 날짜·담당·코드·구분·사업·금액·내용이 같은 행은 칸이 달라도 한 번만 센다 (같은 자료를 두 칸에 붙이거나 조회 결과에 반복 행이 있을 때) */
   const qSeen=new Set();let qDup=0;const qKey=q=>[String(q.gubunRaw||'').replace(/^\d{2}-/,'')||(q.kind==='계약'?'신규계약':q.kind),q.date?q.date.key:q.wkTxt,q.emp,q.code,String(q.name||'').replace(/\s+/g,''),q.form||q.biz,Math.round(q.amt||0),String(q.raw||q.memo||'').replace(/\s+/g,'')].join('|');/* 사업은 원본 계약형태(칸 설정과 무관) */
-  /* 3번 칸(원본 사업 그대로)을 먼저 읽어 중복 시 3번 칸 행이 남게 한다 */
+  /* LPS 계약·견적 칸(원본 사업 그대로)을 먼저 읽어 중복 시 그 행이 남게 한다 */
   [...DBOX.filter(b=>/^dAll/.test(b.id)),...DBOX.filter(b=>!/^dAll/.test(b.id))].forEach(b=>{const raw=$(b.id).value;const Q=parseQuote(raw,b.mode,b.opt);const all=Q.list.length;Q.list=Q.list.filter(YN).filter(q=>regOK(q.reg||'')).filter(q=>{const k=qKey(q);if(qSeen.has(k)){qDup++;return false}qSeen.add(k);return true});if(b.id==='dAllC')V2SRC.contracts=Q.list;if(b.id==='dAllQ')V2SRC.quotes=Q.list;const inn=Q.list.filter(inWkQ);inn.forEach(q=>rows.push(quoteRow(q)));
     $(b.id+'-stat').textContent=raw.trim()?(all?b.label+' 인식: '+all+'건 → 영남 소속 '+Q.list.length+'건'+(inn.length!==Q.list.length?' 중 기간 내 '+inn.length+'건':'')+' · '+Q.matched.join(' / '):b.label+' 형식을 인식하지 못했습니다 · '+diagQuote(raw)):''});
   CAR=carParse($('dCar').value,wk,regOK);carStat();
@@ -964,7 +964,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
   const st3=(L,gAll,k)=>{const M=v2Metrics(gAll,empsOf(k,gAll),P,IX);/* 카드 필터와 무관: 기간 안 전체 활동 기준 */return [M.S.length,M.firms,M.Qp.length,M.qf,M.N.length,M.amtN,M.Uq.length?(M.camps<M.Uq.length?M.Uq.length+' (일괄 '+M.camps+')':M.Uq.length):0,M.amtU,rt(M.linked,M.firms),rt(M.q2c,M.qf),rt(M.N.length-M.noDiary.length,M.N.length),pct(M.boiler,M.n),pct(M.qty,M.n),pct(M.res,M.n)]};
   const S3=rowsOf(st3);const W3=[...keyH.map(()=>72),56,56,56,56,56,80,96,80,92,88,92,56,56,56];
   const head3='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('영업활동',2,1,';background:#dbe8fb')+hg('견적(결재완료)',2,1)+hg('신규계약',2,1,';background:#dbe8fb')+hg('단가인상',2,1)+hg('연결률',3,1,';background:#e2f0d9')+hg('기록 품질',3,1,';background:#fdebd0')+'</tr><tr>'+['건수','업체','건수','업체','건수','예상매출(천원)','건수','효과금액(천원)','영업→견적·계약(30일)','견적→계약','계약 근거일지(30일)','반복문구','수량기재','결과기재'].map(h=>hg(h)).join('')+'</tr>';
-  const srcNote=(IX.contracts.length||IX.quotes.length)?'계약 '+IX.contracts.length+'건 · 견적 '+IX.quotes.length+'건(결재완료, 3번 칸 기준)':'3번 칸에 계약·견적 데이터를 붙여넣으면 성과 연결이 계산됩니다';
+  const srcNote=(IX.contracts.length||IX.quotes.length)?'계약 '+IX.contracts.length+'건 · 견적 '+IX.quotes.length+'건(결재완료, 2번 칸 기준)':'3번 칸에 계약·견적 데이터를 붙여넣으면 성과 연결이 계산됩니다';
   const sec3='<details><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:4px 0">③ 성과 연결 · 기록 품질 · '+esc(P.label)+' <span class="hint" style="margin:0">(카드 필터와 무관하게 기간 전체 기준 · '+srcNote+' · 연결은 붙여넣은 자료 전체에서 찾음)</span></summary><table class="xl sumt"'+tws(W3)+'>'+cgw(W3)+head3+body(S3.T,S3.flags)+'</table></details>';
   /* 신호: 사실만 표시 */
   const sig=[];const inPq=x=>{const k=v2Dk(x);return k>=P.from&&k<=P.to};const emps=[...new Set([...all.map(u=>u.emp),...IX.contracts.filter(inPq).map(c=>c.emp),...IX.quotes.filter(inPq).map(q=>q.emp)].filter(e=>e&&!EXCLUDE_EMP.includes(String(e).replace(/\d+$/,''))))].sort((a,b)=>empIdx(a)-empIdx(b)||String(a).localeCompare(String(b)));
