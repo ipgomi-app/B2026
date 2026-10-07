@@ -27,6 +27,11 @@
   .ed .fgrid.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   @media (max-width: 720px) { .ed .fgrid, .ed .fgrid.six { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .ed input.fi, .ed select.fi { width: 100%; border: 1px solid #b8c2d3; border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 14px; background: #fff; }
+  .cmp { margin-top: 12px; border: 1px solid #c9d6ea; border-radius: 8px; padding: 10px; background: #f6f9fd; } .cmphd { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .cmpgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .cmpcol .f { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .cmpcol textarea { width: 100%; height: 170px; font: 12.5px/1.5 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; background: #fff; border: 1px solid #d5dbe5; border-radius: 6px; padding: 6px 8px; resize: vertical; box-sizing: border-box; }
+  .cmpcol button { margin-top: 4px; }
+  @media (max-width: 900px) { .cmpgrid { grid-template-columns: 1fr; } }
   .ed textarea.needs { height: 460px; min-height: 160px; font: 14px/1.6 -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif; padding: 10px 12px; resize: vertical; }
   .ed .items { height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
   .ed .item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f2f6; font-size: 13.5px; }
@@ -126,7 +131,7 @@
     <div class="grid3" id="reRegions"></div>
     </details>
     <h3 class="sub">권역 상위 20% 업체 별도 취합 <span class="opt">선택</span></h3>
-    <p class="how">권역에서 따로 취합한 <b>상위 20% 업체 표 전체</b>(머리글 포함, 주요 이슈 및 고객사 Needs 옆 <b>2차 전수조사</b> 열 포함)를 복사해 해당 권역 칸에 붙여넣으세요. 앞시트 <b>▶ 금주 주요 업체</b> 다음에 <b>▶본부 매출상위업체</b> 표로 들어갑니다(Needs는 6칸 병합·왼쪽 정렬, 2차 전수조사 내용은 추가 진행현황에). 비운 권역은 지난주 표 그대로입니다.</p>
+    <p class="how">권역에서 따로 취합한 <b>상위 20% 업체 표 전체</b>(머리글 포함, 주요 이슈 및 고객사 Needs 옆 <b>2차 전수조사</b> 열 포함)를 복사해 해당 권역 칸에 붙여넣으세요. <b>수주풀에 같은 업체가 있으면 상위 20% 내용이 우선</b>해 덮어씁니다(보고 주차와 무관, 빈 칸은 수주풀 값 유지, <b>2차 전수조사에 내용이 있으면 Needs = 2차 전수조사</b>). ② 업체 수정의 <b>상위 20% 업체</b>에서 기존 수주풀·상위 20%·2차 내용을 비교해 고칠 수 있습니다. 앞시트 <b>▶ 금주 주요 업체</b> 다음에 <b>▶본부 매출상위업체</b> 표(Needs 6칸 병합·왼쪽 정렬)로도 들어갑니다. 비운 권역은 지난주 그대로입니다.</p>
     <div class="grid3" id="topRegions"></div>
   </section>
 
@@ -359,7 +364,7 @@
   }
   const week = () => E.wk($('week').value);
 
-  function renderLog(log, tlog, fi) {
+  function renderLog(log, tlog, fi, top) {
     let fl = '';
     if (fi && fi.tplMissing) fl += '<div class="flagwarn">⚠ 지난주 수주풀에 솔루션 사업구분 O 표시가 없어 권역 자료로 ' + fi.filled + '개 업체를 채웠습니다.' + (fi.regionMissing.length ? ' (' + esc(fi.regionMissing.join(', ')) + ' 자료에도 G~P가 없어 그 권역은 비어 있습니다 — G~P를 펼쳐 다시 복사하세요)' : '') + '</div>';
     else if (fi && fi.regionMissing.length) fl += '<div class="flagwarn">⚠ ' + esc(fi.regionMissing.join(', ')) + ' 붙여넣기에 솔루션 사업구분(G~P) O 표시가 없습니다 — 기존 업체는 지난주 O 표시를 유지하지만 새 업체는 비게 됩니다. G~P를 펼쳐 다시 복사하세요.</div>';
@@ -370,6 +375,14 @@
       if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.join(', ')) + '</span>');
       return '<div>' + parts.join(' · ') + '</div>';
     }).join('');
+    // 상위 20% → 수주풀 덮어쓰기
+    const topl = (top || []).map((l) => {
+      const parts = ['<b>' + l.region + ' 상위 20%</b>', l.matched + '개 업체 수주풀에 반영 (상위 20% 우선)', '변경 ' + l.changed.length, '2차 전수조사로 Needs 교체 ' + l.survey];
+      let h = '<div>' + parts.join(' · ') + ' <span class="muted">— ② 업체 수정 › 상위 20% 업체에서 기존·2차 내용 비교·수정</span></div>';
+      if (l.missing.length) h += '<div class="flagwarn">⚠ ' + l.region + ' 상위 20% 중 수주풀에 없는 업체(반영 안 함): ' + esc(l.missing.join(', ')) + '</div>';
+      if (l.weekBack.length) h += '<div class="flagwarn">⚠ 상위 20% 값으로 방문 주차가 이전으로 바뀐 업체 ' + l.weekBack.length + '개: ' + esc(l.weekBack.slice(0, 6).join(', ') + (l.weekBack.length > 6 ? ' …' : '')) + ' — 맞는지 확인하세요(② 업체 수정에서 고칠 수 있음)</div>';
+      return h;
+    }).join('');
     $('mergeLog').innerHTML = (log.map((l) => {
       const parts = ['<b>' + l.region + '</b> (' + (l.week ? l.week + ' 방문 ' : '') + l.source + '행 반영)', '변경 ' + l.updated.length, '그대로 ' + l.same];
       if (l.skipped) parts.push('<span class="muted">' + (l.week || '금주') + ' 외 ' + l.skipped + '행은 지난주 제출본 그대로</span>');
@@ -377,7 +390,7 @@
       if (l.removed.length) parts.push('<span class="badge le">삭제 ' + l.removed.length + '</span> ' + esc(l.removed.map((a) => a.name).join(', ')));
       if (l.updated.length) parts.push('<span class="muted">' + esc(l.updated.slice(0, 8).map((u) => u.name).join(', ') + (l.updated.length > 8 ? ' …' : '')) + '</span>');
       return '<div>' + parts.join(' · ') + '</div>';
-    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>') + tl + fl;
+    }).join('') || '<div class="muted">붙여넣은 권역 자료가 없습니다 — 수주풀은 지난주 그대로, 주차만 바뀝니다.</div>') + topl + tl + fl;
   }
 
   function checkCell(issues) {
@@ -441,7 +454,7 @@
     if (!state.listsBase) state.listsBase = E.readLists(ctx);
     state.back = {}; Object.keys(ctx.edit.renamed).forEach((o) => { state.back[ctx.edit.renamed[o]] = o; });
     state.addKeys = state.adds.map(keyOfForm);
-    renderLog(ctx.log, ctx.thirdLog, ctx.flagInfo);
+    renderLog(ctx.log, ctx.thirdLog, ctx.flagInfo, ctx.top20Log);
     state.cands = E.preview(ctx, week());
     renderCands();
     if (!$('p2').hidden) renderEditor();
@@ -546,7 +559,9 @@
     const ctx = state.ctx; const W = week(); const F = (sn) => E.fields(sn, ctx.TL);
     const bk = new Set((state.listsBase ? state.listsBase.bonbuKeys : []).map((k) => ctx.edit.renamed[k] || k));
     const mk = (cond) => ctx.rows.filter((sn) => cond(F(sn), sn)).map((sn) => ({ type: 'row', key: sn.key, name: sn.name, code: sn.code, sub: sn.region.slice(0, 2) + ' · ' + F(sn).stage }));
+    const tk = new Set(Object.keys(ctx.top20Info || {}).map((k) => ctx.edit.renamed[k] || k));
     const g = [
+      ['top20', '수주풀 · 상위 20% 업체 (기존·2차 비교)', mk((f, sn) => tk.has(sn.key))],
       ['upd', '수주풀 · 금주 업데이트 업체', mk((f, sn) => ctx.changedKeys.has(sn.key))],
       ['new', '수주풀 · 금주 신규방문 업체', mk((f) => f.newv === W)],
       ['rev', '수주풀 · 재방문 업체', mk((f) => f.rev === W)],
@@ -611,7 +626,8 @@
       fld('ef_period', '사업시기', f.period, ' placeholder="예: 27년 4Q"') + '</div>' +
       '<div class="fgrid six" style="margin-top:12px">' + fld('ef_plan', '방문계획', f.plan, ' list="dlWeeks"') + fld('ef_newv', '방문실적(신규)', f.newv, ' list="dlWeeks"') + fld('ef_rev', '방문실적(재방문)', f.rev, ' list="dlWeeks"') +
       fld('ef_le', 'LE동행방문', f.le, ' list="dlWeeks"') + fld('ef_note', '비고', f.note) + fld('ef_month', '월구분', f.month) + '</div>' +
-      '<div style="margin-top:12px"><label class="f" for="ef_needs">주요 이슈 및 고객사 Needs</label><textarea class="needs" id="ef_needs">' + esc(f.needs) + '</textarea></div>' +
+      topCompare(it) +
+      '<div style="margin-top:12px"><label class="f" for="ef_needs">주요 이슈 및 고객사 Needs' + (topInfoOf(it) ? ' <span class="muted">(엑셀에 들어갈 내용 — 고친 뒤 본문 변경 저장)</span>' : '') + '</label><textarea class="needs" id="ef_needs">' + esc(f.needs) + '</textarea></div>' +
       '<div id="ef_check" style="margin:8px 0"></div>' +
       (it.isNew ? '' : '<div class="fix" style="margin-bottom:8px">' + (state.ctx.fixes[state.back[it.key] || it.key] ? '자동 수정: ' + esc(state.ctx.fixes[state.back[it.key] || it.key]) : '') + '</div>') +
       '<div class="row"><button class="primary" id="efSave">' + (it.isNew ? '신규 업체로 저장' : '본문 변경 저장') + '</button>' + (state.edits[state.back[it.key] || it.key] ? '<button id="efUndo">수정 취소(원래대로)</button>' : '') + '<span class="muted" id="efSt"></span></div>';
@@ -621,7 +637,21 @@
     $('ef_task').addEventListener('input', liveCheck);
     upd();
     $('efSave').addEventListener('click', saveForm);
+    box.querySelectorAll('[data-use]').forEach((b) => b.addEventListener('click', () => { $('ef_needs').value = b.closest('.cmpcol').querySelector('textarea').value; $('ef_needs').focus(); }));
     if ($('efUndo')) $('efUndo').addEventListener('click', async () => { const k = state.back[it.key] || it.key; delete state.edits[k]; delete state.notes[k]; await refreshAndSelect(state.orig[k] ? keyOfForm(state.orig[k]) : it.key); });
+  }
+  // 상위 20% 업체: 반영 전 수주풀 Needs / 상위 20% Needs / 2차 전수조사를 나란히 보여 주고 골라 쓸 수 있게
+  function topInfoOf(it) {
+    const info = state.ctx && state.ctx.top20Info; if (!info || it.isNew) return null;
+    const ok = state.back[it.key] || it.key;
+    return info[ok] || info[it.key] || null;
+  }
+  function topCompare(it) {
+    const t = topInfoOf(it); if (!t) return '';
+    const col = (title, v, note) => '<div class="cmpcol"><div class="f">' + title + (note ? ' <span class="muted">' + note + '</span>' : '') + '</div><textarea readonly>' + esc(v || '') + '</textarea>' +
+      (String(v || '').trim() ? '<button type="button" class="mini" data-use>이 내용으로 ↓</button>' : '<span class="muted" style="font-size:12px">비어 있음</span>') + '</div>';
+    return '<div class="cmp"><div class="cmphd">상위 20% 업체 — 수주풀 Needs 비교 <span class="muted">(현재 적용: ' + (String(t.survey || '').trim() ? '2차 전수조사' : '상위 20% Needs') + ')</span></div><div class="cmpgrid">' +
+      col('기존 수주풀', t.poolNeeds, '상위 20% 반영 전') + col('상위 20% Needs', t.topNeeds) + col('2차 전수조사', t.survey) + '</div></div>';
   }
   function readForm() {
     const g = (id) => $(id).value;

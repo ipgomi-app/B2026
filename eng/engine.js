@@ -236,6 +236,49 @@
     return { rows, surveyHeader: sv < 0 ? null : trim(grid[h][sv]) };
   }
 
+  // 상위 20% 업체 → 수주풀 덮어쓰기 (보고 주차와 무관, 권역 자료보다 우선)
+  // 상위 20%에 값이 있는 칸만 덮어쓰고 빈 칸은 수주풀 값 유지. 솔루션 사업구분(G~P)은 O가 하나라도 있으면 G~P 전체를 상위 20% 값으로.
+  // 2차 전수조사 칸에 내용이 있으면 Needs = 2차 전수조사 내용
+  function applyTop20(rows, TL, inputs) {
+    const info = {}; const log = [];
+    const VISIT = [['newv', '방문실적(신규)'], ['rev', '방문실적(재방문)'], ['le', 'LE동행방문']];
+    REGIONS.forEach((region) => {
+      const t = inputs && inputs[region]; if (!t || !trim(t)) return;
+      const p = readRegionPaste(t, region, TL);
+      const survey = {}; parseTop20(t, region).rows.forEach((r) => { if (r.region === region && !(r.key in survey)) survey[r.key] = r.survey; });
+      const res = { region, matched: 0, changed: [], missing: [], survey: 0, weekBack: [] };
+      const seen = {};
+      p.rows.filter((r) => r.region === region).forEach((r) => {
+        // 같은 업체(코드+업체명)가 여러 줄이면 순서대로 짝지음
+        const n = (seen[r.key] = (seen[r.key] || 0) + 1);
+        let i = -1; for (let j = 0, c = 0; j < rows.length; j++) if (rows[j].region === region && rows[j].key === r.key && ++c === n) { i = j; break; }
+        if (i < 0) { res.missing.push(r.name); return; }
+        const t0 = rows[i];
+        const vals = {};
+        const hasFlag = TL.flags.some((c) => trim(text(r.vals[c])));
+        Object.keys(r.vals).forEach((c) => {
+          c = +c; const v = r.vals[c];
+          if (TL.flags.includes(c)) { if (hasFlag) vals[c] = v; return; }
+          if (v == null || trim(text(v)) === '') return;
+          vals[c] = v;
+        });
+        const sv = survey[r.key] || '';
+        if (trim(sv)) { vals[TL.needs] = sv; res.survey++; }
+        const merged = applyPaste(t0, { vals }, TL);
+        // 방문 주차가 권역 자료(금주 반영분)보다 이전으로 되돌아가는 경우 알림
+        VISIT.forEach(([k, label]) => {
+          const a = wk(text(t0.cells[TL[k] - 1].v)), b = wk(text(merged.cells[TL[k] - 1].v));
+          if (isWeek(a) && isWeek(b) && weekOrder(b) < weekOrder(a)) res.weekBack.push(r.name + ' ' + label + ' ' + a + '→' + b);
+        });
+        if (diffCols(t0, merged, TL).length) res.changed.push(r.name);
+        info[r.key] = { region, name: r.name, poolNeeds: text(t0.cells[TL.needs - 1].v), topNeeds: r.vals[TL.needs] == null ? '' : String(r.vals[TL.needs]), survey: sv };
+        rows[i] = merged; res.matched++;
+      });
+      log.push(res);
+    });
+    return { info, log };
+  }
+
   // 올린 권역 파일이 어느 권역을 수정했는지 추정 (템플릿과 달라진 행 수)
   function guessRegion(tplRows, regRows) {
     const idx = {}; tplRows.forEach((r) => { (idx[r.key] = idx[r.key] || []).push(r); });
@@ -848,28 +891,32 @@
     Object.keys(TOP_COLS).forEach((k) => { if (f[k] != null && f[k] !== '') sn.cells[TOP_COLS[k] - 1].v = f[k]; });
     return sn;
   }
-  // 상위 20% 붙여넣기(권역별) → 행. 2차 전수조사 내용이 있으면 추가 진행현황(주차 = 보고 주차)으로
-  function topFromInputs(inputs, W) {
+  // 상위 20% 붙여넣기(권역별) → 표 행. 값은 수주풀에 반영된 최종 값(2차 전수조사가 있으면 Needs = 2차 전수조사)
+  function topFromInputs(inputs, W, rows, L, renamed) {
     const out = {};
     REGIONS.forEach((region) => {
       const t = inputs && inputs[region]; if (!t || !trim(t)) return;
       const g = (r, k) => (r.vals[norm(k)] == null ? '' : r.vals[norm(k)]);
       out[region] = parseTop20(t, region).rows.filter((r) => r.region === region).map((r) => {
+        // 수주풀에 반영된 최종 값(상위 20% + 2차 전수조사 + 화면 수정)
+        const k = (renamed && renamed[r.key]) || r.key;
+        const sn = rows && rows.find((x) => x.region === region && x.key === k);
+        if (sn) { const f = fields(sn, L); return { region, mgr: f.mgr, code: codeVal(f), name: f.name, task: f.task, stage: f.stage, amt: amtVal(f), period: f.period, text: clone(f.needs), addWeek: null, addText: null }; }
         const amtT = trim(g(r, '예상매출(억원)')).replace(/,/g, '');
         const needs = String(g(r, '주요이슈및고객사Needs')).replace(/\r\n?/g, '\n').replace(/\n+$/, '');
         return {
           region, mgr: trim(g(r, '담당자')), code: /^\d+$/.test(r.code) ? Number(r.code) : r.code, name: r.name, task: trim(g(r, '추진과제/범위')), stage: trim(g(r, '진행단계')),
           amt: amtT === '' ? null : /^-+$/.test(amtT) ? 0 : isFinite(Number(amtT)) ? Number(amtT) : amtT, period: trim(g(r, '사업시기')),
-          text: trim(needs) ? needs : null, addWeek: trim(r.survey) && W ? W : null, addText: trim(r.survey) ? r.survey : null,
+          text: trim(r.survey) ? r.survey : trim(needs) ? needs : null, addWeek: null, addText: null,
         };
       });
     });
     return out;
   }
   // 앞시트 ▶본부 매출상위업체 표: 입력한 권역은 새 내용으로, 입력 안 한 권역은 지난주 그대로. ▶ 금주 주요 업체 바로 다음
-  function topList(secs, inputs, W, st0) {
+  function topList(secs, inputs, W, st0, rows, L, renamed) {
     const main = secs.find((s) => s.kind === 'main');
-    const byRegion = topFromInputs(inputs, W);
+    const byRegion = topFromInputs(inputs, W, rows, L, renamed);
     let sec = secs.find((s) => s.kind === 'topList');
     if (!main || !main.header || (!sec && !Object.keys(byRegion).length)) return 0;
     const st = st0 || topStyles(main);
@@ -1132,7 +1179,7 @@
       }
     });
     fitUpperSections(ws, secs);
-    log.topRows = topList(secs, opts._top20, W, topSt);
+    log.topRows = topList(secs, opts._top20, W, topSt, rows, L, opts._edit && opts._edit.renamed);
 
     const pos = writeSections(ws, info.start, info.end, secs, maxCol);
     return { cands, log };
@@ -1646,6 +1693,8 @@
       inp.rows = keep; inp.partial = true; inp.skipped = skipped; inp.week = W0;
     });
     const merged = mergeRows(tpl.rows, inputs, TL);
+    // 상위 20% 업체가 권역 자료보다 우선 (화면 수정은 그 뒤에 적용)
+    const top20 = applyTop20(merged.rows, TL, opts.top20Inputs);
     // 3번째 시트(재영업·창고이슈): 권역 붙여넣기는 보고 주차 행만 반영
     const thirdWs = findSheets(tplWb).third;
     const third = thirdWs ? readThird(thirdWs) : null;
@@ -1668,7 +1717,7 @@
       const f = fields(sn, TL); [f.newv, f.rev, f.le].forEach((w) => { if (isWeek(w) && (!latest || weekOrder(w) > weekOrder(latest))) latest = w; });
     }));
     const suggested = latest && weekOrder(latest) > weekOrder(tplWeek) ? latest : nextWeek(tplWeek);
-    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog, flagInfo, top20: opts.top20Inputs || {} };
+    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog, flagInfo, top20: opts.top20Inputs || {}, top20Info: top20.info, top20Log: top20.log };
   }
 
   // 본부 니즈/견적 리스트(재영업 대상)에 이미 있는 업체
