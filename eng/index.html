@@ -122,7 +122,7 @@
     <p class="how">권역 파일의 <b>재영업 및 창고이슈업체 시트 전체</b>(재영업 대상 표 + 창고이슈업체 표, 머리글 포함)를 붙여넣으세요. 그 권역 행 중 <b>보고 주차에 업데이트된 행</b>(주차 또는 방문실적이 보고 주차)만 반영되고, 새 업체는 표 끝에 추가됩니다. 결과는 3번째 시트와 앞시트 <b>◎ 본부 니즈/견적 주요 업체 리스트</b>(재영업 대상 · 창고이슈업체)에 함께 들어갑니다.</p>
     <div class="grid3" id="reRegions"></div>
     <h3 class="sub">권역 상위 20% 업체 별도 취합 <span class="opt">선택</span></h3>
-    <p class="how">권역에서 따로 취합한 <b>상위 20% 업체 표 전체</b>(머리글 포함, 주요 이슈 및 고객사 Needs 옆 <b>2차 전수조사</b> 열 포함)를 복사해 해당 권역 칸에 붙여넣으세요.</p>
+    <p class="how">권역에서 따로 취합한 <b>상위 20% 업체 표 전체</b>(머리글 포함, 주요 이슈 및 고객사 Needs 옆 <b>2차 전수조사</b> 열 포함)를 복사해 해당 권역 칸에 붙여넣으세요. 앞시트 <b>▶ 금주 주요 업체</b> 다음에 <b>▶본부 매출상위업체</b> 표로 들어갑니다(Needs는 6칸 병합·왼쪽 정렬, 2차 전수조사 내용은 추가 진행현황에). 비운 권역은 지난주 표 그대로입니다.</p>
     <div class="grid3" id="topRegions"></div>
   </section>
 
@@ -523,6 +523,7 @@
       const out = ['완료: ' + name];
       const ed = editSummary(); if (ed.length) out.push('업체 수정 반영 ' + ed.length + '건');
       if (res.bonbu.bonbuUpdated && res.bonbu.bonbuUpdated.length) out.push('본부 리스트 추가진행 ' + W + ': ' + res.bonbu.bonbuUpdated.join(', '));
+      if (res.bonbu.topRows) out.push('▶본부 매출상위업체: 입력한 권역 ' + res.bonbu.topRows + '개 업체로 새로 작성');
       if (res.bonbu.bonbuAdded && res.bonbu.bonbuAdded.length) out.push('재영업 대상 맨 아래 추가(니즈확인·견적·계약): ' + res.bonbu.bonbuAdded.join(', '));
       const nfix = Object.keys(ctx.fixes).length; if (nfix) out.push('오탈자·띄어쓰기 수정: 수주풀 ' + nfix + '행' + (res.bonbu.sheetFixes ? ', 앞시트 ' + res.bonbu.sheetFixes + '칸' : ''));
       res.warn.forEach((w) => out.push('⚠ ' + w));

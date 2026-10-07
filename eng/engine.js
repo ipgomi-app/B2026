@@ -648,7 +648,7 @@
     [/^▶LE동행방문대상/, 'leTarget'], [/^▶LE차주방문요청/, 'leNext'], [/^▶계약성사/, 'contract'],
     [/^▶금주주요업체/, 'main'], [/^▶전주LE동행방문/, 'le'], [/^▶전주재방문/, 'rev'],
     [/^◎금주주요업체/, 'bonbuWeek'], [/^◎본부니즈\/견적주요업체리스트/, 'bonbuList'],
-    [/^재영업대상$/, 'reList'], [/^창고이슈업체$/, 'whList'],
+    [/^재영업대상$/, 'reList'], [/^창고이슈업체$/, 'whList'], [/^▶본부매출상위업체/, 'topList'],
   ];
   // ▶/◎ 제목 + 본부 리스트 아래 하위 제목(재영업 대상 / 창고이슈업체)
   const isSecTitle = (t) => /^[▶◎]/.test(t) || /^(재영업대상|창고이슈업체)$/.test(t);
@@ -813,6 +813,75 @@
     const cols = {}; layout.forEach(([a, t]) => { const f = FIELD_OF[norm(t)]; if (f) cols[f] = a; });
     const data = plainFrom(header);
     return { title: norm('◎  금주 주요 업체'), kind: 'bonbuWeek', titleRow: title, header, cols, data: [data], tail: [clone(list.tail[0] || { cells: title.cells.map(() => ({ v: null, s: {} })), height: 18, merges: [] })] };
+  }
+
+  // ---------- ▶본부 매출상위업체 (권역 상위 20% 업체 별도 취합) ----------
+  // B 팀/권역 · C 담당자 · D 코드 · E 업체명 · F 추진과제 · G 진행단계 · H 예상매출 · I 사업시기
+  // J:O 주요 이슈 및 고객사 Needs(전수 재조사, 6칸 병합·왼쪽 정렬) · P 추가진행 주차 · Q:V 추가 진행현황
+  const TOP_COLS = { region: 2, mgr: 3, code: 4, name: 5, task: 6, stage: 7, amt: 8, period: 9, text: 10, addWeek: 16, addText: 17 };
+  const TOP_MERGES = [[10, 15], [17, 22]];
+  const TOP_HEAD = { 2: '팀/권역', 3: '담당자', 4: '코드', 5: '업체명', 6: '추진과제/범위', 7: '진행단계', 8: '예상매출(억원)', 9: '사업시기', 10: '주요 이슈 및 고객사 Needs(전수 재조사)', 16: '추가진행 주차', 17: '추가 진행현황' };
+  const solid = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  // ▶ 금주 주요 업체 서식을 바탕으로 제목·머리글·데이터 행 서식을 만든다
+  function topStyles(main) {
+    const title = clone(main.titleRow); title.cells.forEach((c) => { c.v = null; delete c.f; delete c.note; }); title.cells[1].v = '▶본부 매출상위업체';
+    const H = main.header; const hs = clone(H.cells[2].s);
+    const header = clone(H); header.merges = clone(TOP_MERGES); header.height = H.height || 24;
+    header.cells.forEach((c, i) => { c.v = null; delete c.f; delete c.note; c.s = i >= 1 && i <= 21 ? clone(hs) : (i === 0 ? clone(H.cells[0].s) : {}); });
+    Object.keys(TOP_HEAD).forEach((c) => { header.cells[c - 1].v = TOP_HEAD[c]; });
+    header.cells[15].s.fill = solid('FFC6E0B4');
+    for (let c = 17; c <= 22; c++) header.cells[c - 1].s.fill = solid('FFE2EFDA');
+    const D = main.data[0] || plainFrom(H);
+    const ctr = clone(D.cells[2].s), amt = clone(D.cells[10].s), txt = clone(D.cells[12].s);
+    if (!amt.numFmt) amt.numFmt = '_-* #,##0.0_-;-* #,##0.0_-;_-* "-"_-;_-@_-';
+    amt.alignment = Object.assign({}, amt.alignment, { horizontal: 'right' });
+    const left = Object.assign(clone(ctr), { alignment: Object.assign({}, ctr.alignment, { horizontal: 'left' }) });
+    txt.alignment = Object.assign({}, txt.alignment, { horizontal: 'left', vertical: 'middle', wrapText: true });
+    const data = { cells: D.cells.map((c, i) => ({ v: null, s: i === 0 ? clone(c.s) : {} })), height: 21, merges: clone(TOP_MERGES) };
+    for (let c = 2; c <= 22; c++) data.cells[c - 1].s = clone(c === 5 || c === 6 ? left : c === 8 ? amt : c >= 10 && c !== 16 ? txt : ctr);
+    data.cells[15].s.fill = solid('FFE2EFDA');
+    const blank = clone(main.tail[0] || { cells: D.cells.map(() => ({ v: null, s: {} })), height: 18, merges: [] });
+    return { title, header, data, blank };
+  }
+  function topRow(st, f) {
+    const sn = clone(st.data);
+    Object.keys(TOP_COLS).forEach((k) => { if (f[k] != null && f[k] !== '') sn.cells[TOP_COLS[k] - 1].v = f[k]; });
+    return sn;
+  }
+  // 상위 20% 붙여넣기(권역별) → 행. 2차 전수조사 내용이 있으면 추가 진행현황(주차 = 보고 주차)으로
+  function topFromInputs(inputs, W) {
+    const out = {};
+    REGIONS.forEach((region) => {
+      const t = inputs && inputs[region]; if (!t || !trim(t)) return;
+      const g = (r, k) => (r.vals[norm(k)] == null ? '' : r.vals[norm(k)]);
+      out[region] = parseTop20(t, region).rows.filter((r) => r.region === region).map((r) => {
+        const amtT = trim(g(r, '예상매출(억원)')).replace(/,/g, '');
+        const needs = String(g(r, '주요이슈및고객사Needs')).replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+        return {
+          region, mgr: trim(g(r, '담당자')), code: /^\d+$/.test(r.code) ? Number(r.code) : r.code, name: r.name, task: trim(g(r, '추진과제/범위')), stage: trim(g(r, '진행단계')),
+          amt: amtT === '' ? null : /^-+$/.test(amtT) ? 0 : isFinite(Number(amtT)) ? Number(amtT) : amtT, period: trim(g(r, '사업시기')),
+          text: trim(needs) ? needs : null, addWeek: trim(r.survey) && W ? W : null, addText: trim(r.survey) ? r.survey : null,
+        };
+      });
+    });
+    return out;
+  }
+  // 앞시트 ▶본부 매출상위업체 표: 입력한 권역은 새 내용으로, 입력 안 한 권역은 지난주 그대로. ▶ 금주 주요 업체 바로 다음
+  function topList(secs, inputs, W, st0) {
+    const main = secs.find((s) => s.kind === 'main');
+    const byRegion = topFromInputs(inputs, W);
+    let sec = secs.find((s) => s.kind === 'topList');
+    if (!main || !main.header || (!sec && !Object.keys(byRegion).length)) return 0;
+    const st = st0 || topStyles(main);
+    if (!sec) {
+      sec = { title: norm(st.title.cells[1].v), kind: 'topList', titleRow: st.title, header: st.header, data: [], tail: [st.blank] };
+      secs.splice(secs.indexOf(main) + 1, 0, sec);
+    } else { sec.header = st.header; if (!sec.tail.length) sec.tail = [st.blank]; }
+    const keep = sec.data.filter((sn) => !byRegion[trim(text(sn.cells[1].v))]);
+    const add = []; REGIONS.forEach((r) => (byRegion[r] || []).forEach((f) => add.push(topRow(st, f))));
+    const ord = (sn) => REGION_ORDER[trim(text(sn.cells[1].v))] ?? 9;
+    sec.data = keep.concat(add).map((sn, i) => [sn, i]).sort((a, b) => ord(a[0]) - ord(b[0]) || a[1] - b[1]).map((x) => x[0]);
+    return add.length;
   }
 
   // ---------- 3번째 시트(재영업 및 창고이슈업체) ↔ 앞시트 본부 니즈/견적 리스트 ----------
@@ -1016,6 +1085,7 @@
     secs.forEach((s) => { if (/^▶본부주요업체/.test(s.title)) s.tail = []; });
     if (!secs.some((s) => s.kind === 'bonbuWeek')) { const bw = makeBonbuWeek(secs); if (bw) secs.splice(secs.findIndex((s) => s.kind === 'bonbuList'), 0, bw); }
     const mainSec = secs.find((s) => s.kind === 'main');
+    const topSt = mainSec && mainSec.header ? topStyles(mainSec) : null; // 금주 주요 업체 행을 다시 만들기 전 서식
     const log = { bonbuAdded: [], bonbuUpdated: [], sheetFixes: 0 };
     const choose = opts.selection || {};
     const bonbuSel = new Set(opts.bonbu || []);
@@ -1053,7 +1123,7 @@
         });
       }
       // 앞시트의 옮겨 온 서술도 수주풀과 같은 규칙으로 오탈자·띄어쓰기 수정
-      if (opts.fixText !== false && ['leTarget', 'leNext', 'contract', 'bonbuList', 'reList', 'whList'].includes(sec.kind)) {
+      if (opts.fixText !== false && ['leTarget', 'leNext', 'contract', 'bonbuList', 'reList', 'whList', 'topList'].includes(sec.kind)) {
         sec.data.forEach((sn) => sn.cells.forEach((c) => {
           if (typeof c.v === 'string' && (c.v.length >= 15 || c.v.includes('\n')) || (c.v && c.v.richText)) {
             const lg = []; c.v = fixValue(c.v, lg); if (lg.length) log.sheetFixes++;
@@ -1062,6 +1132,7 @@
       }
     });
     fitUpperSections(ws, secs);
+    log.topRows = topList(secs, opts._top20, W, topSt);
 
     const pos = writeSections(ws, info.start, info.end, secs, maxCol);
     return { cands, log };
@@ -1158,6 +1229,21 @@
       const sec = { title, kind, titleRow: clone(ks.titleRow), header: null, data: [], tail: [] };
       sec.titleRow.cells[1].v = cellVal(g(r, 2));
       let q = r + 1;
+      if (kind === 'topList' && kitMain) {
+        // 본부 매출상위업체: 정해진 열 배치(Needs 6칸 병합)로
+        const st = topStyles(kitMain);
+        Object.assign(sec, { titleRow: st.title, header: st.header, tail: [st.blank] });
+        sec.titleRow.cells[1].v = cellVal(g(r, 2));
+        if (q < grid.length && !titleOf(q) && rowHasVal(rowVals(q))) q++;
+        while (q < grid.length && !titleOf(q) && rowHasVal(rowVals(q))) {
+          const sn = clone(st.data); const vals = rowVals(q);
+          sn.cells.forEach((c, i) => { if (i >= 1 && i <= 21) c.v = cellVal(vals[i]); });
+          TOP_MERGES.forEach(([a, b]) => { for (let c = a + 1; c <= b; c++) sn.cells[c - 1].v = null; });
+          sec.data.push(sn); q++;
+        }
+        while (q < grid.length && !titleOf(q)) q++;
+        out.push(sec); r = q; continue;
+      }
       if (q < grid.length && !titleOf(q) && rowHasVal(rowVals(q))) {
         sec.header = clone(ks.header || kitMain.header);
         rowVals(q).forEach((v, i) => { if (trim(v) && !(sec.header.cells[i].f)) sec.header.cells[i].v = cellVal(v); });
@@ -1582,7 +1668,7 @@
       const f = fields(sn, TL); [f.newv, f.rev, f.le].forEach((w) => { if (isWeek(w) && (!latest || weekOrder(w) > weekOrder(latest))) latest = w; });
     }));
     const suggested = latest && weekOrder(latest) > weekOrder(tplWeek) ? latest : nextWeek(tplWeek);
-    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog, flagInfo };
+    return { pool, sum, TL, tpl, rows, log, tplWeek, suggestedWeek: suggested, detected, fixes, checks, changedKeys, inputRegions: Object.keys(inputs), edit: ed, third, thirdLog, flagInfo, top20: opts.top20Inputs || {} };
   }
 
   // 본부 니즈/견적 리스트(재영업 대상)에 이미 있는 업체
@@ -1614,9 +1700,9 @@
     const maxCol = sumMaxCol(sum);
     const info = readSections(sum, maxCol);
     let res = { cands: [], log: {} };
-    if (info) { info.maxCol = maxCol; res = rebuildSections(sum, info, ctx.rows, TL, W, Object.assign({ _edit: ctx.edit, _third: ctx.third }, opts)); }
-    if (ctx.third && ctx.third.tables[0] && ctx.third.tables[0].rows.length) writeThird(ctx.third);
+    if (info) { info.maxCol = maxCol; res = rebuildSections(sum, info, ctx.rows, TL, W, Object.assign({ _edit: ctx.edit, _third: ctx.third, _top20: ctx.top20 }, opts)); }
     else warn.push('하단 업체 목록(▶ LE 동행방문 대상 리스트)을 찾지 못해 목록 갱신을 건너뜀');
+    if (ctx.third && ctx.third.tables[0] && ctx.third.tables[0].rows.length) writeThird(ctx.third);
     // 4) 열 때 재계산
     tplWb.calcProperties = Object.assign({}, tplWb.calcProperties, { fullCalcOnLoad: true });
     stripResults(sum); stripResults(pool);
