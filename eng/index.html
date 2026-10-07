@@ -49,6 +49,9 @@
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   @media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+  details.fold > summary { cursor: pointer; list-style: none; } details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary h3::before { content: '▸ '; color: #6b7a90; } details.fold[open] > summary h3::before { content: '▾ '; }
+  details.fold > summary h3 { display: inline-block; }
   h3.sub { margin: 16px 0 4px; font-size: 14px; } h3.sub .opt { font-weight: 400; color: #6b7a90; font-size: 12px; }
   .box { border: 1px dashed #b8c2d3; border-radius: 10px; padding: 10px 12px; background: #fbfcfe; }
   .box.filled { border-style: solid; border-color: #9fb4d9; background: var(--soft); }
@@ -118,9 +121,10 @@
     <h2><span class="step">2</span>이번 주 권역 자료 붙여넣기</h2>
     <p class="how">권역 담당이 보낸 파일의 <b>영남대상업체(수주풀) 시트 전체</b>(또는 권역 시트, 머리글 행 포함)를 복사해 해당 권역 칸에 붙여넣으세요. 그 권역 업체 행만 반영됩니다. 비워두면 지난주 내용 그대로입니다.</p>
     <div class="grid3" id="regions"></div>
-    <h3 class="sub">권역 재영업·창고이슈업체 <span class="opt">선택</span></h3>
+    <details class="fold" id="reFold"><summary><h3 class="sub">권역 재영업·창고이슈업체 <span class="opt">선택 · 눌러서 펼치기</span> <span class="opt" id="reFoldSt"></span></h3></summary>
     <p class="how">권역 파일의 <b>재영업 및 창고이슈업체 시트 전체</b>(재영업 대상 표 + 창고이슈업체 표, 머리글 포함)를 붙여넣으세요. 그 권역 행 중 <b>보고 주차에 업데이트된 행</b>(주차 또는 방문실적이 보고 주차)만 반영되고, 새 업체는 표 끝에 추가됩니다. 결과는 3번째 시트와 앞시트 <b>◎ 본부 니즈/견적 주요 업체 리스트</b>(재영업 대상 · 창고이슈업체)에 함께 들어갑니다.</p>
     <div class="grid3" id="reRegions"></div>
+    </details>
     <h3 class="sub">권역 상위 20% 업체 별도 취합 <span class="opt">선택</span></h3>
     <p class="how">권역에서 따로 취합한 <b>상위 20% 업체 표 전체</b>(머리글 포함, 주요 이슈 및 고객사 Needs 옆 <b>2차 전수조사</b> 열 포함)를 복사해 해당 권역 칸에 붙여넣으세요. 앞시트 <b>▶ 금주 주요 업체</b> 다음에 <b>▶본부 매출상위업체</b> 표로 들어갑니다(Needs는 6칸 병합·왼쪽 정렬, 2차 전수조사 내용은 추가 진행현황에). 비운 권역은 지난주 표 그대로입니다.</p>
     <div class="grid3" id="topRegions"></div>
@@ -310,8 +314,9 @@
   function setReText(r, t) {
     if (t.trim()) state.reRegions[r] = t; else delete state.reRegions[r];
     $('rebox_' + r).classList.toggle('filled', !!state.reRegions[r]);
+    const nRe = Object.keys(state.reRegions).length; $('reFoldSt').textContent = nRe ? '· ' + nRe + '개 권역 붙여넣음' : '';
     status('res_' + r, '', state.reRegions[r] ? lines(t) + '행 붙여넣음' : '비어 있음 — 지난주 내용 유지');
-    if (state.reRegions[r]) { try { E.parseThirdPaste(t); } catch (e) { boxWarn('res_' + r, e.message); } }
+    if (state.reRegions[r]) { try { E.parseThirdPaste(t); } catch (e) { boxWarn('res_' + r, e.message); $('reFold').open = true; } }
     changed();
   }
   function markRegion(r) {
