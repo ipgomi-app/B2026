@@ -121,6 +121,9 @@
     <h3 class="sub">권역 재영업·창고이슈업체 <span class="opt">선택</span></h3>
     <p class="how">권역 파일의 <b>재영업 및 창고이슈업체 시트 전체</b>(재영업 대상 표 + 창고이슈업체 표, 머리글 포함)를 붙여넣으세요. 그 권역 행 중 <b>보고 주차에 업데이트된 행</b>(주차 또는 방문실적이 보고 주차)만 반영되고, 새 업체는 표 끝에 추가됩니다. 결과는 3번째 시트와 앞시트 <b>◎ 본부 니즈/견적 주요 업체 리스트</b>(재영업 대상 · 창고이슈업체)에 함께 들어갑니다.</p>
     <div class="grid3" id="reRegions"></div>
+    <h3 class="sub">권역 상위 20% 업체 별도 취합 <span class="opt">선택</span></h3>
+    <p class="how">권역에서 따로 취합한 <b>상위 20% 업체 표 전체</b>(머리글 포함, 주요 이슈 및 고객사 Needs 옆 <b>2차 전수조사</b> 열 포함)를 복사해 해당 권역 칸에 붙여넣으세요.</p>
+    <div class="grid3" id="topRegions"></div>
   </section>
 
   <section class="card">
@@ -187,7 +190,7 @@
   const $ = (id) => document.getElementById(id);
   const REG = E.REGIONS;
   // tpl: {type:'paste'} | {type:'file', bytes, name}
-  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, confirmed: null, reRegions: {}, ctx: null,
+  const state = { tpl: null, tplRows: null, regions: {}, cands: [], placement: {}, bonbu: {}, confirmed: null, reRegions: {}, topRegions: {}, ctx: null,
     edits: {}, orig: {}, notes: {}, adds: [], deletes: [], delNames: {}, lists: {}, listNotes: {}, listsBase: null, back: {}, addKeys: [], ed: { group: 'upd', sel: null } };
 
   const load = (bytes) => E.loadWorkbook(ExcelJS, JSZip, bytes);
@@ -236,7 +239,7 @@
       state.tplWeek = w;
       if (!$('week').dataset.touched) { $('week').value = E.nextWeek(w); $('weekHint').textContent = '(지난주 ' + w + ' 다음 주)'; }
       checkWeek();
-      REG.forEach(markRegion);
+      REG.forEach(markRegion); REG.forEach(markTop);
       changed();
     } catch (e) {
       console.error(e);
@@ -270,6 +273,39 @@
     $('reRegions').querySelectorAll('[data-rereset]').forEach((el) => el.addEventListener('click', () => {
       const r = el.dataset.rereset; $('reRegions').querySelector('textarea[data-re="' + r + '"]').value = ''; setReText(r, '');
     }));
+  }
+  // 권역 상위 20% 업체 붙여넣기
+  function renderTopRegions() {
+    $('topRegions').innerHTML = REG.map((r) =>
+      '<div class="box" id="topbox_' + r + '"><h3><span>' + r + ' 상위 20%</span><span class="tools"><button class="mini" data-topreset="' + r + '">초기화</button></span></h3>' +
+      '<textarea data-top="' + r + '" placeholder="' + r + ' 상위 20% 업체 표 전체 붙여넣기"></textarea><div class="st" id="tops_' + r + '"></div></div>').join('');
+    $('topRegions').querySelectorAll('textarea').forEach((el) => el.addEventListener('input', debounce(() => setTopText(el.dataset.top, el.value), 300)));
+    $('topRegions').querySelectorAll('[data-topreset]').forEach((el) => el.addEventListener('click', () => {
+      const r = el.dataset.topreset; $('topRegions').querySelector('textarea[data-top="' + r + '"]').value = ''; setTopText(r, '');
+    }));
+  }
+  function setTopText(r, t) {
+    if (t.trim()) state.topRegions[r] = t; else delete state.topRegions[r];
+    $('topbox_' + r).classList.toggle('filled', !!state.topRegions[r]);
+    markTop(r);
+    changed();
+  }
+  function markTop(r) {
+    const t = state.topRegions[r];
+    if (!t) { status('tops_' + r, '', '비어 있음'); return; }
+    let p;
+    try { p = E.parseTop20(t, r); } catch (e) { status('tops_' + r, '', lines(t) + '행 붙여넣음'); boxWarn('tops_' + r, e.message); return; }
+    const mine = p.rows.filter((x) => x.region === r);
+    const filled = mine.filter((x) => x.survey.trim()).length;
+    status('tops_' + r, 'ok', '✓ 업체 ' + mine.length + '개 · 2차 전수조사 입력 ' + filled + '개');
+    if (!p.surveyHeader) boxWarn('tops_' + r, '2차 전수조사 열이 없습니다. 주요 이슈 및 고객사 Needs 옆 열까지 함께 복사해 주세요.');
+    const other = p.rows.length - mine.length;
+    if (other) boxWarn('tops_' + r, '다른 권역 행 ' + other + '개는 제외합니다.');
+    if (state.tplRows) {
+      const keys = new Set(state.tplRows.map((x) => x.key));
+      const miss = mine.filter((x) => !keys.has(x.key)).map((x) => x.name);
+      if (miss.length) boxWarn('tops_' + r, '지난주 수주풀에 없는 업체(코드+업체명 불일치) ' + miss.length + '개: ' + miss.slice(0, 5).join(', ') + (miss.length > 5 ? ' 외' : ''));
+    }
   }
   function setReText(r, t) {
     if (t.trim()) state.reRegions[r] = t; else delete state.reRegions[r];
@@ -375,7 +411,7 @@
     $('checkWrap').hidden = false;
   }
 
-  const engineOpts = async () => ({ week: week(), inputs: await engineInputs(), thirdInputs: Object.assign({}, state.reRegions), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
+  const engineOpts = async () => ({ week: week(), inputs: await engineInputs(), thirdInputs: Object.assign({}, state.reRegions), top20Inputs: Object.assign({}, state.topRegions), fixText: $('fixText').checked, edits: state.edits, adds: state.adds, deletes: state.deletes });
   const keyOfForm = (f) => String(f.code == null ? '' : f.code).trim() + '|' + String(f.name || '').trim();
 
   // 보고 주차가 지난주 제출본 주차보다 뒤인지 (12월 → 1월 넘어가는 경우 포함)
@@ -702,7 +738,7 @@
   if (!window.ExcelJS || !window.JSZip || !KIT) msg($('buildMsg'), 'err', '구성 파일(vendor/, kit.js, engine.js)을 불러오지 못했습니다. index.html 과 같은 폴더에 있는지 확인하세요.');
   renderRegions();
   REG.forEach(markRegion);
-  renderReRegions();
+  renderReRegions(); renderTopRegions(); REG.forEach(markTop);
   REG.forEach((r) => status('res_' + r, '', '비어 있음 — 지난주 내용 유지'));
 })();
 </script>

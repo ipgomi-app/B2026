@@ -215,6 +215,27 @@
     return { rows, hasFlags };
   }
 
+  // 상위 20% 업체 별도 취합(권역별) 붙여넣기 → 행 목록. 수주풀과 같은 머리글 + '2차 전수조사(…)' 열
+  // 반환 { rows:[{region, code, name, key, survey, vals:{정규화머리글: 값}}], surveyHeader }
+  function parseTop20(str, region) {
+    const grid = parseTSV(str);
+    let h = -1;
+    for (let i = 0; i < Math.min(grid.length, 30); i++) { const ks = grid[i].map(norm); if (ks.includes('업체명') && ks.includes('코드')) { h = i; break; } }
+    if (h < 0) throw new Error('붙여넣은 내용에서 헤더(코드/업체명) 행을 찾지 못했습니다. 헤더 행까지 함께 복사해 주세요.');
+    const hdr = grid[h].map(norm);
+    const idx = (k) => hdr.indexOf(k);
+    const sv = hdr.findIndex((k) => /^2차전수조사/.test(k));
+    const rows = [];
+    for (let i = h + 1; i < grid.length; i++) {
+      const src = grid[i]; const name = trim(src[idx('업체명')]); if (!name) continue;
+      const vals = {}; hdr.forEach((k, j) => { if (k) vals[k] = src[j] == null ? '' : String(src[j]); });
+      const reg = trim(src[idx('팀/권역')]);
+      const code = trim(src[idx('코드')]);
+      rows.push({ region: REGIONS.includes(reg) ? reg : region, code, name, key: code + '|' + name, survey: sv < 0 ? '' : String(src[sv] == null ? '' : src[sv]).replace(/\r\n?/g, '\n').replace(/\n+$/, ''), vals });
+    }
+    return { rows, surveyHeader: sv < 0 ? null : trim(grid[h][sv]) };
+  }
+
   // 올린 권역 파일이 어느 권역을 수정했는지 추정 (템플릿과 달라진 행 수)
   function guessRegion(tplRows, regRows) {
     const idx = {}; tplRows.forEach((r) => { (idx[r.key] = idx[r.key] || []).push(r); });
@@ -1619,7 +1640,7 @@
 
   return {
     REGIONS, loadWorkbook, saveWorkbook, parseTSV, findSheets, poolLayout, readPool, readRegionWorkbook, guessRegion, prepare, preview, build,
-    templateFromPaste, rowForm, readLists, readRegionPaste, parseThirdPaste, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
+    templateFromPaste, rowForm, readLists, readRegionPaste, parseThirdPaste, parseTop20, FLAG_KEYS, FLAG_LABEL, KEY_STAGES, checkRow, nextWeek, wk, isWeek, monthOf, text, shiftFormulaCols, fields,
     // 틀(kit) 생성 도구용
     _i: { readSections, snapRow, writeRow, unmergeRows, rowMergeMap, writePool, formulaPatterns, writeSections, sumMaxCol, stripResults },
   };
