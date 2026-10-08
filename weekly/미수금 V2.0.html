@@ -667,11 +667,12 @@ function mgDetectYM(raw){if(!raw.trim())return null;const m=raw.match(/(\d{2})�
   const rows=parseTSV(raw);const di=rows.findIndex(r=>r.some(isCode6));const hdr=rows.slice(0,di<0?rows.length:di);let best='';
   hdr.forEach(h=>h.forEach((c,i)=>{const t=String(c||'').trim();let y='',mo='';let k;if((k=t.match(/^(20\d{2})[.\-\/]?(0[1-9]|1[0-2])$/))){y=k[1];mo=k[2]}else if((k=t.match(/^(\d{2})[.\-\/](0?[1-9]|1[0-2])$/))){y='20'+k[1];mo=k[2].padStart(2,'0')}if(!y)return;
     const has=rows.slice(di<0?0:di).some(r=>num(r[i])>0);if(has&&y+mo>best)best=y+mo}));return best?{ym:best,src:'머리글 월 열'}:null}
-/* 2-2 AMS 담당자별(업체현황): '개별'/'업체합계' 칸 기준 상대 위치로 읽음
-   구분·관리부서(코드,명)·관리담당자(코드,명)·청구담당자(코드,명)·거래처(코드,명)·신용등급·결제조건·결제기일·청구년월·금액·연체개월 */
+/* 2-2 AMS 담당자별(업체현황): 머리글 없이 A·B열 어디서 시작해도 '개별'/'업체합계' 칸 기준 상대 위치로 읽음
+   구분·관리부서(코드,명)·관리담당자(코드,명)·청구담당자(코드,명)·거래처(코드,명)·신용등급·결제조건·결제기일·청구년월·금액·연체개월·시작일·종료일·보증보험·가입년월·보증금·법조치·추가조치·회생/파산 */
 function mgParseEmp(raw){const out={};if(!raw||!raw.trim())return out;parseTSV(raw).map(r=>r.map(x=>String(x||'').trim())).forEach(r=>{const k=r.findIndex(x=>x==='개별'||x==='업체합계');if(k<0)return;const v=i=>r[k+i]||'';const code=v(7);if(!/^\d{6}$/.test(code))return;
-  const o=out[code]||(out[code]={code,br:v(2),emp:v(4),name:v(8),grade:'',cond:'',due:'',amt:0,months:0,rows:[]});
-  if(r[k]==='개별'){o.rows.push({ym:v(12).replace(/\D/g,''),amt:num(v(13))});if(!o.grade)o.grade=v(9);if(!o.cond)o.cond=v(10);if(!o.due)o.due=v(11)}else{o.amt=num(v(13));o.months=num(v(14));if(!o.br)o.br=v(2);if(!o.emp)o.emp=v(4);if(!o.name)o.name=v(8)}});
+  const o=out[code]||(out[code]={code,br:v(2),emp:v(4),name:v(8),grade:'',cond:'',due:'',amt:0,months:0,rows:[],insFrom:'',insTo:'',insAmt:0,depYM:'',dep:0,law:'',law2:'',rehab:''});
+  if(r[k]==='개별'){o.rows.push({ym:v(12).replace(/\D/g,''),amt:num(v(13))});if(!o.grade)o.grade=v(9);if(!o.cond)o.cond=v(10);if(!o.due)o.due=v(11)}
+  else{o.amt=num(v(13));o.months=num(v(14));Object.assign(o,{insFrom:v(15),insTo:v(16),insAmt:num(v(17)),depYM:v(18),dep:num(v(19)),law:v(20).replace(/^0$/,''),law2:v(21).replace(/^0$/,''),rehab:v(22).replace(/^0$/,'')});if(!o.br)o.br=v(2);if(!o.emp)o.emp=v(4);if(!o.name)o.name=v(8)}});
   Object.values(out).forEach(o=>{if(!o.amt)o.amt=o.rows.reduce((a,x)=>a+x.amt,0)});return out}
 function mgYM(){const v=(document.getElementById('mg-ym').value||'').trim();return /^\d{4}-\d{2}$/.test(v)?v.replace('-',''):''}
 function mgYMSync(){const el=document.getElementById('mg-ym'),st=document.getElementById('mg-ym-stat');const d=mgDetectYM(document.getElementById('mg-prev').value);
