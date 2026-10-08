@@ -629,7 +629,11 @@ function mgParsePay(raw){const out={amt:{},dates:{},sub:{},rows:0,warn:[]};if(!r
 /* 전주 출력표: 코드 → 세부 진행내역 */
 function mgParseLast(raw){const out={};if(!raw.trim())return out;const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));const hi=rows.findIndex(r=>r.some(c=>/진행내역|세부내역/.test(c.replace(/\s+/g,''))));
   const H=hi>=0?rows[hi].map(x=>x.replace(/\s+/g,'')):[];let mi=H.findIndex(h=>/진행내역|세부내역/.test(h));let ci=H.findIndex(h=>h==='코드');
-  rows.forEach((c,i)=>{if(i===hi)return;const code=ci>=0&&isCode6(c[ci])?c[ci]:c.find(isCode6);if(!code)return;let memo=mi>=0?(c[mi]||''):'';if(mi<0){const k=c.indexOf(code);memo=c.slice(k+1).filter(x=>/[가-힣]/.test(x)&&x.length>8).sort((a,b)=>b.length-a.length)[0]||''}if(memo)out[code]={memo}});return out}
+  /* 4번 기준 출력용: 구분·지점·담당·거래처·미수채권·연체개월·결제기일·신용등급·보증금액·법조치도 같이 읽음(구분은 병합이라 위 행 값 이어받음) */
+  const hx=(...k)=>H.findIndex(h=>k.includes(h));const C={grp:hx('구분'),br:hx('지점','관리부서명'),emp:hx('담당','관리담당자','관리담당자명'),name:hx('거래처','거래처명','업체명'),amt:hx('미수채권'),mon:hx('연체개월'),due:hx('결제기일'),grade:hx('신용등급'),gamt:H.findIndex(h=>/^보증금액/.test(h)),law:H.findIndex(h=>/법조치/.test(h))};
+  let curG='';rows.forEach((c,i)=>{if(i===hi)return;const code=ci>=0&&isCode6(c[ci])?c[ci]:c.find(isCode6);if(!code)return;let memo=mi>=0?(c[mi]||''):'';if(mi<0){const k=c.indexOf(code);memo=c.slice(k+1).filter(x=>/[가-힣]/.test(x)&&x.length>8).sort((a,b)=>b.length-a.length)[0]||''}
+    const g=k=>C[k]>=0?(c[C[k]]||''):'';const gv=g('grp');if(/법조치|회생|결제지연/.test(gv))curG=/회생/.test(gv)?'회생채권':/법조치/.test(gv)?'법조치':'결제지연';let br=g('br');if(br&&!/지점$|팀$/.test(br))br+='지점';
+    out[code]={memo,grp:curG,br,emp:g('emp'),name:g('name'),amt:num(g('amt')),months:num(g('mon')),cond:g('due'),grade:g('grade'),gamt:num(g('gamt')),law:g('law')}});return out}
 /* 금주 내역 데이터(취합 출력표 형식): 구분·권역·지점·담당·코드·거래처·미수채권·연체개월·결제기일·신용등급·보증가입여부·보증금액·법조치 현황·전주 세부내역·금주 세부내역·수금금액·잔여 미수금·청구년월·금주수금·최종수금일 */
 const isWeekFmt=raw=>{const rows=parseTSV(raw||'');return rows.some(r=>{const H=r.map(x=>String(x||'').replace(/\s+/g,''));return H.some(h=>/금주세부내역|전주세부내역|세부진행내역/.test(h))&&H.some(h=>h==='코드'||/거래처|업체명/.test(h))})};
 function mgParseWeek(raw){const list=[];if(!raw||!raw.trim())return {list};const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));
@@ -681,17 +685,18 @@ Object.keys(MG_LIVE).forEach(id=>{const ta=document.getElementById(id),st=docume
   ['input','change','blur','mouseleave'].forEach(ev=>ta.addEventListener(ev,upd));ta.addEventListener('cleared',()=>st.textContent='')});
 let MG=null;
 function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value),M=mgParseMon(document.getElementById('mg-mon').value);
-  const codes=Object.keys(P);if(!codes.length){alert('1번 KPP 업체별 세부 시트를 붙여넣으세요');return}
   const from=(document.getElementById('mg-from').value||'').trim(),to=(document.getElementById('mg-to').value||'').trim();const inRange=d=>!!d&&(!from||d>=from)&&(!to||d<=to);
   const PAY=mgParsePay(document.getElementById('mg-pay').value);const LAST=mgParseLast(document.getElementById('mg-last').value);
-  const min=+document.getElementById('mg-min').value||0;const cut=mgYM();const recs=[];let outYN=0,outMin=0,fromBase=0,added=0,paidN=0,fullN=0;
-  codes.forEach(code=>{const prev=P[code]||{},m=M[code]||{};const br=prev.br||m.br||'';const emp=prev.emp||m.emp||'';
+  /* 4번(지난주 출력표)을 붙이면 4번 업체 전부를 기준으로 출력(기준금액 무관, 1번에 없는 업체는 1번 기준월에 미수 없음 = 완납으로 봄) */const byLast=Object.keys(LAST).length>0;
+  const codes=byLast?Object.keys(LAST):Object.keys(P);if(!codes.length){alert('1번 KPP 업체별 세부 시트(또는 4번 지난주 출력표)를 붙여넣으세요');return}
+  const min=byLast?0:(+document.getElementById('mg-min').value||0);const cut=mgYM();const recs=[];let outYN=0,outMin=0,fromBase=0,added=0,paidN=0,fullN=0,notInP=0;
+  codes.forEach(code=>{const L=LAST[code]||{};const prev=P[code]||(byLast?L:{}),m=M[code]||{};const br=prev.br||m.br||'';const emp=prev.emp||m.emp||'';
     if(!(YN_BR.has(br)||YN_EMP.has(emp))){outYN++;return}
     const mRows=(m.rows||[]).filter(x=>!cut||!x.ym||x.ym<=cut);/* 기준 청구년월까지만 */const mAmt=mRows.reduce((s,x)=>s+x.amt,0);const amt=prev.amt||mAmt;if(amt<min){outMin++;return}
     const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';
     const payD=(PAY.dates[code]||[]).slice().sort();
     /* 월별(2번)이 기본 틀: 청구년월·금주수금·최종수금일·완납 판정. 3번 수금 데이터는 같은 업체가 있을 때 수금금액(과 수금일)만 더 정확한 값으로 덮어씀 */
-    const fullM=!!P[code]&&Object.keys(M).length>0&&!mRows.some(x=>x.amt>0);/* KPP에 있고 AMS 월별(기준월까지)에 없거나 미수금이 모두 0이면 완납 */
+    const fullM=(!!P[code]&&Object.keys(M).length>0&&!mRows.some(x=>x.amt>0))||(byLast&&!P[code]&&!mRows.some(x=>x.amt>0));if(byLast&&!P[code])notInP++;/* KPP에 있고 AMS 월별(기준월까지)에 없거나 미수금이 모두 0이면 완납 */
     let paid=(code in PAY.amt)?Math.min(PAY.amt[code],amt):(fullM?amt:0);const full=fullM||(amt>0&&paid>=amt);
     const wk=(full||inRange(lastPay)||payD.some(inRange))?'O':'';const lastPay2=[lastPay,payD[payD.length-1]||''].sort().pop();
     if(wk)paidN++;if(full)fullN++;const pd=lastPay2?lastPay2.slice(2).replace(/-/g,'.'):'';
@@ -704,7 +709,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   MG={recs,tsv};document.getElementById('mg-prev-stat').textContent=Object.keys(P).length?'기준 시트 '+Object.keys(P).length+'업체 인식(영남 소속)':'';document.getElementById('mg-mon-stat').textContent=Object.keys(M).length?'월별 '+Object.keys(M).length+'업체 인식 · 완납(월별에 없음) '+fullN+'업체':'';document.getElementById('mg-pay-stat').textContent=Object.keys(PAY.amt).length?'수금 '+Object.keys(PAY.amt).length+'업체 '+PAY.rows+'건 인식 (결제금액 합산)'+(PAY.warn.length?' · 소계 불일치 '+PAY.warn.length+'건: '+PAY.warn.slice(0,3).join(', '):''):'';document.getElementById('mg-last-stat').textContent=Object.keys(LAST).length?'전주 '+Object.keys(LAST).length+'업체 인식 · 세부내역 이어받음 '+recs.filter(x=>x.memoPrev).length+'건':'';
   recs.forEach(x=>{const key=Object.keys(BR2REG).find(b=>x.br.startsWith(b));x.reg=key?REG_SHORT(BR2REG[key]):'';x.mon=x.months||'';x.due=x.cond||'';x.ins=x.insYN});
   MGR={list:recs,month:'',min};mgRender();
-  const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 금주수금 O '+paidN+'업체(완납 '+fullN+', 결제 완료 세부내역 자동 '+recs.filter(x=>x.memo).length+'건'+(recs.filter(x=>x.memo&&!x.pd).length?' · 그중 최종입금일 없음 '+recs.filter(x=>x.memo&&!x.pd).length+'건(2번 월별에 해당 업체 행이 없거나 날짜를 못 읽음)':'')+') · 영남 외 '+outYN+'건, 기준금액 미만 '+outMin+'건 제외'}
+  const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 금주수금 O '+paidN+'업체(완납 '+fullN+', 결제 완료 세부내역 자동 '+recs.filter(x=>x.memo).length+'건'+(recs.filter(x=>x.memo&&!x.pd).length?' · 그중 최종입금일 없음 '+recs.filter(x=>x.memo&&!x.pd).length+'건(2번 월별에 해당 업체 행이 없거나 날짜를 못 읽음)':'')+')'+(byLast?' · 4번(지난주 출력표) '+codes.length+'업체 기준(기준금액 무관, 1번에 없어 완납 처리 '+notInP+')':'')+' · 영남 외 '+outYN+'건'+(byLast?'':', 기준금액 미만 '+outMin+'건')+' 제외'}
 (function(){const d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');/* 로컬(한국) 날짜 */const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;document.getElementById('mg-xlsx').onclick=mgXlsx;
 document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
