@@ -64,9 +64,10 @@ table.xl tr td.rg{border-left:2px solid #2b6cb0}table.xl tr td.rgr{border-right:
 .rp-foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--mut)}
 .rp-foot button{background:#fff;color:var(--accent);border:1px solid var(--accent);padding:2px 8px;font-size:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-law{display:grid;grid-template-columns:1fr 230px 1fr;gap:14px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 @media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+@media(max-width:1000px){.grid,.grid-law{grid-template-columns:1fr}}
 /* 출력표 스타일 (엑셀 붙여넣기 시 함께 복사됨) */
 table.xl{border-collapse:collapse;font-family:"Malgun Gothic";font-size:10pt;table-layout:fixed}
 table.xl td{border:none;padding:1px 4px;height:20px;white-space:nowrap;overflow:visible;vertical-align:middle}
@@ -130,10 +131,12 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </div>
 </div>
 <div class="tabpane on" id="pane-merge">
-<div class="grid">
+<div class="grid-law">
 <div class="card"><h2>1. KPP 미수채권현황 › 업체별 세부 <span class="hint" style="margin:0">(기준 자료, 금액 단위 원)</span></h2><textarea id="mg-prev" style="min-height:130px" placeholder="KPP 미수채권현황 > 업체별 세부 표를 머리글 포함 그대로 붙여넣기 (관리부서명, 관리담당자명, 거래처, 거래처명, 합계, 연체개월, 결제기일, 신용등급, 가입여부, 금액, 가능여부, 금액, 금액, 법조치현황)"></textarea><div class="hint" id="mg-prev-stat"></div></div>
-<div class="card"><h2>1-1. 법조치 업체 LIST <span class="hint" style="margin:0">(여기 있는 업체는 법조치로 분류)</span></h2><textarea id="mg-law" style="min-height:130px" placeholder="26년도 법조치 업체 LIST를 제목·머리글 포함 그대로 붙여넣기 (팀, 담당자, 코드, 거래처명, 금액, 조치 구분, 조치 구분2, 회수금액, 대손금액, 잔액, 조치상태, 월)"></textarea><div class="hint" id="mg-law-stat"></div></div>
+<div class="card"><h2>1-1. 법조치 LIST <span class="hint" style="margin:0">(있으면 법조치 분류)</span></h2><textarea id="mg-law" style="min-height:130px" placeholder="26년도 법조치 업체 LIST를 제목·머리글 포함 그대로 붙여넣기 (팀, 담당자, 코드, 거래처명, 금액, 조치 구분, 조치 구분2, 회수금액, 대손금액, 잔액, 조치상태, 월)"></textarea><div class="hint" id="mg-law-stat"></div></div>
 <div class="card"><h2>2. AMS 채권관리현황 › 월별(업체현황) <span class="hint" style="margin:0">(청구년월·수금일·완납 판정용)</span></h2><textarea id="mg-mon" style="min-height:130px" placeholder="AMS 월별(업체현황) 표를 그대로 붙여넣기 (청구년월, 거래처 코드·명, 등급, 결재, 조건, 청구부서, 청구담당, 수금담당, 재무담당, 미수금, 최종입금전표일, 최종입금전표 생성일). '합 계' 행은 무시됩니다"></textarea><div class="hint" id="mg-mon-stat"></div></div>
+</div>
+<div class="grid" style="margin-top:14px">
 <div class="card"><h2>3. 수금 데이터 <span class="hint" style="margin:0">(AMS 수금내역 · 거래처별 결제금액 합산 → 수금금액)</span></h2><textarea id="mg-pay" style="min-height:130px" placeholder="AMS 수금내역을 그대로 붙여넣기 (청구부서, 청구담당자, 관리담당자, 거래처 코드·명, 조건, 기일, 세금계산서일자, 수금일자, 청구금액, 결제금액, …). 거래처 코드별로 결제금액을 합쳐 수금금액에 넣고, '거 래 처 계' 소계 행은 검증에만 씁니다. 수금일자가 금주 기간 안이면 금주수금 O, 최종수금일에도 반영됩니다"></textarea><div class="hint" id="mg-pay-stat"></div></div>
 <div class="card"><h2>4. 전주 내역 데이터 <span class="hint" style="margin:0">(지난주 출력표 → 전주 세부내역 자동 입력)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
 </div>
@@ -148,7 +151,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
   <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
     <button class="sec mg-reg on" data-reg="">전체</button><button class="sec mg-reg" data-reg="경북">경북</button><button class="sec mg-reg" data-reg="부산">부산</button><button class="sec mg-reg" data-reg="경남">경남</button>
     <span class="hint" style="margin:0">선택한 권역만 표에 표시되고 복사 버튼도 그 권역만 복사합니다.</span></div>
-  <div class="hint">1번 시트가 기준입니다. 구분은 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고(청구년월은 기준 청구년월까지만 사용, 기준월은 1번 시트 제목 "26년 7월분"에서 자동 인식하며 수정 가능), 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다. 최종입금전표일이 금주 기간 안이면 금주수금 O. 3번 수금 데이터에 같은 업체가 있으면 수금금액은 그 결제금액 합산(더 정확)으로 넣고 수금일자가 기간 안이면 금주수금 O·최종수금일에도 반영합니다. 청구년월·금주수금·최종수금일·완납의 기본 틀은 2번 월별 자료입니다. 잔여 미수금 = 미수채권 − 수금금액. 4번 지난주 출력표의 세부 진행내역은 '전주 세부내역'에 들어가고 금주 세부내역은 표에서 직접 입력합니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다. 미수금 탭은 별개로 동작합니다.</div>
+  <div class="hint">1번 시트가 기준입니다. 구분은 1-1 법조치 LIST에 있으면 법조치, 없으면 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고(청구년월은 기준 청구년월까지만 사용, 기준월은 1번 시트 제목 "26년 7월분"에서 자동 인식하며 수정 가능), 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다(4번을 붙이면 4번 업체 전부 + 1·2번에만 있는 기준금액 이상 업체를 [신규]로 추가). 최종입금전표일이 금주 기간 안이면 금주수금 O. 3번 수금 데이터에 같은 업체가 있으면 수금금액은 그 결제금액 합산(더 정확)으로 넣고 수금일자가 기간 안이면 금주수금 O·최종수금일에도 반영합니다. 청구년월·금주수금·최종수금일·완납의 기본 틀은 2번 월별 자료입니다. 잔여 미수금 = 미수채권 − 수금금액. 4번 지난주 출력표의 세부 진행내역은 '전주 세부내역'에 들어가고 금주 세부내역은 표에서 직접 입력합니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다. 미수금 탭은 별개로 동작합니다.</div>
   <div id="merge-out" class="prev" style="margin-top:8px"></div>
 </div>
 <div class="card" style="border:2px solid var(--navy)"><h2>주간회의자료 생성 <span class="hint" style="margin:0">②가 있으면 ② 기준(금주 세부내역, 없으면 전주), 없으면 5번 취합 결과 기준 · 보고 기준금액 이상 업체만</span></h2>
@@ -747,7 +750,7 @@ const PASTE_GUIDE={
   'mg-prev':{t:'미수채권세부 시트 <b>A1</b>(제목)부터 마지막 행까지 전체',rows:[{c:['','■ KPP 미수채권현황 / 업체별 세부'],bold:1,sp:1,n:1},{c:['','관리부서명','관리담당자','거래처','거래처명','합계','연체개월'],h:1,n:4},{c:['','WP팀','김남영','268414','주식회사 대영테크','1,320,000','2'],d1:1,n:5}],sc:1,hbg:'#d9d9d9',cbg:{5:'#fff2cc'},bd:'#999',ral:{5:1,6:1}},
   'mg-mon':{t:'AMS 월별 표의 <b>첫 데이터 행 청구년월 셀</b>부터 끝까지',ams:1,rows:[{c:['','청구년월','거래처','','등급','결재','조건','청구부서'],h:1,n:''},{c:['1','201604','214579','주식회사 신승엠앤티','NR','현금','30','진주지점'],d1:1}],sc:1,hbg:'#e4e6f2',bd:'#b8bccf'},
   'mg-pay':{t:'AMS 수금내역의 <b>첫 데이터 행 청구부서 셀</b>부터 끝까지',ams:1,rows:[{c:['','청구부서','','청구담당자','','거래처',''],h:1,n:''},{c:['1','600691','진주지점','223116','정준혁','200210','곤명농협 곤양지점'],bg:'#eef0ff',d1:1}],sc:1,hbg:'#dcdcf4',bd:'#b8bccf'},
-  'mg-law':{t:'법조치 업체 LIST <b>제목 행</b>부터 마지막 행까지',rows:[{c:['','■ 26년도 법조치 업체 LIST'],bold:1,sp:1,n:1},{c:['','팀','담당자','코드','거래처명','금액','조치 구분'],h:1,n:2},{c:['','영천지점','이기선','202082','한우리영농조합법인','12,209,382','지급명령'],d1:1,n:3}],sc:1,hbg:'#d6d0b0',bd:'#999',ral:{5:1}},
+  'mg-law':{t:'<b>제목 행</b>부터 끝까지',rows:[{c:['','■ 법조치 업체 LIST'],bold:1,sp:1,n:1},{c:['','팀','코드'],h:1,n:2},{c:['','영천지점','202082'],d1:1,n:3}],sc:1,hbg:'#d6d0b0',bd:'#999'},
   'mg-last':{t:'지난주 취합 출력표 <b>A1</b>부터 전체',rows:OUT_ROWS,hbg:'#fff2cc',cbg:{0:'#e2efda'},cbold:{0:1},bd:'#999',ral:{6:1,7:1}},'mg-week':{t:'금주 세부내역을 채운 취합 시트 <b>A1</b>부터 전체',rows:OUT_ROWS,hbg:'#fff2cc',cbg:{0:'#e2efda'},cbold:{0:1},bd:'#999',ral:{6:1,7:1}},
   'mg-cur':{t:'합계표의 <b>경북권역 소계 첫 셀</b>부터 본부계 행까지 (머리글 제외)',rows:[['경북권역 소계','175','57','82,758,954','…']],nohdr:true}
 };
