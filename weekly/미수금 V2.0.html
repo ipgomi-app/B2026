@@ -628,10 +628,10 @@ function mgParsePay(raw){const out={amt:{},dates:{},sub:{},rows:0,warn:[]};if(!r
   return out}
 /* 전주 출력표: 코드 → 세부 진행내역 */
 function mgParseLast(raw){const out={};if(!raw.trim())return out;const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));const hi=rows.findIndex(r=>r.some(c=>/진행내역|세부내역/.test(c.replace(/\s+/g,''))));
-  const H=hi>=0?rows[hi].map(x=>x.replace(/\s+/g,'')):[];let mi=H.findIndex(h=>/진행내역|세부내역/.test(h));let ci=H.findIndex(h=>h==='코드');
+  const H=hi>=0?rows[hi].map(x=>x.replace(/\s+/g,'')):[];/* 지난주 출력표의 '금주 세부내역'이 이번 주 '전주 세부내역'이 됨: 금주 열 우선, 비면 전주 열 */let mi=H.indexOf('금주세부내역');if(mi<0)mi=H.findIndex(h=>/진행내역|세부내역/.test(h)&&h!=='전주세부내역');if(mi<0)mi=H.findIndex(h=>/진행내역|세부내역/.test(h));const pi=H.indexOf('전주세부내역');let ci=H.findIndex(h=>h==='코드');
   /* 4번 기준 출력용: 구분·지점·담당·거래처·미수채권·연체개월·결제기일·신용등급·보증금액·법조치도 같이 읽음(구분은 병합이라 위 행 값 이어받음) */
   const hx=(...k)=>H.findIndex(h=>k.includes(h));const C={grp:hx('구분'),br:hx('지점','관리부서명'),emp:hx('담당','관리담당자','관리담당자명'),name:hx('거래처','거래처명','업체명'),amt:hx('미수채권'),mon:hx('연체개월'),due:hx('결제기일'),grade:hx('신용등급'),gamt:H.findIndex(h=>/^보증금액/.test(h)),law:H.findIndex(h=>/법조치/.test(h))};
-  let curG='';rows.forEach((c,i)=>{if(i===hi)return;const code=ci>=0&&isCode6(c[ci])?c[ci]:c.find(isCode6);if(!code)return;let memo=mi>=0?(c[mi]||''):'';if(mi<0){const k=c.indexOf(code);memo=c.slice(k+1).filter(x=>/[가-힣]/.test(x)&&x.length>8).sort((a,b)=>b.length-a.length)[0]||''}
+  let curG='';rows.forEach((c,i)=>{if(i===hi)return;const code=ci>=0&&isCode6(c[ci])?c[ci]:c.find(isCode6);if(!code)return;let memo=mi>=0?(c[mi]||(pi>=0&&pi!==mi?c[pi]||'':'')):'';if(mi<0){const k=c.indexOf(code);memo=c.slice(k+1).filter(x=>/[가-힣]/.test(x)&&x.length>8).sort((a,b)=>b.length-a.length)[0]||''}
     const g=k=>C[k]>=0?(c[C[k]]||''):'';const gv=g('grp');if(/법조치|회생|결제지연/.test(gv))curG=/회생/.test(gv)?'회생채권':/법조치/.test(gv)?'법조치':'결제지연';let br=g('br');if(br&&!/지점$|팀$/.test(br))br+='지점';
     out[code]={memo,grp:curG,br,emp:g('emp'),name:g('name'),amt:num(g('amt')),months:num(g('mon')),cond:g('due'),grade:g('grade'),gamt:num(g('gamt')),law:g('law')}});return out}
 /* 금주 내역 데이터(취합 출력표 형식): 구분·권역·지점·담당·코드·거래처·미수채권·연체개월·결제기일·신용등급·보증가입여부·보증금액·법조치 현황·전주 세부내역·금주 세부내역·수금금액·잔여 미수금·청구년월·금주수금·최종수금일 */
