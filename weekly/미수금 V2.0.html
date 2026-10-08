@@ -696,7 +696,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
     const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';
     const payD=(PAY.dates[code]||[]).slice().sort();
     /* 월별(2번)이 기본 틀: 청구년월·금주수금·최종수금일·완납 판정. 3번 수금 데이터는 같은 업체가 있을 때 수금금액(과 수금일)만 더 정확한 값으로 덮어씀 */
-    const fullM=(!!P[code]&&Object.keys(M).length>0&&!mRows.some(x=>x.amt>0))||(byLast&&!isNew&&!P[code]&&!mRows.some(x=>x.amt>0));if(byLast&&!isNew&&!P[code])notInP++;/* KPP에 있고 AMS 월별(기준월까지)에 없거나 미수금이 모두 0이면 완납 */
+    const fullM=(!!P[code]&&Object.keys(M).length>0&&!mRows.some(x=>x.amt>0))||(byLast&&!isNew&&!P[code]&&!mRows.some(x=>x.amt>0));if(byLast&&!isNew&&!P[code]&&fullM)notInP++;/* KPP에 있고 AMS 월별(기준월까지)에 없거나 미수금이 모두 0이면 완납 */
     let paid=(code in PAY.amt)?Math.min(PAY.amt[code],amt):(fullM?amt:0);const full=fullM||(amt>0&&paid>=amt);
     const wk=(full||inRange(lastPay)||payD.some(inRange))?'O':'';const lastPay2=[lastPay,payD[payD.length-1]||''].sort().pop();
     if(wk)paidN++;if(full)fullN++;const pd=lastPay2?lastPay2.slice(2).replace(/-/g,'.'):'';
