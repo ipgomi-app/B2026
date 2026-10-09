@@ -681,14 +681,8 @@ function mgYMSync(){const el=document.getElementById('mg-ym'),st=document.getEle
   else{if(el.dataset.auto==='1'){el.value='';delete el.dataset.auto}st.textContent=document.getElementById('mg-prev').value.trim()?'기준월을 못 찾았습니다. 직접 입력하세요':''}}
 document.getElementById('mg-prev').addEventListener('input',mgYMSync);document.getElementById('mg-prev').addEventListener('cleared',mgYMSync);document.getElementById('mg-ym').addEventListener('input',()=>{delete document.getElementById('mg-ym').dataset.auto});
 /* 기준 청구년월을 바꾸면 이미 취합한 결과를 바로 다시 계산 */document.getElementById('mg-ym').addEventListener('change',()=>{if(MG)mgBuild()});
-/* 금주 수금 완료 업체: "연체청구월 / 품목, M/D일 결제 완료(금액원)" 로 요약. 청구월·품목은 전주 세부내역에서 뽑고, 청구월이 없으면 월별 청구년월 사용. 결제일 = 최종입금전표일(최종수금일) */
-function mgDoneMemo(memoPrev,pd,paid,ym){const t=String(memoPrev||'').replace(/\s+/g,' ');const pairs=[];const add=(y,m)=>{y=String(y);m=+m;if(!m||m>12)return;pairs.push({y:y.length===4?y.slice(2):y.padStart(2,'0'),m})};let k;const re=[/(\d{4}|\d{2})\s*년\s*(\d{1,2})\s*월?\s*(?:~|-|∼)\s*(\d{1,2})\s*월/g,/(\d{4}|\d{2})\s*년\s*(\d{1,2})\s*월/g,/(\d{4})\s*\.\s*(\d{1,2})\b/g,/\b(\d{2})\.(\d{2})\b(?!\.\d)\s*(?:(?:~|-|∼)\s*(\d{1,2})\s*월)?/g];
-  let u=t;re.forEach((r,ri)=>{u=u.replace(r,(m0,a,b,c)=>{add(a,b);if(c&&(ri===0||ri===3))add(a,c);return ' '})});
-  if(!pairs.length&&ym){String(ym).split('~').forEach(x=>{const m=x.match(/(\d{2})\.(\d{2})/);if(m)add(m[1],m[2])})}
-  let mon='';if(pairs.length){pairs.sort((a,b)=>(a.y-b.y)||(a.m-b.m));const a=pairs[0],b=pairs[pairs.length-1];mon=a.y===b.y?(a.m===b.m?a.y+'년 '+a.m+'월':a.y+'년 '+a.m+'~'+b.m+'월'):a.y+'년 '+a.m+'월~'+b.y+'년 '+b.m+'월'}
-  const items=[];const ir=/(PPS(?:\s*(?:비보조|보조))?|SCM|MHE|산업자재유통(?:\([^)]*\))?|산자(?:\([^)]*\))?|글로벌비즈|포워딩|골판지\s*박스|골판지|스트레치\s*필름|지게차|임대료|임대)/g;while((k=ir.exec(t))){const v=k[1].replace(/\s+/g,' ').replace('골판지 박스','골판지박스').replace('스트레치 필름','스트레치필름');if(!items.includes(v))items.push(v)}
-  const m=String(pd||'').match(/(\d{2})\.(\d{2})\.(\d{2})$/);const d=m?(+m[2])+'/'+(+m[3])+'일 ':'';const head=[mon,items.join(', ')].filter(Boolean).join(' / ');
-  return (head?head+', ':'')+d+'결제 완료'}
+
+function mgDoneMemo(){return '결제 완료'}/* 결제 완료 업체 금주 세부내역은 '결제 완료'로만 표기 */
 /* 붙여넣는 즉시(입력·칸 벗어남) 인식 결과 표시 */
 const MG_LIVE={'mg-prev':()=>{const P=mgParsePrev(document.getElementById('mg-prev').value);const n=Object.keys(P).length;const g=RECV_GROUPS.map(gp=>gp+' '+Object.values(P).filter(x=>(x.grp||'결제지연')===gp).length).join(', ');return n?'기준 시트 '+n+'업체 인식(영남 소속) · '+g:'인식 실패: 머리글(관리부서명, 거래처, 합계 …)과 6자리 코드 행이 필요합니다'},
   'mg-mon':()=>{const M=mgParseMon(document.getElementById('mg-mon').value);const n=Object.keys(M).length;const rows=Object.values(M).reduce((s,x)=>s+x.rows.length,0);const yms=Object.values(M).flatMap(x=>x.rows.map(r=>r.ym)).filter(Boolean).sort();return n?'월별 '+n+'업체 '+rows+'행 인식 · 청구년월 '+yms[0].slice(2,4)+'.'+yms[0].slice(4)+'~'+yms[yms.length-1].slice(2,4)+'.'+yms[yms.length-1].slice(4):'인식 실패: 청구년월(202607 형식)과 거래처 코드 열이 필요합니다'},
