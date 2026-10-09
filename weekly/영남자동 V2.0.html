@@ -1443,7 +1443,7 @@ addPasteGuides();document.querySelectorAll('.tabs button').forEach(b=>b.addEvent
 /* 통합 리스트: '구분' 머리글 열(g)부터 고정 순서 19열 */
 function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.some(c=>c==='구분')&&r.some(c=>c==='코드'));if(hi<0)return null;const g=rows[hi].indexOf('구분');
   const out=[];rows.slice(hi+1).forEach(r=>{const v=i=>r[g+i]||'';if(!isCode6(v(1)))return;const cont=v(16),quote=v(15),visit=v(14);
-    out.push({grp:v(0),code:v(1),name:v(2),reg:v(3),br:v(4),emp:v(5),vals:[6,7,8,9,10,11,12,13].map(v),visit,quote,cont,stage:cont?'계약':quote?'견적':'방문',amt:num(v(17)),memo:v(18)})});return {rows:out}}
+    out.push({grp:v(0),code:v(1),name:v(2),reg:v(3),br:v(4),emp:v(5),vals:[6,7,8,9,10,11,12,13].map(i=>i===8||i===11?v(i).replace(/\d{4,}/g,n=>Number(n).toLocaleString('en-US')):v(i)),/* 단가(25/2000/600)는 천단위 쉼표 → 25/2,000/600 */visit,quote,cont,stage:cont?'계약':quote?'견적':'방문',amt:num(v(17)),memo:v(18)})});return {rows:out}}
 /* 표 종류: 공통 B~O(14칸) 뒤에 붙는 열. 세부사항은 남은 칸~Z 병합 */
 /* 원본 배치: 계약(110~) · 빈 1행 · 견적(120~) · 빈 2행 · 방문업체(131~, 단위 표기 없음) */
 const TG_KIND=[{k:'계약',t:'▣ 계약',ext:['최종 방문일','최종견적일'],grp:{t:'계약',sub:['계약년월','예상매출']},unit:1,gap:1},{k:'견적',t:'▣ 견적',ext:['최종 방문일','최종견적일','예상매출'],unit:1,gap:2},{k:'방문',t:'▣ 방문업체',ext:['최종 방문일'],gap:0}];
