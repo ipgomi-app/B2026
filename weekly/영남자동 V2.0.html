@@ -936,7 +936,7 @@ function mgSheetRows(T,ST,link){/* link: 코드 → {sh,rw} (전체 시트에서
     if(row.t==='h'){push([null,...c.map(v=>({v,s:S({b:1,fill:'DCE6F1',border:'thin'})}))],{ht:20});return}
     if(row.t==='s'||row.t==='st'){const bg=GBG[row.grp||'합계'];const rn=push([null,...c.map((v,i)=>({v:typeof v==='number'?v:v,s:S({b:1,fill:bg,border:'thin',h:i?'right':'center',num:i>0})}))],{ht:20})+1;if(row.t==='s')sRows.push({grp:row.grp,rn});else stRow=rn;return}
     if(row.t==='h2'){push([null,...c.map((v,i)=>({v,s:S({b:1,fill:hbg(i),border:brd(i),wrap:1})}))],{ht:30});return}
-    if(row.t==='d'){const memo=String(c[14]||''),memoP=String(c[13]||'');const lines=Math.max(1,...(memo+'\n'+memoP).split('\n').map(l=>Math.ceil(l.length/42)));
+    if(row.t==='d'){const memo=String(c[14]||''),memoP=String(c[13]||'');const lines=Math.max(1,...(memo+'\n'+memoP).split('\n').map(l=>Math.ceil(l.length/60)));
       const bg=GBG[row.grp];const cells=[null];c.forEach((v,i)=>{let st;
         if(i===0)st={b:1,fill:bg,border:'thin'};
         else if(i===5)st={h:'left',border:'thin',wrap:1};
@@ -962,7 +962,7 @@ function mgSheetRows(T,ST,link){/* link: 코드 → {sh,rw} (전체 시트에서
   let gs=null;T.forEach((row,i)=>{if(row.t==='d'&&row.cells[0])gs=i;if(row.t==='sum'&&gs!=null){const a=rowIndexOf(T,gs),b=rowIndexOf(T,i);merges.push('B'+(a+1)+':B'+(b+1));gs=null}});
   return {rows,merges,map}}
 function rowIndexOf(T,ti){/* T 인덱스 → 시트 행 인덱스 (T 항목 1개 = 행 1개) */return ti}
-function mgXlsx(){if(!MGR){alert('먼저 취합 작성을 실행하세요');return}const ST=xlStyles();const widths=[2,8,7,13,8,11,26,13,8,8,9,11,12,10,45,45,13,13,12,5,5,11];/* 요약표 D·F 넓힘(####방지), 세부내역 넓히고 부분수금·완납 좁힘 */
+function mgXlsx(){if(!MGR){alert('먼저 취합 작성을 실행하세요');return}const ST=xlStyles();const widths=[2,8,7,13,8,11,26,13,8,8,9,11,12,10,71,71,13,13,12,5,5,11];/* 사용자 90% 화면 기준: O·P 71, 최종수금일(V)까지 한 화면 *//* 요약표 D·F 넓힘(####방지), 세부내역 넓히고 부분수금·완납 좁힘 */
   const regs=['','경북','부산','경남'];const keep=MG_REG;const sheets=[];
   const link={};/* 권역 시트를 먼저 만들고, 전체 시트의 금주 세부내역·수금금액은 권역 시트 셀을 참조하는 수식으로 */
   try{regs.slice(1).forEach(rg=>{MG_REG=rg;const T=mgTable();if(!T.some(r=>r.t==='d'))return;const {rows,merges,map}=mgSheetRows(T,ST);Object.keys(map).forEach(code=>link[code]={sh:rg,rw:map[code].rw});sheets.push({name:rg,xml:xlSheet(rows,merges,widths,{cols:[10,11,12,13,14],collapse:1,zoom:90})})});
