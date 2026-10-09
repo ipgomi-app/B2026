@@ -419,8 +419,8 @@ function mgTable(filterFn){const L=(filterFn?MGR.list.filter(filterFn):MGR.list)
   T.push({t:'h2',cells:MG_H2});
   const insYN=x=>x.ins&&/^[OX]$/i.test(x.ins)?x.ins.toUpperCase():(x.gamt>0?'O':'X');
   RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp).sort((a,b)=>b.amt-a.amt);if(!g.length)return;
-    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,String(x.br||'').replace(/지점$/,''),x.emp||'',x.code,x.name,x.amt,x.mon,x.due,x.grade||'',insYN(x),x.gamt,x.law,x.memoPrev||'',x.memo,x.paid,x.amt-x.paid,x.ym||'',mgPart(x),mgFull(x),x.pd||'']}));
-    T.push({t:'sum',grp:gp,cells:['','합계','','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','','',g.reduce((s,x)=>s+x.paid,0),'','','','','']})});
+    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,String(x.br||'').replace(/지점$/,''),x.emp||'',x.code,x.name,x.amt,x.mon,x.due,x.grade||'',insYN(x),x.gamt,x.law,x.memoPrev||'',x.memo,x.paid||'',x.amt-x.paid,x.ym||'',mgPart(x),mgFull(x),x.pd||'']}));
+    T.push({t:'sum',grp:gp,cells:['','합계','','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','','',g.reduce((s,x)=>s+x.paid,0)||'','','','','','']})});
   return T}
 const MG_H2=['구분','권역','지점','담당','코드','거래처','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','전주 세부내역','금주 세부내역','수금금액','잔여\n미수금','청구년월','부분수금','완납','최종수금일'];
 const MG_NC=21,MG_PREV=13,MG_MEMO=14,MG_PAID=15;
@@ -549,8 +549,8 @@ function mgRptTable(L,lim){const T=[];const title='○ 본부 미수채권 업�
   T.push({t:'st',cells:['합계',tot.n,tot.a,tot.pn,tot.p,tot.a-tot.p]});T.push({t:'blank',cells:[]});
   T.push({t:'h2',cells:['구분','권역','코드','업체명','','미수채권','연체개월','결제기일','보증금액\n(보증금+보증보험)','법조치현황','세부 진행내역','','','','','','수금금액','잔여\n미수금','청구년월','부분수금','완납','최종수금일']});
   RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp).sort((a,b)=>b.amt-a.amt);if(!g.length)return;
-    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,x.code,x.name,'',x.amt,x.mon,x.due,x.gamt,x.law,x.memo,'','','','','',x.paid,x.amt-x.paid,x.ym||'',mgPart(x),mgFull(x),x.pd||'']}));
-    T.push({t:'sum',grp:gp,cells:['','합계','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','','','','',g.reduce((s,x)=>s+x.paid,0),'','','','','']})});
+    g.forEach((x,i)=>T.push({t:'d',grp:gp,ref:x,cells:[i===0?gp:'',x.reg,x.code,x.name,'',x.amt,x.mon,x.due,x.gamt,x.law,x.memo,'','','','','',x.paid||'',x.amt-x.paid,x.ym||'',mgPart(x),mgFull(x),x.pd||'']}));
+    T.push({t:'sum',grp:gp,cells:['','합계','','','',g.reduce((s,x)=>s+x.amt,0),'','','','','','','','','','',g.reduce((s,x)=>s+x.paid,0)||'','','','','','']})});
   return T}
 function mgRptHtml(rows,withHdr){const NUM=v=>typeof v==='number'?v:'';
   const TH='border-left:1.5pt solid #000;';/* 그룹 경계 굵은 세로선: 미수채권·결제기일·세부 진행내역·수금금액 앞 */
