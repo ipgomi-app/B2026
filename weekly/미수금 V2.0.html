@@ -147,7 +147,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <label>금주 기간 <input type="date" id="mg-from"> ~ <input type="date" id="mg-to"></label>
     <label>기준금액(원) <input type="number" id="mg-min" value="1000000" style="width:110px"></label>
     <label style="display:none" title="1번에서 빠지는 업체(관계사 등). 쉼표로 여러 개">제외 거래처 코드 <input id="mg-ex" value="260814" style="width:120px"></label><!-- 화면에서 숨김, 값(260814)은 그대로 적용 -->
-    <label>기준 청구년월 <input type="month" id="mg-ym" style="width:140px" title="1번 시트 제목(예: 26년 7월분 미수채권)에서 자동 인식. 이 달까지의 청구년월만 씁니다"></label><span class="hint" id="mg-ym-stat" style="margin:0"></span>
+    <label>기준 청구년월 <input type="month" id="mg-ym" style="width:140px" title="1번 미수채권세부의 청구월(예: 26년 7월분). 1번 시트 제목에서 자동 인식"></label><label>조회 청구년월 <input type="month" id="mg-qym" style="width:140px" title="AMS 2-1·2-2를 조회한 마지막 청구월(예: 2026-08). 2-2에서 자동 인식, 이 달까지의 청구분을 씀"></label><span class="hint" id="mg-ym-stat" style="margin:0"></span>
     <button id="mg-run">취합 작성</button>
     <button class="sec" id="mg-xlsx">엑셀 파일 저장 (전체·권역별 시트, 권역 입력 → 전체 자동 반영)</button>
     <span id="mg-stat" class="ok"></span></div>
@@ -548,7 +548,7 @@ function mgXlsx(){if(!MGR){alert('먼저 취합 작성을 실행하세요');retu
   const u8=xlWorkbook(sheets,ST.xml());const d=new Date();const nm='미수금취합_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);
   document.getElementById('mg-stat').textContent='엑셀 파일 저장: '+nm+' (시트: '+sheets.map(s=>s.name).join(', ')+') · J~N열 열 그룹 · 권역 시트의 금주 세부내역·수금금액을 적으면 전체 시트와 요약표·합계·잔여 미수금에 수식으로 자동 반영'}
 /* 본부주간 보고용: 회의자료 시트 서식 그대로(구분·권역·코드·업체명·미수채권·연체개월·결제기일·보증금액·법조치현황·세부 진행내역·수금금액·잔여 미수금) */
-function mgRptTable(L,lim){const T=[];const cm=mgYM();const title='○ 본부 미수채권 업체 현황 ('+Math.round(lim/10000)+'만원 이상~)'+(cm?', '+(+cm.slice(4))+'월 청구까지':'');
+function mgRptTable(L,lim){const T=[];const cm=mgQYM();const title='○ 본부 미수채권 업체 현황 ('+Math.round(lim/10000)+'만원 이상~)'+(cm?', '+(+cm.slice(4))+'월 청구까지':'');
   T.push({t:'title',cells:[title]});T.push({t:'h',cells:['구분','전체업체','미수금합계','수금업체','수금합계','잔여 미수금']});
   const tot={n:0,a:0,pn:0,p:0};RECV_GROUPS.forEach(gp=>{const g=L.filter(x=>x.grp===gp);const n=g.length,a=g.reduce((s,x)=>s+x.amt,0),pn=g.filter(x=>x.paid>0).length,p=g.reduce((s,x)=>s+x.paid,0);tot.n+=n;tot.a+=a;tot.pn+=pn;tot.p+=p;T.push({t:'s',grp:gp,cells:[gp,n,a,pn,p,a-p]})});
   T.push({t:'st',cells:['합계',tot.n,tot.a,tot.pn,tot.p,tot.a-tot.p]});T.push({t:'blank',cells:[]});
@@ -681,11 +681,13 @@ function mgParseEmp(raw){const out={};if(!raw||!raw.trim())return out;parseTSV(r
   else{o.tot=1;o.amt=na(v(13));o.months=num(v(14));Object.assign(o,{insFrom:v(15),insTo:v(16),insAmt:num(v(17)),depYM:v(18),dep:num(v(19)),law:v(20).replace(/^0$/,''),law2:v(21).replace(/^0$/,''),rehab:v(22).replace(/^0$/,'')});if(!o.br)o.br=v(2);if(!o.emp)o.emp=v(4);if(!o.name)o.name=v(8)}});
   Object.values(out).forEach(o=>{if(!o.amt&&!o.tot)o.amt=o.rows.reduce((a,x)=>a+x.amt,0)});return out}
 function mgYM(){const v=(document.getElementById('mg-ym').value||'').trim();return /^\d{4}-\d{2}$/.test(v)?v.replace('-',''):''}
+/* 조회 청구년월(AMS 조회 마지막 달): 없으면 기준 청구년월 */function mgQYM(){const v=(document.getElementById('mg-qym').value||'').trim();return /^\d{4}-\d{2}$/.test(v)?v.replace('-',''):mgYM()}
+/* 2-2(없으면 2-1)를 붙이면 조회 청구년월을 마지막 청구월로 자동 채움(직접 고치면 유지) */function mgQYMSync(){const el=document.getElementById('mg-qym');if(el.value&&el.dataset.auto!=='1')return;const E=mgParseEmp(document.getElementById('mg-emp').value);let ys=Object.values(E).flatMap(o=>o.rows.map(r=>r.ym));if(!ys.length){const M=mgParseMon(document.getElementById('mg-mon').value);ys=Object.values(M).flatMap(o=>o.rows.map(r=>r.ym))}ys=ys.filter(y=>/^\d{6}$/.test(y)).sort();if(ys.length){const y=ys[ys.length-1];el.value=y.slice(0,4)+'-'+y.slice(4);el.dataset.auto='1'}else if(el.dataset.auto==='1'){el.value='';delete el.dataset.auto}}
 function mgYMSync(){const el=document.getElementById('mg-ym'),st=document.getElementById('mg-ym-stat');const d=mgDetectYM(document.getElementById('mg-prev').value);
   if(d){if(!el.value||el.dataset.auto==='1'){el.value=d.ym.slice(0,4)+'-'+d.ym.slice(4);el.dataset.auto='1'}st.textContent='기준월 '+d.ym.slice(2,4)+'.'+d.ym.slice(4)+' ('+d.src+'에서 인식)'}
   else{if(el.dataset.auto==='1'){el.value='';delete el.dataset.auto}st.textContent=document.getElementById('mg-prev').value.trim()?'기준월을 못 찾았습니다. 직접 입력하세요':''}}
 document.getElementById('mg-prev').addEventListener('input',mgYMSync);document.getElementById('mg-prev').addEventListener('cleared',mgYMSync);document.getElementById('mg-ym').addEventListener('input',()=>{delete document.getElementById('mg-ym').dataset.auto});
-/* 기준 청구년월·기준금액을 바꾸면 이미 취합한 결과를 바로 다시 계산 */['mg-ym','mg-min'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{if(MG)mgBuild()}));
+/* 기준 청구년월·기준금액을 바꾸면 이미 취합한 결과를 바로 다시 계산 */['mg-ym','mg-qym','mg-min'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{if(MG)mgBuild()}));document.getElementById('mg-qym').addEventListener('input',()=>{delete document.getElementById('mg-qym').dataset.auto});['mg-emp','mg-mon'].forEach(id=>{const t=document.getElementById(id);t.addEventListener('input',mgQYMSync);t.addEventListener('cleared',mgQYMSync)});
 
 function mgDoneMemo(){return '결제 완료'}/* 결제 완료 업체 금주 세부내역은 '결제 완료'로만 표기 */
 /* 붙여넣는 즉시(입력·칸 벗어남) 인식 결과 표시 */
@@ -700,7 +702,7 @@ let MG=null;
 function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value),M=mgParseMon(document.getElementById('mg-mon').value);
   const from=(document.getElementById('mg-from').value||'').trim(),to=(document.getElementById('mg-to').value||'').trim();const inRange=d=>!!d&&(!from||d>=from)&&(!to||d<=to);
   const PAY=mgParsePay(document.getElementById('mg-pay').value);const LAST=mgParseLast(document.getElementById('mg-last').value);const E=mgParseEmp(document.getElementById('mg-emp').value);
-  const hasP=Object.keys(P).length>0,hasM=Object.keys(M).length>0,hasE=Object.keys(E).length>0;const cut=mgYM();const inCut=y=>!cut||!y||y<=cut;
+  const hasP=Object.keys(P).length>0,hasM=Object.keys(M).length>0,hasE=Object.keys(E).length>0;const cut=mgQYM();const inCut=y=>!cut||!y||y<=cut;/* 2-1·2-2는 조회 청구년월까지 */
   /* 작성 기준
      · 리스트 = 1번 업체 전부(1번은 100만원 이상만 나옴). 1번에 없고 2-2에만 있는 업체(2-2를 1번 기준월 이후까지 조회한 경우)는 기준금액 이상이면 [신규]로 추가
      · 미수채권·구분·법조치 현황 = 1번 / 연체개월·결제기일·신용등급·보증가입여부·보증금액·청구년월 = 2-2(없으면 1번·2-1)
@@ -713,12 +715,12 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   const minV=+document.getElementById('mg-min').value||0;const EX=new Set((document.getElementById('mg-ex').value||'').split(/[^\d]+/).filter(isCode6));
   const base=hasP?Object.keys(P):hasE?Object.keys(E):Object.keys(LAST);const extra=hasP&&hasE?Object.keys(E).filter(c=>!P[c]):[];const codes=[...base,...extra];
   if(!codes.length){alert('1번 KPP 업체별 세부 시트를 붙여넣으세요 (없으면 2-2 담당자별 또는 3번 전주 작성분)');return}
-  const pYM=(mgDetectYM(document.getElementById('mg-prev').value)||{}).ym||'';/* 1번 기준월 */let addN=0;const recs=[];let rehN=0,outYN=0,outMin=0,exN=0,paidN=0,fullN=0,newN=0,noM=0;
+  const pYM=mgYM()||(mgDetectYM(document.getElementById('mg-prev').value)||{}).ym||'';if(pYM&&cut&&pYM!==cut)alert('기준 청구년월('+pYM.slice(2,4)+'.'+pYM.slice(4)+', 1번 미수채권세부)과 조회 청구년월('+cut.slice(2,4)+'.'+cut.slice(4)+', AMS)이 다릅니다.\n\n· 1번 업체: 1번 금액 + '+cut.slice(4).replace(/^0/,'')+'월까지 2-2의 1번 이후 청구분 합산\n· 1번에 없는 업체: 1번 이후 청구분이 있으면 [신규] 결제지연으로 추가(회생은 추가 안 함)');/* 1번 기준월 */let addN=0,oldN=0;const recs=[];let rehN=0,outYN=0,outMin=0,exN=0,paidN=0,fullN=0,newN=0,noM=0;
   codes.forEach(code=>{if(EX.has(code)){exN++;return}const p=P[code],e=E[code],m=M[code]||{},L=LAST[code]||{};const isNew=hasP&&!p;
     const br=(p&&p.br)||(e&&e.br)||m.br||L.br||'',emp=(p&&p.emp)||(e&&e.emp)||m.emp||L.emp||'';if(!(YN_BR.has(br)||YN_EMP.has(emp))){outYN++;return}
     const mRows=(m.rows||[]).filter(x=>inCut(x.ym));const eRows=e?e.rows.filter(r=>inCut(r.ym)):[];
     /* 1번(예: 7월분) 업체도 기준 청구년월(예: 8월)까지 2-2의 1번 이후 청구분을 더함 */const addAmt=p&&pYM&&e?e.rows.filter(r=>r.ym&&r.ym>pYM&&inCut(r.ym)).reduce((a,r)=>a+r.amt,0):0;if(addAmt)addN++;
-    const amt=p?p.amt+addAmt:e?eAmt(e):(L.amt||mRows.reduce((s,x)=>s+x.amt,0));if(amt<minV){outMin++;return}/* 기준금액은 1번 업체에도 적용 */if(isNew&&e&&e.rehab){rehN++;return}/* 회생채권은 1번 리스트만: 2-2에만 있는 회생 업체는 추가하지 않음 */if(!(amt>0)){outMin++;return}if(isNew)newN++;
+    const amt=p?p.amt+addAmt:e?eAmt(e):(L.amt||mRows.reduce((s,x)=>s+x.amt,0));if(amt<minV){outMin++;return}/* 기준금액은 1번 업체에도 적용 */if(isNew&&e&&e.rehab){rehN++;return}if(isNew&&pYM&&cut>pYM&&!(e&&e.rows.some(r=>r.amt>0&&r.ym>pYM&&inCut(r.ym)))){oldN++;return}/* 신규는 1번 이후(예: 8월) 청구분이 있는 업체만 *//* 회생채권은 1번 리스트만: 2-2에만 있는 회생 업체는 추가하지 않음 */if(!(amt>0)){outMin++;return}if(isNew)newN++;
     /* 잔액: 2-1에서 2-2 미수 청구월(없으면 기준월까지)만 더함 */const eYs=new Set(eRows.filter(r=>r.amt>0).map(r=>r.ym));const balRows=eYs.size?mRows.filter(x=>eYs.has(x.ym)):mRows;
     let paid=0;if(hasM){const bal=Math.max(0,balRows.reduce((s,x)=>s+x.amt,0));paid=Math.max(0,amt-bal);if(!m.rows)noM++}else if(code in PAY.amt)paid=Math.min(PAY.amt[code],amt);paid=Math.min(paid,amt);
     const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';const payD=(PAY.dates[code]||[]).slice().sort();
@@ -737,7 +739,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   recs.forEach(x=>{const key=Object.keys(BR2REG).find(b=>x.br.startsWith(b));x.reg=key?REG_SHORT(BR2REG[key]):'';x.mon=x.months||'';x.due=x.cond||'';x.ins=x.insYN});
   MGR={list:recs,month:'',min:minV};mgRender();
   const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');
-  document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(hasP?' · 1번 기준 리스트 '+base.length+'업체':hasE?' · 1번 없음: 2-2 기준':' · 1번·2-2 없음: 3번(전주) 기준')+(newN?' + 2-2 신규 '+newN+'업체('+fmtWon(minV)+'원 이상, 결제지연)':'')+(rehN?' · 2-2에만 있는 회생 '+rehN+'업체 제외':'')+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+(addN?' · 1번('+pYM.slice(2,4)+'.'+pYM.slice(4)+') 이후 청구분 합산 '+addN+'업체':'')+' · 결제 완료 '+fullN+'업체 · 금주수금 O '+paidN+'업체'+(hasM?'':' · 2-1 없음: 잔액은 4번 수금으로만 계산')+(hasE?'':' · 2-2 없음: 연체개월·보증 등은 1번 값')+(exN?' · 제외 코드 '+exN+'건':'')+' · 영남 외 '+outYN+'건'+(outMin?', 기준금액('+fmtWon(minV)+'원) 미만 '+outMin+'건':'')+' 제외'}
+  document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(hasP?' · 1번 기준 리스트 '+base.length+'업체':hasE?' · 1번 없음: 2-2 기준':' · 1번·2-2 없음: 3번(전주) 기준')+(newN?' + 2-2 신규 '+newN+'업체('+fmtWon(minV)+'원 이상, 결제지연)':'')+(rehN?' · 2-2에만 있는 회생 '+rehN+'업체 제외':'')+(oldN?' · 1번 이후 청구 없는 2-2 업체 '+oldN+'건 제외':'')+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+(addN?' · 1번('+pYM.slice(2,4)+'.'+pYM.slice(4)+') 이후 청구분 합산 '+addN+'업체':'')+' · 결제 완료 '+fullN+'업체 · 금주수금 O '+paidN+'업체'+(hasM?'':' · 2-1 없음: 잔액은 4번 수금으로만 계산')+(hasE?'':' · 2-2 없음: 연체개월·보증 등은 1번 값')+(exN?' · 제외 코드 '+exN+'건':'')+' · 영남 외 '+outYN+'건'+(outMin?', 기준금액('+fmtWon(minV)+'원) 미만 '+outMin+'건':'')+' 제외'}
 (function(){const d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');/* 로컬(한국) 날짜 */const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;document.getElementById('mg-xlsx').onclick=mgXlsx;
 document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
