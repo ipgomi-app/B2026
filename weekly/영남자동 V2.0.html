@@ -1441,9 +1441,13 @@ function addPasteGuides(){Object.keys(PASTE_GUIDE).forEach(id=>{const ta=documen
 addPasteGuides();document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>document.querySelectorAll('.inbox textarea').forEach(t=>t.dispatchEvent(new Event('change'))),0)));
 /* ===== 타겟업체 '▣ 계약 / 견적 / 방문업체' 표 (V2.0) ===== */
 /* 통합 리스트: '구분' 머리글 열(g)부터 고정 순서 19열 */
+/* 업체명 정리: [..] 머리말·-공장/지점 꼬리·(상주)(부산강서구) 같은 괄호 설명 제거, (주)(유)(농) 같은 법인 표기는 그대로 */
+const TG_KEEP=/^(주|유|합|자|사|재|농|영|의|학|복|협|조|종)$/;
+function tgName(n){let t=String(n||'').replace(/（/g,'(').replace(/）/g,')').replace(/\[[^\]]*\]/g,'').replace(/\s*-\s*[^-()]*(공장|사업장|지점|센터|창고|물류|본사|지사|농장|매장)\s*$/,'');
+  t=t.replace(/\s*\(([^()]*)\)/g,(m,x)=>TG_KEEP.test(x.trim())?m:'');return t.replace(/\s{2,}/g,' ').trim()||String(n||'').trim()}
 function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.some(c=>c==='구분')&&r.some(c=>c==='코드'));if(hi<0)return null;const g=rows[hi].indexOf('구분');
   const out=[];rows.slice(hi+1).forEach(r=>{const v=i=>r[g+i]||'';if(!isCode6(v(1)))return;const cont=v(16),quote=v(15),visit=v(14);
-    out.push({grp:v(0),code:v(1),name:v(2),reg:v(3),br:v(4),emp:v(5),vals:[6,7,8,9,10,11,12,13].map(i=>i===8||i===11?v(i).replace(/\d{4,}/g,n=>Number(n).toLocaleString('en-US')):v(i)),/* 단가(25/2000/600)는 천단위 쉼표 → 25/2,000/600 */visit,quote,cont,stage:cont?'계약':quote?'견적':'방문',amt:num(v(17)),memo:v(18)})});return {rows:out}}
+    out.push({grp:v(0),code:v(1),name:tgName(v(2)),reg:v(3),br:v(4),emp:v(5),vals:[6,7,8,9,10,11,12,13].map(i=>i===8||i===11?v(i).replace(/\d{4,}/g,n=>Number(n).toLocaleString('en-US')):v(i)),/* 단가(25/2000/600)는 천단위 쉼표 → 25/2,000/600 */visit,quote,cont,stage:cont?'계약':quote?'견적':'방문',amt:num(v(17)),memo:v(18)})});return {rows:out}}
 /* 표 종류: 공통 B~O(14칸) 뒤에 붙는 열. 세부사항은 남은 칸~Z 병합 */
 /* 원본 배치: 계약(110~) · 빈 1행 · 견적(120~) · 빈 2행 · 방문업체(131~, 단위 표기 없음) */
 const TG_KIND=[{k:'계약',t:'▣ 계약',ext:['최종 방문일','최종견적일'],grp:{t:'계약',sub:['계약년월','예상매출']},unit:1,gap:1},{k:'견적',t:'▣ 견적',ext:['최종 방문일','최종견적일','예상매출'],unit:1,gap:2},{k:'방문',t:'▣ 방문업체',ext:['최종 방문일'],gap:0}];
@@ -1472,7 +1476,7 @@ function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\
 async function tgCopyAll(){if(!TG)tgBuild();if(!TG)return;let h='';const txt=[];TG_KIND.forEach(K=>{h+=tgHtml(K,false).replace(/^<table[^>]*>/,'').replace(/<\/table>$/,'')+'<tr><td></td></tr>'.repeat(K.gap)});const ok=await writeBoth(XLHTML('<table style="border-collapse:collapse">'+h+'</table>'),'');document.getElementById('tg-stat').textContent=ok?'계약·견적·방문업체 전체 서식 복사됨 → 엑셀 B110(▣ 계약 제목 칸)에 붙여넣기':'복사 실패'}
 async function tgCopy(k){const K=TG_KIND.find(x=>x.k===k);const t=(TG[k]||[]).map(r=>r.map(v=>String(v).replace(/\s*\n\s*/g,' ')).join('\t')).join('\n');const ok=await writeBoth(XLHTML(tgHtml(K,false,true)),t);document.getElementById('tg-stat').textContent=ok?K.t.slice(2)+' 내용 복사됨 ('+(TG[k]||[]).length+'행, 머리글 제외) → 엑셀 첫 데이터 행의 구분(B열) 칸에 붙여넣기':'복사 실패'}
 function tgXlsx(){const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=[];const HB='E2EFDA';const hs=S({b:1,sz:9,fill:HB,border:'thin',wrap:1});const L=i=>colL(i);
-  const dc=S({sz:9,border:'thin'}),dl=S({sz:9,border:'thin',h:'left',wrap:1}),dn=S({sz:9,border:'thin',h:'right',num:1});
+  const dc=S({sz:9,border:'thin',wrap:1}),dl=S({sz:9,border:'thin',h:'left',wrap:1}),dn=S({sz:9,border:'thin',h:'right',num:1});
   TG_KIND.forEach(K=>{const nFix=14+K.ext.length+(K.grp?2:0);const mS=1+nFix;/* 세부사항 시작 열 index(B=1) */const t=rows.length+1;
     rows.push({cells:[null,{v:K.t,s:S({b:1,sz:10,h:'left'})},...Array(22).fill(null),K.unit?{v:'[단위 : 천원]',s:S({sz:9,h:'right'})}:null],ht:20});
     const top=['구분','코드','거래처명','권역','지점','담당자','경쟁사매출','','','KPP매출','','','점유율','',...K.ext,...(K.grp?[K.grp.t,'']:[])],sub=['','','','','','','경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가','KPP','AJ',...K.ext.map(()=>''),...(K.grp?K.grp.sub:[])];
@@ -1481,7 +1485,7 @@ function tgXlsx(){const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=
     (TG[K.k]||[]).forEach(r=>{const rn=rows.length+1;const cells=[null];r.slice(0,nFix).forEach((v,i)=>{let val=v;if(i===1&&/^[1-9]\d{0,14}$/.test(String(v)))val=+v;cells.push({v:val,s:typeof v==='number'?dn:i===2?dl:dc})});cells.push({v:r[nFix],s:dl});while(cells.length<26)cells.push({v:'',s:dl});
       const lines=String(r[nFix]||'').split('\n').reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/70)),0);rows.push({cells,ht:Math.min(409,Math.max(22,lines*13))});merges.push(L(mS)+rn+':Z'+rn)});
     for(let i=0;i<K.gap;i++)rows.push({cells:[]})});
-  const widths=[2,8,8,16,9,9,8,10,10,10,10,9,9,8,8,11,11,9,10,10,10,10,10,10,10,10];
+  const widths=[2,8,8,18,9,9,8,10,10,13,10,9,13,6,6,11,11,10,10,10,10,10,10,10,10,10];/* 단가(J·M)는 25/2,500/500이 한 줄에 들어가게, 칸은 줄바꿈 허용(글자가 옆 빈칸으로 넘쳐 테두리가 가려지지 않게) */
   const u8=xlWorkbook([{name:'타겟업체',xml:xlSheet(rows,merges,widths)}],ST.xml());const d=new Date();const nm='타겟_계약견적방문_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(u8,nm);return nm}
 document.getElementById('tg-run').onclick=tgBuild;(function(){const d=new Date(),a=new Date(d);a.setDate(d.getDate()-6);const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');document.getElementById('tg-from').value=f(a);document.getElementById('tg-to').value=f(d)})();['tg-from','tg-to'].forEach(i=>document.getElementById(i).addEventListener('change',()=>{if(TG)tgBuild()}));document.getElementById('tg-dclr').onclick=()=>{document.getElementById('tg-from').value='';document.getElementById('tg-to').value='';if(TG)tgBuild()};
 document.getElementById('tg-xlsx').onclick=()=>{if(!TG)tgBuild();if(!TG)return;document.getElementById('tg-stat').textContent='저장: '+tgXlsx()};
