@@ -679,6 +679,7 @@ function mgYMSync(){const el=document.getElementById('mg-ym'),st=document.getEle
   if(d){if(!el.value||el.dataset.auto==='1'){el.value=d.ym.slice(0,4)+'-'+d.ym.slice(4);el.dataset.auto='1'}st.textContent='기준월 '+d.ym.slice(2,4)+'.'+d.ym.slice(4)+' ('+d.src+'에서 인식)'}
   else{if(el.dataset.auto==='1'){el.value='';delete el.dataset.auto}st.textContent=document.getElementById('mg-prev').value.trim()?'기준월을 못 찾았습니다. 직접 입력하세요':''}}
 document.getElementById('mg-prev').addEventListener('input',mgYMSync);document.getElementById('mg-prev').addEventListener('cleared',mgYMSync);document.getElementById('mg-ym').addEventListener('input',()=>{delete document.getElementById('mg-ym').dataset.auto});
+/* 기준 청구년월을 바꾸면 이미 취합한 결과를 바로 다시 계산 */document.getElementById('mg-ym').addEventListener('change',()=>{if(MG)mgBuild()});
 /* 금주 수금 완료 업체: "연체청구월 / 품목, M/D일 결제 완료(금액원)" 로 요약. 청구월·품목은 전주 세부내역에서 뽑고, 청구월이 없으면 월별 청구년월 사용. 결제일 = 최종입금전표일(최종수금일) */
 function mgDoneMemo(memoPrev,pd,paid,ym){const t=String(memoPrev||'').replace(/\s+/g,' ');const pairs=[];const add=(y,m)=>{y=String(y);m=+m;if(!m||m>12)return;pairs.push({y:y.length===4?y.slice(2):y.padStart(2,'0'),m})};let k;const re=[/(\d{4}|\d{2})\s*년\s*(\d{1,2})\s*월?\s*(?:~|-|∼)\s*(\d{1,2})\s*월/g,/(\d{4}|\d{2})\s*년\s*(\d{1,2})\s*월/g,/(\d{4})\s*\.\s*(\d{1,2})\b/g,/\b(\d{2})\.(\d{2})\b(?!\.\d)\s*(?:(?:~|-|∼)\s*(\d{1,2})\s*월)?/g];
   let u=t;re.forEach((r,ri)=>{u=u.replace(r,(m0,a,b,c)=>{add(a,b);if(c&&(ri===0||ri===3))add(a,c);return ' '})});
@@ -701,7 +702,8 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   const PAY=mgParsePay(document.getElementById('mg-pay').value);const LAST=mgParseLast(document.getElementById('mg-last').value);
   /* 2-2 담당자별(업체현황)을 붙이면 1번 대신 기준 자료: 구분 = 법조치 열 값 있으면 법조치, 회생/파산 있으면 회생채권, 아니면 결제지연 / 법조치 글자는 1번에서 / 보증금액 = 보증보험 + 보증금 */
   const E=mgParseEmp(document.getElementById('mg-emp').value);const hasE=Object.keys(E).length>0;
-  const B=hasE?Object.fromEntries(Object.values(E).map(o=>[o.code,{grp:o.rehab?'회생채권':o.law?'법조치':'결제지연',law:(P[o.code]||{}).law||'',br:o.br,emp:o.emp,name:o.name,amt:o.amt,months:o.months,cond:o.due,grade:o.grade,gamt:o.insAmt+o.dep}])):P;
+  /* 기준 청구년월이 있으면 2-2 개별 행도 그 달까지만 더함(바꾸고 취합하면 다시 계산) */const cut0=mgYM();const eAmt=o=>cut0&&o.rows.length?o.rows.filter(r=>!r.ym||r.ym<=cut0).reduce((a,r)=>a+r.amt,0):o.amt;
+  const B=hasE?Object.fromEntries(Object.values(E).filter(o=>eAmt(o)>0).map(o=>[o.code,{grp:o.rehab?'회생채권':o.law?'법조치':'결제지연',law:(P[o.code]||{}).law||'',br:o.br,emp:o.emp,name:o.name,amt:eAmt(o),months:o.months,cond:o.due,grade:o.grade,gamt:o.insAmt+o.dep}])):P;
   /* 4번(지난주 출력표)을 붙이면 4번 업체 전부를 기준으로 출력(기준금액 무관, 1번에 없는 업체는 1번 기준월에 미수 없음 = 완납으로 봄) */const byLast=Object.keys(LAST).length>0;
   /* 4번 기준일 때도 1번·2번(채권관리)에 새로 생긴 업체는 기준금액 이상이면 추가(구분은 1번 따름, 없으면 결제지연) */const codes=byLast?[...new Set([...Object.keys(LAST),...Object.keys(B),...(hasE?[]:Object.keys(M))])]:Object.keys(B);if(!codes.length){alert('1번 KPP 업체별 세부 시트(또는 2-2 담당자별, 4번 지난주 출력표)를 붙여넣으세요');return}
   const minV=+document.getElementById('mg-min').value||0;const min=byLast?0:minV;const cut=mgYM();const recs=[];let outYN=0,outMin=0,fromBase=0,added=0,paidN=0,fullN=0,notInP=0,newN=0;
