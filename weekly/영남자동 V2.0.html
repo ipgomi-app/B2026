@@ -1146,7 +1146,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
     /* 1번에 없고 2-2에만 생긴 업체는 일단 결제지연(다음 주 1번 리스트에 맞춰 다시 들어감) */const grp=p?(p.grp||(/회생/.test(p.law)?'회생채권':p.law?'법조치':'결제지연')):isNew?'결제지연':L.grp?L.grp:e?(e.rehab?'회생채권':e.law?'법조치':'결제지연'):'결제지연';
     const months=e?eMon(e):(p&&p.months)||L.months||Math.min(6,mRows.length);const gamt=e?e.insAmt+e.dep:((p&&p.gamt)||L.gamt||0);
     const memoPrev=L.memo||(isNew?'[신규]'+(ym?' '+ym+' 청구':''):'');
-    recs.push({grp,br,emp,code,name:(p&&p.name)||(e&&e.name)||m.name||L.name||'',amt,months,cond:(e&&e.due)||(p&&p.cond)||m.cond||L.cond||'',grade:e?(e.grade||'평가없음'):((p&&p.grade)||m.grade||L.grade||''),insYN:gamt>0?'O':'X',gamt,law:(p&&p.law)||L.law||'',ym,wk,pd,memoPrev,isNew,memo:full?mgDoneMemo(L.memo,pd,amt,ym):'',paid})});
+    recs.push({grp,br,emp,code,name:(p&&p.name)||(e&&e.name)||m.name||L.name||'',amt,months,cond:(e&&e.due)||(p&&p.cond)||m.cond||L.cond||'',grade:e?(e.grade||'평가없음'):((p&&p.grade)||m.grade||L.grade||''),insYN:gamt>0?'O':'X',gamt,law:isNew?'':((p&&p.law)||L.law||'')/* 신규(2-2에만)는 법조치 구분 안 함 */,ym,wk,pd,memoPrev,isNew,memo:full?mgDoneMemo(L.memo,pd,amt,ym):'',paid})});
   const hdr=['구분','관리부서명','관리담당자명','거래처↓','거래처명','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','청구년월','금주수금','최종수금일','수금금액','전주 세부내역'];
   const order={법조치:0,회생채권:1,결제지연:2};recs.sort((x,y)=>(order[x.grp]-order[y.grp])||(y.amt-x.amt));
   const tsv=[hdr,...recs.map(x=>[x.grp,x.br,x.emp,x.code,x.name,x.amt,x.months,x.cond,x.grade,x.insYN,x.gamt,x.law,x.ym,x.wk,x.pd,x.paid||'',x.memoPrev||''])].map(r=>r.map(tsvCell).join('\t')).join('\n');
