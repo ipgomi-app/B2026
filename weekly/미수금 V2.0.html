@@ -94,7 +94,7 @@ table.xl td.bl{border-left:.5pt solid #000}
 table.xl td.br{border-right:.5pt solid #000}
 table.xl td.dtl{padding-left:6px}
 #merge-out table.xl td{border:1px solid #bfbfbf}/* 5번 취합 결과 표: 회색 테두리 */
-#merge-out table.mgd{width:100%;table-layout:fixed;font-size:9pt}#merge-out table.mgd td{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;padding:1px 3px}/* 상세표: 너비 안에 다 들어가게 */
+#merge-out{overflow-x:auto}#merge-out table.mgd{table-layout:fixed;font-size:9pt}#merge-out table.mgd td{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;padding:1px 3px}/* 상세표: 너비 안에 다 들어가게 */
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
 td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </style>
@@ -430,7 +430,7 @@ const MG_NC=21,MG_PREV=13,MG_MEMO=14,MG_PAID=15;
 function mgRender(){const T=mgTable();const bg={법조치:'#e2efda',회생채권:'#fff2cc',결제지연:'#fce4d6'};const hbg=i=>i>=17?'#d9d9d9':i<=5?'#dce6f1':i===12?'#fce4d6':'#fff2cc';
   let h='<table class="xl" style="width:auto">';T.forEach((r,ri)=>{if(r.t==='title'){h+='<tr><td colspan="'+MG_NC+'" style="border:0;font-weight:700;font-size:14px;color:var(--navy)">'+esc(r.cells[0])+'</td></tr>';return}
     if(r.t==='blank'){h+='<tr><td colspan="'+MG_NC+'" style="border:0;height:10px"></td></tr>';return}
-    /* 상세표는 화면 너비에 맞춘 고정 표(요약표와 분리) */if(r.t==='h2')h+='</table><table class="xl mgd">'+'<colgroup>'+[3,2.2,2.2,2.8,3.2,8.5,5.5,2.3,2.3,4,2.3,5,3.6,14.75,14.75,5,5.5,3.6,3,2.5,4].map(w=>'<col style="width:'+w+'%">').join('')+'</colgroup>';
+    /* 상세표는 화면 너비에 맞춘 고정 표(요약표와 분리) */if(r.t==='h2'){/* 잔여 미수금까지(앞 17칸)가 화면 너비 100%, 참고내용 4칸은 오른쪽으로 넘침(가로 스크롤) */const W=[3,2.2,2.2,2.8,3.2,8.5,5.5,2.3,2.3,4,2.3,5,3.6,27.85,14.75,5,5.5,4.5,3,2.5,4];const tw=W.reduce((a,b)=>a+b,0);h+='</table><table class="xl mgd" style="width:'+tw+'%">'+'<colgroup>'+W.map(w=>'<col style="width:'+(w/tw*100).toFixed(3)+'%">').join('')+'</colgroup>'}
     const isH=r.t==='h'||r.t==='h2';h+='<tr>';const gcnt=r.t==='d'&&r.cells[0]?T.filter(x=>(x.t==='d'||x.t==='sum')&&x.grp===r.grp).length:0;
     r.cells.forEach((v,ci)=>{const isNum=typeof v==='number';const ed=r.t==='d'&&(ci===MG_MEMO||ci===MG_PREV||ci===MG_PAID);const cs=r.t==='sum'&&ci===1?5:1;if(r.t==='sum'&&ci>=2&&ci<=5)return;if((r.t==='d'&&!r.cells[0]||r.t==='sum')&&ci===0)return;const rs=r.t==='d'&&ci===0&&gcnt>1?gcnt:1;
       const firstD=r.t==='d'&&ci===0&&T.findIndex(x=>x.t==='d')===ri,firstS=r.t==='s'&&ci===1&&T.findIndex(x=>x.t==='s')===ri;
