@@ -210,7 +210,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
     <label>금주 기간 <input type="date" id="mg-from"> ~ <input type="date" id="mg-to"></label>
     <label>기준금액(원) <input type="number" id="mg-min" value="1000000" style="width:110px"></label>
     <label style="display:none" title="1번에서 빠지는 업체(관계사 등). 쉼표로 여러 개">제외 거래처 코드 <input id="mg-ex" value="260814" style="width:120px"></label><!-- 화면에서 숨김, 값(260814)은 그대로 적용 -->
-    <label>기준 청구년월 <input type="month" id="mg-ym" style="width:140px" title="1번 미수채권세부의 청구월(예: 26년 7월분). 1번 시트 제목에서 자동 인식"></label><label>조회 청구년월 <input type="month" id="mg-qym" style="width:140px" title="AMS 2-1·2-2를 조회한 마지막 청구월(예: 2026-08). 2-2에서 자동 인식, 이 달까지의 청구분을 씀"></label><span class="hint" id="mg-ym-stat" style="margin:0"></span>
+    <label style="color:#1f4fd8">기준 청구년월 <input type="month" id="mg-ym" style="width:140px;color:#1f4fd8" title="1번 미수채권세부의 청구월(예: 26년 7월분). 1번 시트 제목에서 자동 인식"></label><label style="color:#d00000;font-weight:700">조회 청구년월 <input type="month" id="mg-qym" style="width:140px;color:#d00000;font-weight:700;border-color:#d00000" title="AMS 2-1·2-2를 조회한 마지막 청구월(예: 2026-08). 2-2에서 자동 인식, 이 달까지의 청구분을 씀"></label><span class="hint" id="mg-ym-stat" style="margin:0"></span>
     <button id="mg-run">취합 작성</button>
     <button class="sec" id="mg-xlsx">엑셀 파일 저장 (전체·권역별 시트, 권역 입력 → 전체 자동 반영)</button>
     <span id="mg-stat" class="ok"></span></div>
