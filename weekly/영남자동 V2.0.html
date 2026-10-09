@@ -1479,10 +1479,10 @@ function tgSaveEdits(quiet,only){if(!TG)return 0;const trs=only?[only]:[...docum
   trs.forEach(tr=>{const r=TG[tr.dataset.tgk][+tr.dataset.tgr];tr.querySelectorAll('[data-tgc]').forEach(c=>{const j=+c.dataset.tgc;const t=c.innerText.replace(/\u00a0/g,' ').replace(/\n+$/,'').trim();
     const nv=typeof r[j]==='number'||(r[j]===''&&c.dataset.num)?(t===''?'':num(t)):t;if(String(nv)!==String(r[j])){r[j]=nv;(TG_EDIT[r._key]=TG_EDIT[r._key]||{})[j]=nv;n++}})});
   TG_DIRTY=false;if(!quiet||n){tgRender();if(!quiet)document.getElementById('tg-stat').textContent='수정 완료: '+n+'칸 반영 (수정한 행은 연분홍) · 삭제 '+TG_DEL.size+'행 · 복사·엑셀 저장에 반영'}return n}
-function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\'맑은 고딕\';font-size:10pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;'+(view?'word-break:keep-all;':'');
+function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\'맑은 고딕\';font-size:10pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;'+(view?'word-break:keep-all;font-size:9pt;line-height:1.15;':'');/* 화면 머리글은 9pt로 좁은 칸에 맞춤 */
   const nFix=14+K.ext.length+(K.grp?2:0);const mc=25-nFix;/* 세부사항 병합 칸 수(B~Z 25칸) */
   /* 화면: 세 표 열 너비를 같게 고정해 구분~AJ 칸이 위아래로 줄 맞음, 남는 폭은 세부사항(최소 240px), 끝에 삭제칸 */
-  const EXW={'최종 방문일':80,'최종견적일':80,'예상매출':66};const CW=[62,58,140,60,60,50,70,70,88,64,56,88,32,32,...K.ext.map(t=>EXW[t]||80),...(K.grp?[80,66]:[])];const cwSum=CW.reduce((a,x)=>a+x,0)+40;
+  const EXW={'최종 방문일':76,'최종견적일':76,'예상매출':62};const CW=[62,54,120,56,56,46,62,62,86,58,48,86,30,30,...K.ext.map(t=>EXW[t]||76),...(K.grp?[76,62]:[])];/* 앞 칸은 좁게, 세부사항을 넓게 */const cwSum=CW.reduce((a,x)=>a+x,0)+40;
   let h='<table style="border-collapse:collapse'+(view?';width:100%;min-width:'+(cwSum+240)+'px;table-layout:fixed':'')+'">';
   if(view)h+='<colgroup>'+CW.map(w=>'<col style="width:'+w+'px">').join('')+'<col span="'+mc+'"><col style="width:40px"></colgroup>';
   if(!dataOnly){h+='<tr><td style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;white-space:nowrap">'+esc(K.t)+'</td><td colspan="24" style="font-family:\'맑은 고딕\';font-size:10pt;text-align:right">'+(K.unit?'[단위 : 천원]':'')+'</td>'+(view?'<td></td>':'')+'</tr>';
