@@ -308,7 +308,9 @@ const RECV_GROUPS=['법조치','회생채권','결제지연'];const REG_SHORT=r=
 let RECV=null,RECV_CUR=null;
 const CUR_H1=['업체수','보증보험(금)','1개월경과','2개월경과','3개월경과','4개월경과','5개월경과','6개월이상','소계'],CUR_H2=['업체수','금액','업체수','금액','업체수','금액'];
 function recvCurParse(raw){if(!raw.trim())return null;const rows=parseTSV(raw).map(r=>r.map(c=>String(c||'').trim())).filter(r=>r.some(c=>c));const out=[];
-  rows.forEach(r=>{const lab=r.find(c=>/소계|본부계|합계/.test(c)&&/[가-힣]/.test(c));if(!lab)return;const nums=r.filter(c=>/^[\d,.\-]+$/.test(c)&&/\d/.test(c)).map(num);if(nums.length<9)return;
+  rows.forEach(r=>{const li=r.findIndex(c=>/소계|본부계|합계/.test(c)&&/[가-힣]/.test(c));if(li<0)return;const lab=r[li];
+    /* 열 위치 그대로: 이름 칸 뒤 첫 값부터, 빈칸·'-'는 0 (빈칸을 지우면 뒤 값이 앞으로 당겨짐) */const cs=r.slice(li+1);while(cs.length&&cs[0]==='')cs.shift();while(cs.length&&cs[cs.length-1]==='')cs.pop();
+    const isN=c=>/^[\d,.\-]+$/.test(c)&&/\d/.test(c);const nums=cs.map(c=>isN(c)?num(c):0);if(cs.filter(c=>isN(c)||c==='-').length<9)return;
     out.push({label:lab.replace(/\s+/g,' '),tot:/본부계|합계/.test(lab),a:nums.slice(0,9),b:nums.slice(9,15)})});return out}
 function recvCurBuild(){const raw=document.getElementById('recv-cur').value;RECV_CUR=null;const st=document.getElementById('recv-cur-stat');document.getElementById('recv-cur-out').innerHTML='';document.getElementById('recv-copycur').style.display='none';
   if(!raw.trim()){st.textContent='';return}
@@ -614,7 +616,7 @@ function mgRptSumHtml(T){const rows=T.filter(r=>r.t==='s'||r.t==='st');const tit
   const sN=rows.filter(r=>r.t==='s').length;let k=0;rows.forEach(r=>{const tot=r.t==='st';const t=tot?'double':k===0?'double':'thin',b=tot?'medium':k===sN-1?'double':'thin';if(!tot)k++;const bg='background:'+(RBG[r.cells[0]]||RBG.합계)+';';h+='<tr>'+rtd(esc(r.cells[0]),bg+'text-align:center;font-weight:700;'+SB(0,t,b))+r.cells.slice(1).map((v,j)=>rtd(typeof v==='number'?v:'',(tot?bg+'font-weight:700;':'background:#fff;')+RACC+SB(j+1,t,b))).join('')+'</tr>'});
   return h+'</table>'}
 /* ===== 미수금 취합 탭: AMS 합계/상세 + 전주 시트 → 미수금 시트 형식 ===== */
-const isCode6=v=>/^\d{6}$/.test(String(v||'').trim());const normDate=v=>{const t=String(v||'').trim();let m=t.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})(?:\s.*)?$/)||t.match(/^(\d{4})(\d{2})(\d{2})$/)||t.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})$/)||t.match(/^(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일?$/);if(!m)return '';const y=m[1].length===2?'20'+m[1]:m[1];return y+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')};const isYM=v=>/^20\d{2}(0[1-9]|1[0-2])$/.test(String(v||'').trim());
+const isCode6=v=>/^\d{6}$/.test(String(v||'').trim());const normDate=v=>{const t=String(v||'').trim();let m=t.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})(?:\s.*)?$/)||t.match(/^((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/)||t.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})$/)||t.match(/^(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일?$/);if(!m)return '';const y=m[1].length===2?'20'+m[1]:m[1];return y+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')};const isYM=v=>/^20\d{2}(0[1-9]|1[0-2])$/.test(String(v||'').trim());
 function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterYN(raw,{group:true});const rows=parseTSV(f.tsv);const hRow=(()=>{const i=rows.findIndex(r=>r.some(c=>isCode6(c)));const cand=rows.slice(0,i<0?rows.length:i).reverse().find(r=>r.some(c=>/거래처|관리부서|합계/.test(String(c||''))));return cand||rows[0]||[]})();const H=hRow.map(x=>String(x||'').replace(/\s+/g,''));
   const col=(keys,def)=>{for(const k of keys){const i=H.findIndex(h=>h.includes(k));if(i>=0)return i}return def};const cc=col(['거래처↓','거래처코드','코드','거래처'],3),cl=col(['법조치현황','법조치'],11),cg=H.findIndex(h=>h==='구분');
   const C={br:col(['관리부서','부서'],1),emp:col(['담당자','담당'],2),name:col(['거래처명','업체명'],4),amt:col(['미수채권','미수금','합계'],5),mon:col(['연체개월'],6),due:col(['결제기일'],7),grade:col(['신용등급'],8),ins:col(['보증가입','가입여부'],9),gamt:col(['보증금액'],-1)};
