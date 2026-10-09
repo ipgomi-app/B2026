@@ -610,7 +610,7 @@ function mgParsePrev(raw){const out={};if(!raw.trim())return out;const f=filterY
 function mgParseMon(raw){const out={};if(!raw.trim())return out;const isDate=v=>!!normDate(v);
   parseTSV(raw).forEach(r=>{const c=r.map(x=>String(x||'').trim());if(c.some(x=>/^합\s*계$/.test(x)))return;const yi=c.findIndex(isYM);if(yi<0)return;const ci=c.findIndex((x,i)=>i>yi&&isCode6(x));if(ci<0)return;
     const code=c[ci];const name=c[ci+1]||'';const br=c.find(x=>/(지점|팀|파트)$/.test(x))||'';const bi=c.indexOf(br);const emp=bi>=0?(c[bi+1]||''):'';
-    const nums=c.map((x,i)=>({x,i})).filter(o=>o.i>ci+1&&/^[\d,]+$/.test(o.x)&&!/^\d{1,3}$/.test(o.x));const amt=nums.length?num(nums[0].x):0;
+    /* 미수금 = 첫 날짜(최종입금전표일) 바로 앞의 숫자 칸(날짜 없으면 행의 마지막 숫자 칸). 588처럼 세 자리 금액도 읽음, (1,234) = 마이너스 */const di=c.findIndex((x,i)=>i>ci+1&&isDate(x));const nums=c.map((x,i)=>({x,i})).filter(o=>o.i>ci+1&&(di<0||o.i<di)&&/^(\(|-)?[\d,]+\)?$/.test(o.x));const ax=nums.length?nums[nums.length-1].x:'';const amt=ax?(/^[(-]/.test(ax)?-Math.abs(num(ax)):num(ax)):0;
     const dates=c.filter(isDate).map(normDate);const pay=dates[0]||'';const cond=c.slice(ci+2).find(x=>/^\d{1,3}$/.test(x))||'';const grade=c.slice(ci+2).find(x=>/^(NR|[A-D]{1,3}[0+\-]?|평가없음|농협)$/.test(x))||'';
     if(!out[code])out[code]={code,name,br,emp,cond,grade,rows:[]};out[code].rows.push({ym:c[yi],amt,pay})});return out}
 /* 수금 데이터(AMS 수금내역: 청구부서·청구담당자·관리담당자·거래처 코드+명·조건·기일·세금계산서일자·수금일자·청구금액·결제금액·…): 거래처 코드별 결제금액 합산, '거 래 처 계' 소계 행은 검증용, 수금일자는 금주수금·최종수금일 판정용 */
