@@ -1468,10 +1468,13 @@ const TG_HB='#e2efda';
 const TG_DEL=new Set();let TG_EDIT={};let TG_DIRTY=false;const TG_EDBG='#fde4ec';/* 수정한 행 음영(연분홍) */
 const tgList=k=>(TG&&TG[k]||[]).filter(r=>!TG_DEL.has(r._key));/* 복사·엑셀용: 삭제 체크 뺀 행 */
 function tgRender(){document.getElementById('tg-out').innerHTML=TG_KIND.map(K=>'<div class="row" style="margin:12px 0 4px"><button class="sec xs" data-tgcopy="'+K.k+'">'+K.t.slice(2)+' 내용 복사</button></div>'+tgHtml(K,true)).join('');
-  document.querySelectorAll('[data-tgcopy]').forEach(b=>b.onclick=()=>tgCopy(b.dataset.tgcopy));
+  document.querySelectorAll('[data-tgcopy]').forEach(b=>b.onclick=()=>tgCopy(b.dataset.tgcopy));tgFit();
   document.querySelectorAll('#tg-out tr[data-tgr]').forEach(tr=>{const r=TG[tr.dataset.tgk][+tr.dataset.tgr];const cb=tr.querySelector('[data-tgdel]');
     cb.onchange=()=>{if(cb.checked)TG_DEL.add(r._key);else TG_DEL.delete(r._key);tgRowStyle(tr,cb.checked);tgDelStat()};
     /* 표 칸을 눌러 바로 고치고 [수정 완료]로 반영 */tr.querySelectorAll('[data-tgc]').forEach(c=>c.addEventListener('input',()=>{TG_DIRTY=true;c.style.background='#f8cfdc';document.getElementById('tg-stat').textContent='수정 중 · 다 고친 뒤 [수정 완료]를 누르세요 (복사·엑셀 저장 때도 자동 반영)'}))})}
+/* 화면이 좁으면 표 전체를 비율로 축소해 가로 넘침 없이 한 화면에 (칸 배치·글자 비율은 그대로) */
+function tgFit(){const o=document.getElementById('tg-out');if(!o||!o.offsetWidth)return;const W=o.clientWidth;const ts=[...o.querySelectorAll('table[data-tgfit]')];const need=Math.max(0,...ts.map(t=>+t.dataset.tgfit));const z=W<need?Math.max(0.5,W/need):1;/* 세 표 같은 비율로 줄여 칸 줄 맞춤 유지 */ts.forEach(t=>{t.style.zoom=z;t.style.minWidth=(z<1?W/z:+t.dataset.tgfit)+'px'})}
+window.addEventListener('resize',()=>{clearTimeout(window.__tgfz);window.__tgfz=setTimeout(tgFit,100)});document.querySelector('.tabs [data-tab="tgc"]').addEventListener('click',()=>setTimeout(tgFit,0));
 function tgRowStyle(tr,del){tr.style.background=del?'#eeeeee':(TG_EDIT[TG[tr.dataset.tgk][+tr.dataset.tgr]._key]?TG_EDBG:'');tr.style.color=del?'#999':'';tr.style.textDecoration=del?'line-through':''}
 function tgDelStat(){const n=TG_KIND.map(K=>K.k+' '+tgList(K.k).length+(TG[K.k].length-tgList(K.k).length?'(삭제 '+(TG[K.k].length-tgList(K.k).length)+')':'')).join(' · ');document.getElementById('tg-stat').textContent='복사·엑셀 대상: '+n}
 /* 수정 완료: 화면에서 고친 칸을 표 자료에 반영 (숫자 칸은 숫자로) */
@@ -1483,7 +1486,7 @@ function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\
   const nFix=14+K.ext.length+(K.grp?2:0);const mc=25-nFix;/* 세부사항 병합 칸 수(B~Z 25칸) */
   /* 화면: 세 표 열 너비를 같게 고정해 구분~AJ 칸이 위아래로 줄 맞음, 남는 폭은 세부사항(최소 240px), 끝에 삭제칸 */
   const EXW={'최종 방문일':76,'최종견적일':76,'예상매출':62};const CW=[62,54,100,36,36,46,62,62,86,58,48,86,30,30,...K.ext.map(t=>EXW[t]||76),...(K.grp?[76,62]:[])];/* 앞 칸은 좁게, 세부사항을 넓게 */const cwSum=CW.reduce((a,x)=>a+x,0)+40;
-  let h='<table style="border-collapse:collapse'+(view?';width:100%;min-width:'+(cwSum+240)+'px;table-layout:fixed':'')+'">';
+  let h='<table'+(view?' data-tgfit="'+(cwSum+300)+'"':'')+' style="border-collapse:collapse'+(view?';width:100%;min-width:'+(cwSum+300)+'px;table-layout:fixed':'')+'">';
   if(view)h+='<colgroup>'+CW.map(w=>'<col style="width:'+w+'px">').join('')+'<col span="'+mc+'"><col style="width:40px"></colgroup>';
   if(!dataOnly){h+='<tr><td style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;white-space:nowrap">'+esc(K.t)+'</td><td colspan="24" style="font-family:\'맑은 고딕\';font-size:10pt;text-align:right">'+(K.unit?'[단위 : 천원]':'')+'</td>'+(view?'<td></td>':'')+'</tr>';
   const rs=' rowspan="2"';h+='<tr>'+['구분','코드','거래처명','권역','지점','담당자'].map(t=>td(t,H,rs)).join('')+td('경쟁사매출',H,' colspan="3"')+td('KPP매출',H,' colspan="3"')+td('점유율',H,' colspan="2"')+K.ext.map(t=>td(t,H,rs)).join('')+(K.grp?td(K.grp.t,H,' colspan="2"'):'')+td('영업 진행 세부사항',H+(view?'width:100%;':''),' colspan="'+mc+'" rowspan="2"')+(view?td('삭제',H,rs):'')+'</tr>';/* 화면: 삭제 체크칸은 세부사항 오른쪽 */
