@@ -876,7 +876,9 @@ const V2_FILTERS=[['V2:영업','영업 전체'],['V2:운영','운영 전체'],['
 const V2_ENG=/프로젝트\s*구분\s*:\s*엔지니어링/;
 /* 활동명: "1. 활동명 2. …" · "* 활동명" · "[머리] 활동명" · "시간기록 활동명" */
 const V2_LABEL=[/^\s*1\s*\.\s*(.{1,40}?)\s*2\s*\./,/^\s*\*\s*([^0-9\-*]{1,25})/,/^\[[^\]]*\]\s*(?:1\s*\.)?\s*(.{1,30}?)(?:\s*2\s*\.|\s*-|$)/,/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(.{0,30})/];
-function v2Label(t){t=String(t||'').replace(/^["\s]+|["\s]+$/g,'');for(const re of V2_LABEL){const m=t.match(re);if(m)return m[1].trim()}return ''}
+function v2Label(t){t=String(t||'').replace(/^["\s]+|["\s]+$/g,'');for(const re of V2_LABEL){const m=t.match(re);if(m)return v2LabOk(m[1])}return ''}
+/* 활동명 정리: "방문목적-" 떼기. 면담자·담당자 같은 양식 칸, 점·코드로 시작하는 본문 조각, 긴 문장은 활동명이 아니다 */
+function v2LabOk(a,name){a=String(a||'').replace(/^\s*(방문\s*)?목적\s*[:\-]?\s*/,'').replace(/^[\s,.:\-]+|[\s,.:\-]+$/g,'').trim();if(!a||a.length>40||/^(면담자|담당자|미팅자|방문자|업체명|주요\s*내용)\s*([:：]|$)/.test(a)||/^\d{3,}/.test(a)||/^\d{4}-\d\d-\d\d/.test(a))return '';if(name&&v2Name(a)&&v2Name(a)===v2Name(name))return '';return a}
 /* 주 분류 규칙(우선순위 순). "영업지원"은 영업이 아니다 */
 const V2_SW='(?<!영업지원)(?<!영업지원 )영업(?!\\s*지원)';
 const V2_RULES=[['X',/휴가|연차|반차|직출|직퇴|병가|경조/],
@@ -888,7 +890,7 @@ const V2_RULES=[['X',/휴가|연차|반차|직출|직퇴|병가|경조/],
  ['5',/재고\s*(실사|조사)|실사|유휴\s*재고|실물\s*재고|실재고/],
  ['3',/신규\s*(업체|현장|공사|건설|코드)/],
  ['M',/입고\s*미회수|미회수|미입고/],
- ['4',/회수|공\s*파렛트|재고\s*증가|현장|IO?T|미방문|파렛트\s*점검|재입고|반송|런업체/],
+ ['4',/회수|공\s*파렛트|재고\s*(증가|증감)|누계\s*증감|현장|IO?T|미방문|파렛트\s*점검|재입고|반송|런업체/],
  ['9',/업무일지|교육|회의|검수|임대\s*(문의|안내)|미팅|자료\s*전달|출근|복귀|이사|업체\s*방문|서류|지점\s*방문|사무실|내근/]];
 /* 상세구분 코드 기본값 (담당자 선택값은 기본값으로만 쓴다) */
 const V2_TYPE={'18':'6','02':'M','01':'3','17':'5','08':'4','47':'8','12':'2','13':'2','07':'6','03':'6','05':'M','04':'4','35':'8','34':'7','38':'7','36':'7','59':'4'};
@@ -897,12 +899,18 @@ const V2_SALES=new Set(['24','68','72','25','66','71','26','67','74','76','48','
 const V2_G1=new RegExp('견적\\s*(제출|전달|발송|요청|진행|안내)|제안|'+V2_SW+'|계약\\s*(협의|체결)|경쟁사\\s*(전환|사용)'),V2_G8=/미수금|입금\s*(요청|독촉)|채권|법적|지급명령|가처분|강제\s*집행/,V2_G2=/단가\s*(인상|협의)|재계약|증차/;
 /* 직출·직퇴: 시간기록과 [직출]·직출- 표식을 떼고 남은 내용으로 분류한다. 내용이 짧으면(20자 미만) 제외 */
 const V2_OUT=/직출|직퇴/;
+/* 운영 기본값이어도 영업으로 볼 신호: 물동량·신규 견적·경쟁사 단독사용·향후 영업계획 */
+const V2_G1X=/물동량\s*[:]?\s*\d|신규\s*[,]?\s*N1[1-3]|(AJ|아주|로지스올|타사)\s*단독|영업\s*계획/;
 function v2Clean(t){return String(t||'').replace(/^\s*\d{4}-\d\d-\d\d \d\d:\d\d:\d\d/,'').replace(/\[\s*(직출|직퇴)\s*\]|\(\s*(직출|직퇴)\s*\)|(직출|직퇴)\s*(중|후|예정)?\s*[-:]?/g,' ').replace(/\s+/g,' ').trim()}
 function v2Main(code,typ,t){if(V2_OUT.test(t)&&!/휴가|연차|반차/.test(t)){const c=v2Clean(t);if(c.replace(/\s/g,'').length<20)return ['X','out'];const r=v2MainCore(code,typ,c,true);return r[0]==='?'||r[0]==='X'?['9','out']:r}return v2MainCore(code,typ,t,false)}
-function v2MainCore(code,typ,t,skipX){if(V2_ENG.test(t))return ['1','eng'];const a=v2Label(t);if(a){for(const [k,re] of V2_RULES){if(skipX&&k==='X')continue;if(re.test(a))return [k,'label']}}
+function v2MainCore(code,typ,t,skipX){if(V2_ENG.test(t))return ['1','eng'];if(String(t).trim()&&!String(t).replace(/^\s*\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.?/,'').replace(/[\s.\-]/g,''))return ['X','empty'];const a=v2Label(t)||v2LabOk(((t.match(/방문\s*목적\s*[:\-]\s*([^,.\n]{2,30})/)||[])[1]||'').replace(/\s*(방문\s*)?내용.*$/,''));if(a){for(const [k,re] of V2_RULES){if(skipX&&k==='X')continue;if(re.test(a))return [k,'label']}}
   const base=V2_TYPE[code]||(V2_SALES.has(code)?'1':'');const ops=/^[3456M]$/.test(base);
   for(const [k,re] of V2_RULES.slice(0,5)){if(skipX&&k==='X')continue;if(k==='X'&&!/^["\s]*(휴가|연차|반차|병가|경조|직출|직퇴)/.test(t)&&t.replace(/\s/g,'').length>=20)continue;/* 상대방 휴가 언급은 업무 */if(k==='1'&&ops&&!V2_G1.test(t))continue;if(k==='8'&&base&&base!=='8'&&!V2_G8.test(t))continue;if(k==='2'&&ops&&!V2_G2.test(t))continue;if(re.test(t))return [k,'text']}
-  if(base)return [base,'type'];for(const [k,re] of V2_RULES.slice(5))if(re.test(t))return [k,'text'];return ['?','none']}
+  if(base==='6'&&/누계\s*증감|재고\s*증가|공\s*파렛트\s*회수|회수\s*(요청|예정|완료)/.test(t)&&!/자료\s*수정|DRS|출고\s*(정리|내역)|재입고\s*처리|거래\s*명세서|계산서|실착|전표|마감/.test(t))return ['4','text'];
+  if(ops&&V2_G1X.test(t))return ['1','text'];
+  if(base)return [base,'type'];for(const [k,re] of V2_RULES.slice(5))if(re.test(t))return [k,'text'];for(const [k,re] of V2_FALL)if(re.test(t))return [k,'fall'];return ['?','none']}
+/* 그래도 못 정하면: 현장 상황 기록으로 분류 */
+const V2_FALL=[['1',/물동량|AJ|아주|경쟁|단독\s*사용|제조업|신규/],['5',/잔여\s*재고|재고\s*(없음|파악|확인)|실물\s*확인|파렛트\s*실물/],['4',/폐업|경매|부지|빈\s*창고|파렛트\s*(파악|사용|확인)|원사\s*파렛트|임가공|파렛트/]];
 /* 태그: 사업 · 대상 · 결과 · 비대면 */
 const V2_BIZ=[['엔지니어링',/엔지니어링|CES|자동화|AS\/RS|컨베이어/],['지게차',/지게차|MHE|리치|전동\s*C\/B|물류장비/],['산업자재',/산업자재|필름|스트레치|테이프|골판지|박스|파우치|EPS|아이스팩|포장재|일회용\s*파렛트/],['RRPP',/RRPP|R11|R13|폴드팩|FOLDPAC|수출입/],['SCM',/SCM|3PL|운송|도급|보관|풀필먼트|윙바디/]];
 const V2_RES=[['회수불가',/회수\s*불가|분실|폐업/],['회수완료',/회수\s*(완료|진행함|함)(?!\s*(여부|예정|안|되지|못))|전량\s*회수(?!\s*(예정|요청|필요|협의))/],['회수예정',/회수\s*(예정|요청|지시|협의|가능)/],['견적',/견적\s*(제출|전달|발송|진행|안내|요청)/],['계약',/계약\s*(체결|완료|서\s*(작성|날인))(?!\s*(불가|예정|여부|안|보류))|날인(?!\s*(예정|요청))/],['자료수정',/자료\s*수정\s*(작성|완료)|DRS\s*작성|상계\s*(완료|처리)/],['입금',/입금\s*(완료|확인)(?!\s*(안|불가|예정|여부|요청|필요))/],['약정',/약정\s*(체결|작성|날인|완료)|변제\s*약정/]];
@@ -923,7 +931,7 @@ function v2Units(diaries){const U=[],CW=curWeek();diaries.forEach(d=>{if(!d.date
     const hasText=d.dtl.some(x=>/^\d{2}$/.test(x.code)&&String(x.text||'').trim()&&!AUTO_QUOTE_RE.test(x.text));
     d.dtl.forEach(x=>{if(!/^\d{2}$/.test(x.code))return;const t=x.text;if(AUTO_QUOTE_RE.test(t))return;if(!String(t||'').trim()&&hasText)return;const [cat,src]=v2Main(x.code,x.typ,t);const tc=V2_OUT.test(t)?v2Clean(t):t;const tg=v2Tags(x.typ,tc);
       const groups=new Set(Object.keys(V2_STRONG).filter(c=>V2_STRONG[c].test(t)).concat([cat]).map(c=>V2G[c]||'').filter(Boolean));
-      U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:v2WkOf(d.date.key,CW),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:v2Label(tc),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
+      U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:v2WkOf(d.date.key,CW),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:v2LabOk(v2Label(tc),d.name),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
   const seen=new Map(),out=U.filter(u=>{const k1='n|'+u.num+'|'+v2Norm(u.text),k2='e|'+u.emp+'|'+u.key+'|'+u.code+'|'+u.cat;if(seen.has(k1))return false;const first=seen.get(k2);if(first){/* 같은 날·담당·업체·분류: 건수는 1, 내용과 결과는 합쳐 보존 */first.text+=' ‖ '+u.text;first.res=first.res||u.res;first.remote=first.remote||u.remote;first.merged=(first.merged||1)+1;seen.set(k1,first);return false}seen.set(k1,u);seen.set(k2,u);return true});
   V2TC={};out.forEach(u=>{const k=u.emp+'|'+v2Norm(u.text);V2TC[k]=(V2TC[k]||0)+1});return out}
 /* 활동명 세분화: 담당자가 쓴 활동명이 없으면 내용 키워드로 분류별 세부 활동명을 붙인다 */
@@ -1049,7 +1057,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     Object.keys(bg).forEach(k=>{const L=bg[k];let pe=null;det+='<details open class="det-br"><summary>'+esc(k.replace('|',' · '))+' <span class="hint" style="margin:0">'+L.length+'건 · '+new Set(L.map(u=>u.emp)).size+'명</span></summary><div class="prev" style="padding:6px"><table class="xl dett"><colgroup>'+W.map(w=>'<col'+(w?' style="width:'+w+'px"':'')+'>').join('')+'</colgroup><tr>'+HD.map(x=>'<td class="hg">'+x+'</td>').join('')+'</tr>'+
       L.map(u=>{const tags=[u.biz!=='PPS'||u.cat==='1'||u.cat==='2'?u.biz:'',u.tgt,u.res,u.multi?'복합':'',u.remote?'비대면':''].filter(Boolean);
         /* 내용은 V1 작성 규칙(parseForm·lineSummary): 일자·업체코드·면담자·전화번호 제거, 경쟁사 등록형은 경쟁사 구분·단가·물동량·비고, 번호형은 지역·업종·내용만. 원문은 마우스 올리면 표시 */
-        const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text||'(내용 없음 · 상세구분 '+u.typ+'만 체크)',act=(u.lab||(PF.act&&PF.form!=='일반'?PF.act:'')||'').replace(/^\[경쟁사\]$/,'경쟁사 등록')||v2ActName(u.cat,'',V2_OUT.test(u.text)?v2Clean(u.text):u.text);
+        const PF=parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),body=lineSummary(PF,'')||u.text||'(내용 없음 · 상세구분 '+u.typ+'만 체크)',act=(u.lab||(PF.act&&PF.form!=='일반'?v2LabOk(PF.act,u.name):'')||'').replace(/^\[경쟁사\]$/,'경쟁사 등록')||v2ActName(u.cat,'',V2_OUT.test(u.text)?v2Clean(u.text):u.text);
         const sep=pe!==null&&pe!==u.emp?' class="empb"':'';pe=u.emp;const a2=actShort(act);
         return '<tr'+sep+'><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c" style="font-weight:700">'+esc(u.emp)+'</td><td class="c"><span class="tag" style="white-space:nowrap" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt" title="'+esc(u.name)+'">'+esc(nmShort(u.name))+'</td><td class="txt" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(act)+'">'+esc(a2)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
   /* 신호·주차별 표는 기간이 '전체'일 때만 표시 */
