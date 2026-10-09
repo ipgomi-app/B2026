@@ -216,7 +216,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
   <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
     <button class="sec mg-reg on" data-reg="">전체</button><button class="sec mg-reg" data-reg="경북">경북</button><button class="sec mg-reg" data-reg="부산">부산</button><button class="sec mg-reg" data-reg="경남">경남</button>
     <span class="hint" style="margin:0">선택한 권역만 표에 표시되고 복사 버튼도 그 권역만 복사합니다.</span></div>
-  <div class="hint">붙이는 순서: 1 → 2-1 → 2-2 → 3(전주 작성분) → 4(수금 결제). 리스트는 1번 업체 전부(1번은 100만원 이상)이고, 1번에 없고 2-2에만 있는 업체는 기준금액 이상이면 [신규]로 추가합니다. 미수채권·구분·법조치 현황은 1번, 연체개월·결제기일·신용등급·보증가입여부·보증금액(보증보험 + 보증금)·청구년월은 2-2에서 가져옵니다. 잔여 미수금은 2-1 잔액(2-2 미수 청구월 기준), 수금금액 = 미수채권 − 잔여 미수금이며, 2-1에 없거나 잔액이 0이면 결제 완료로 표시하고 리스트에서 빼지 않습니다. 최종수금일은 2-1 최종입금전표일과 4번 수금일 중 최근 날짜이며, 이 날짜가 금주 기간 안일 때만 수금금액과 부분수금(잔여 남음)·완납(잔여 0)을 표시합니다(기간 밖이면 수금금액 0, 수금일만 표시). 3번 전주 작성분의 세부 진행내역은 '전주 세부내역'으로 들어갑니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다.</div>
+  <div class="hint">붙이는 순서: 1 → 2-1 → 2-2 → 3(전주 작성분) → 4(수금 결제). 리스트는 1번 업체 중 기준금액 이상이고, 1번에 없고 2-2에만 있는 업체는 기준금액 이상이면 [신규]로 추가합니다. 미수채권·구분·법조치 현황은 1번, 연체개월·결제기일·신용등급·보증가입여부·보증금액(보증보험 + 보증금)·청구년월은 2-2에서 가져옵니다. 잔여 미수금은 2-1 잔액(2-2 미수 청구월 기준), 수금금액 = 미수채권 − 잔여 미수금이며, 2-1에 없거나 잔액이 0이면 결제 완료로 표시하고 리스트에서 빼지 않습니다. 최종수금일은 2-1 최종입금전표일과 4번 수금일 중 최근 날짜이며, 이 날짜가 금주 기간 안일 때만 수금금액과 부분수금(잔여 남음)·완납(잔여 0)을 표시합니다(기간 밖이면 수금금액 0, 수금일만 표시). 3번 전주 작성분의 세부 진행내역은 '전주 세부내역'으로 들어갑니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다.</div>
   <div id="merge-out" class="prev" style="margin-top:8px"></div>
 </div>
 <div class="card" style="border:2px solid var(--navy)"><h2>주간회의자료 생성 <span class="hint" style="margin:0">②가 있으면 ② 기준(금주 세부내역, 없으면 전주), 없으면 5번 취합 결과 기준 · 보고 기준금액 이상 업체만</span></h2>
@@ -1103,7 +1103,7 @@ function mgYMSync(){const el=document.getElementById('mg-ym'),st=document.getEle
   if(d){if(!el.value||el.dataset.auto==='1'){el.value=d.ym.slice(0,4)+'-'+d.ym.slice(4);el.dataset.auto='1'}st.textContent='기준월 '+d.ym.slice(2,4)+'.'+d.ym.slice(4)+' ('+d.src+'에서 인식)'}
   else{if(el.dataset.auto==='1'){el.value='';delete el.dataset.auto}st.textContent=document.getElementById('mg-prev').value.trim()?'기준월을 못 찾았습니다. 직접 입력하세요':''}}
 document.getElementById('mg-prev').addEventListener('input',mgYMSync);document.getElementById('mg-prev').addEventListener('cleared',mgYMSync);document.getElementById('mg-ym').addEventListener('input',()=>{delete document.getElementById('mg-ym').dataset.auto});
-/* 기준 청구년월을 바꾸면 이미 취합한 결과를 바로 다시 계산 */document.getElementById('mg-ym').addEventListener('change',()=>{if(MG)mgBuild()});
+/* 기준 청구년월·기준금액을 바꾸면 이미 취합한 결과를 바로 다시 계산 */['mg-ym','mg-min'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{if(MG)mgBuild()}));
 
 function mgDoneMemo(){return '결제 완료'}/* 결제 완료 업체 금주 세부내역은 '결제 완료'로만 표기 */
 /* 붙여넣는 즉시(입력·칸 벗어남) 인식 결과 표시 */
@@ -1135,7 +1135,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   codes.forEach(code=>{if(EX.has(code)){exN++;return}const p=P[code],e=E[code],m=M[code]||{},L=LAST[code]||{};const isNew=hasP&&!p;
     const br=(p&&p.br)||(e&&e.br)||m.br||L.br||'',emp=(p&&p.emp)||(e&&e.emp)||m.emp||L.emp||'';if(!(YN_BR.has(br)||YN_EMP.has(emp))){outYN++;return}
     const mRows=(m.rows||[]).filter(x=>inCut(x.ym));const eRows=e?e.rows.filter(r=>inCut(r.ym)):[];
-    const amt=p?p.amt:e?eAmt(e):(L.amt||mRows.reduce((s,x)=>s+x.amt,0));if(!p&&(hasP||hasE)&&amt<minV){outMin++;return}if(!(amt>0)){outMin++;return}if(isNew)newN++;
+    const amt=p?p.amt:e?eAmt(e):(L.amt||mRows.reduce((s,x)=>s+x.amt,0));if(amt<minV){outMin++;return}/* 기준금액은 1번 업체에도 적용 */if(!(amt>0)){outMin++;return}if(isNew)newN++;
     /* 잔액: 2-1에서 2-2 미수 청구월(없으면 기준월까지)만 더함 */const eYs=new Set(eRows.filter(r=>r.amt>0).map(r=>r.ym));const balRows=eYs.size?mRows.filter(x=>eYs.has(x.ym)):mRows;
     let paid=0;if(hasM){const bal=Math.max(0,balRows.reduce((s,x)=>s+x.amt,0));paid=Math.max(0,amt-bal);if(!m.rows)noM++}else if(code in PAY.amt)paid=Math.min(PAY.amt[code],amt);paid=Math.min(paid,amt);
     const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';const payD=(PAY.dates[code]||[]).slice().sort();
@@ -1154,7 +1154,7 @@ function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value)
   recs.forEach(x=>{const key=Object.keys(BR2REG).find(b=>x.br.startsWith(b));x.reg=key?REG_SHORT(BR2REG[key]):'';x.mon=x.months||'';x.due=x.cond||'';x.ins=x.insYN});
   MGR={list:recs,month:'',min:minV};mgRender();
   const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');
-  document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(hasP?' · 1번 기준 리스트 '+base.length+'업체':hasE?' · 1번 없음: 2-2 기준':' · 1번·2-2 없음: 3번(전주) 기준')+(newN?' + 2-2 신규 '+newN+'업체('+fmtWon(minV)+'원 이상)':'')+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 결제 완료 '+fullN+'업체 · 금주수금 O '+paidN+'업체'+(hasM?'':' · 2-1 없음: 잔액은 4번 수금으로만 계산')+(hasE?'':' · 2-2 없음: 연체개월·보증 등은 1번 값')+(exN?' · 제외 코드 '+exN+'건':'')+' · 영남 외 '+outYN+'건'+(outMin?', '+(hasP?'2-2에만 있고 ':'')+'기준금액 미만 '+outMin+'건':'')+' 제외'}
+  document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(hasP?' · 1번 기준 리스트 '+base.length+'업체':hasE?' · 1번 없음: 2-2 기준':' · 1번·2-2 없음: 3번(전주) 기준')+(newN?' + 2-2 신규 '+newN+'업체('+fmtWon(minV)+'원 이상)':'')+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 결제 완료 '+fullN+'업체 · 금주수금 O '+paidN+'업체'+(hasM?'':' · 2-1 없음: 잔액은 4번 수금으로만 계산')+(hasE?'':' · 2-2 없음: 연체개월·보증 등은 1번 값')+(exN?' · 제외 코드 '+exN+'건':'')+' · 영남 외 '+outYN+'건'+(outMin?', 기준금액('+fmtWon(minV)+'원) 미만 '+outMin+'건':'')+' 제외'}
 (function(){const d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');/* 로컬(한국) 날짜 */const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;document.getElementById('mg-xlsx').onclick=mgXlsx;
 document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
