@@ -1451,15 +1451,15 @@ const TG_REG={경북:0,부산:1,경남:2};let TG=null;
 function tgYM(d){const m=String(d||'').match(/(\d{2,4})\D+(\d{1,2})/);return m?String(m[1]).slice(-2)+'년 '+(+m[2])+'월':''}
 function tgBuild(){const src=document.getElementById('tg-src').value;const st=document.getElementById('tg-stat');if(!src.trim()){st.textContent='경쟁사 통합 리스트를 붙여넣으세요';return}
   const P=tgParse(src);if(!P){st.textContent='인식 실패: 구분·코드 머리글 행이 필요합니다';return}let ALL=P.rows;
-  /* 실적 선택일: 계약·견적·방문 모두 최종방문일이 기간 안인 행만 */const fr=document.getElementById('tg-from').value.replace(/\D/g,''),to=document.getElementById('tg-to').value.replace(/\D/g,'');let outN=0;
-  if(fr||to){const dOf=x=>String(x.visit).replace(/\D/g,'').slice(0,8);const n0=ALL.length;ALL=ALL.filter(x=>{const d=dOf(x);return d.length===8&&(!fr||d>=fr)&&(!to||d<=to)});outN=n0-ALL.length}
+  /* 실적 선택일: 계약은 계약완료일(계약년월), 견적은 최종견적일, 방문은 최종방문일이 기간 안인 행만 */const fr=document.getElementById('tg-from').value.replace(/\D/g,''),to=document.getElementById('tg-to').value.replace(/\D/g,'');let outN=0;
+  if(fr||to){const dOf=x=>String(x.stage==='계약'?x.cont:x.stage==='견적'?x.quote:x.visit).replace(/\D/g,'').slice(0,8);const n0=ALL.length;ALL=ALL.filter(x=>{const d=dOf(x);return d.length===8&&(!fr||d>=fr)&&(!to||d<=to)});outN=n0-ALL.length}
   TG={};const msg=[];
   TG_KIND.forEach(K=>{const list=ALL.filter(x=>x.stage===K.k).sort((a,b)=>b.amt-a.amt);
     TG[K.k]=list.map(x=>{const r=[x.grp,x.code,x.name,x.reg,x.br,x.emp,...x.vals,x.visit];if(K.k!=='방문')r.push(x.quote);if(K.k==='계약')r.push(x.cont,x.amt||'');if(K.k==='견적')r.push(x.amt||'');r.push(x.memo);return r});
     msg.push(K.k+' '+list.length)});
   document.getElementById('tg-out').innerHTML=TG_KIND.map(K=>'<div class="row" style="margin:12px 0 4px"><button class="sec xs" data-tgcopy="'+K.k+'">'+K.t.slice(2)+' 내용 복사</button></div>'+tgHtml(K,true)).join('');
   document.querySelectorAll('[data-tgcopy]').forEach(b=>b.onclick=()=>tgCopy(b.dataset.tgcopy));
-  st.textContent=((fr||to)?'실적 기간(최종방문일) '+(fr?fr.slice(4,6)+'/'+fr.slice(6):'처음')+'~'+(to?to.slice(4,6)+'/'+to.slice(6):'끝')+' (기간 밖 제외 '+outN+') · ':'')+msg.join(' · ')+' · 전체 '+P.rows.length+'행'}
+  st.textContent=((fr||to)?'실적 기간(계약완료일·최종견적일·최종방문일) '+(fr?fr.slice(4,6)+'/'+fr.slice(6):'처음')+'~'+(to?to.slice(4,6)+'/'+to.slice(6):'끝')+' (기간 밖 제외 '+outN+') · ':'')+msg.join(' · ')+' · 전체 '+P.rows.length+'행'}
 const TG_HB='#e2efda';
 function tgHtml(K,view,dataOnly){const B='border:1px solid #808080;font-family:\'맑은 고딕\';font-size:9pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;';
   const nFix=14+K.ext.length+(K.grp?2:0);const mc=25-nFix;/* 세부사항 병합 칸 수(B~Z 25칸) */
