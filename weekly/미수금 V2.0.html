@@ -134,12 +134,12 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </div>
 <div class="tabpane on" id="pane-merge">
 <div class="grid-3">
-<div class="card"><h2>1. KPP 미수채권현황 › 업체별 세부 <span class="hint" style="margin:0">(기준 자료, 금액 단위 원)</span></h2><textarea id="mg-prev" style="min-height:130px" placeholder="KPP 미수채권현황 > 업체별 세부 표를 머리글 포함 그대로 붙여넣기 (관리부서명, 관리담당자명, 거래처, 거래처명, 합계, 연체개월, 결제기일, 신용등급, 가입여부, 금액, 가능여부, 금액, 금액, 법조치현황)"></textarea><div class="hint" id="mg-prev-stat"></div></div>
-<div class="card"><h2>2-1. AMS 채권관리현황 › 월별(업체현황) <span class="hint" style="margin:0">(청구년월·수금일·완납 판정용)</span></h2><textarea id="mg-mon" style="min-height:130px" placeholder="AMS 월별(업체현황) 표를 그대로 붙여넣기 (청구년월, 거래처 코드·명, 등급, 결재, 조건, 청구부서, 청구담당, 수금담당, 재무담당, 미수금, 최종입금전표일, 최종입금전표 생성일). '합 계' 행은 무시됩니다"></textarea><div class="hint" id="mg-mon-stat"></div></div>
-<div class="card"><h2>2-2. AMS 채권관리현황 › 담당자별(업체현황) <span class="hint" style="margin:0">(결제기일 미도래 채권제외 체크)</span></h2><textarea id="mg-emp" style="min-height:130px" placeholder="AMS 담당자별(업체현황) 표를 그대로 붙여넣기 (구분, 관리부서, 관리담당자, 청구담당자, 거래처, 신용등급, 결제조건, 결제기일, 청구년월, 금액, 연체개월 …)"></textarea><div class="hint" id="mg-emp-stat"></div></div>
+<div class="card"><h2>1. 시운부 미수채권 자료 &gt; "미수채권세부" <span class="hint" style="margin:0">(기준 자료, 금액 단위 원)</span></h2><textarea id="mg-prev" style="min-height:130px" placeholder="KPP 미수채권현황 > 업체별 세부 표를 머리글 포함 그대로 붙여넣기 (관리부서명, 관리담당자명, 거래처, 거래처명, 합계, 연체개월, 결제기일, 신용등급, 가입여부, 금액, 가능여부, 금액, 금액, 법조치현황)"></textarea><div class="hint" id="mg-prev-stat"></div></div>
+<div class="card"><h2>2-1. AMS "채권관리현황" › 월별(업체현황) <span class="hint" style="margin:0">(청구년월·수금일·완납 판정용)</span></h2><textarea id="mg-mon" style="min-height:130px" placeholder="AMS 월별(업체현황) 표를 그대로 붙여넣기 (청구년월, 거래처 코드·명, 등급, 결재, 조건, 청구부서, 청구담당, 수금담당, 재무담당, 미수금, 최종입금전표일, 최종입금전표 생성일). '합 계' 행은 무시됩니다"></textarea><div class="hint" id="mg-mon-stat"></div></div>
+<div class="card"><h2>2-2. AMS "채권관리현황" › 담당자별(업체현황) <span style="color:#d00;font-weight:700">(결제기일 미도래 채권제외 체크)</span></h2><textarea id="mg-emp" style="min-height:130px" placeholder="AMS 담당자별(업체현황) 표를 그대로 붙여넣기 (구분, 관리부서, 관리담당자, 청구담당자, 거래처, 신용등급, 결제조건, 결제기일, 청구년월, 금액, 연체개월 …)"></textarea><div class="hint" id="mg-emp-stat"></div></div>
 </div>
 <div class="grid" style="margin-top:14px">
-<div class="card"><h2>3. 전주 작성분 <span class="hint" style="margin:0">(지난주 보고 출력표 → 전주 세부내역 참고)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
+<div class="card"><h2>3. 전주 작성분 &gt; 본부 실시간 미수금 엑셀시트 <span class="hint" style="margin:0">(전주 세부내용 참고용)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
 <div class="card"><h2>4. 수금 결제 <span class="hint" style="margin:0">(AMS 수금내역 · 최종수금일·금주수금 확인)</span></h2><textarea id="mg-pay" style="min-height:130px" placeholder="AMS 수금내역을 그대로 붙여넣기 (청구부서, 청구담당자, 관리담당자, 거래처 코드·명, 조건, 기일, 세금계산서일자, 수금일자, 청구금액, 결제금액, …). 거래처 코드별로 결제금액을 합쳐 수금금액에 넣고, '거 래 처 계' 소계 행은 검증에만 씁니다. 수금일자가 금주 기간 안이면 금주수금 O, 최종수금일에도 반영됩니다"></textarea><div class="hint" id="mg-pay-stat"></div></div>
 </div>
 <div class="card"><h2>5. 취합 결과 <span class="tag">영남 소속 · 기준금액 이상 · 법조치/회생채권/결제지연</span></h2>
@@ -159,14 +159,14 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </div>
 <div class="card" style="border:2px solid var(--navy)"><h2>주간회의자료 생성 <span class="hint" style="margin:0">③이 있으면 ③ 금주 주요미수채권현황 업체 기준 · 세부내역·수금은 ②(금주 세부내역, 없으면 전주), ②가 없으면 5번 취합 결과 · 보고 기준금액 이상 업체만</span></h2>
 <div class="grid-3">
-<div class="card"><h2>① 금주 본부 미수금 합계표 <span class="hint" style="margin:0">본부·권역 합계표 (경북·부산·경남권역 소계 + 본부계 행) · 주간회의자료 맨 위에 붙습니다</span></h2>
+<div class="card"><h2>① 시운부 미수채권 자료 › "미수채권집계" <span class="hint" style="margin:0">본부·권역 합계표 (경북·부산·경남권역 소계 + 본부계 행) · 주간회의자료 맨 위에 붙습니다</span></h2>
   <textarea id="mg-cur" style="min-height:90px" placeholder="경북권역 소계&#9;175&#9;57&#9;82,758,954 …
 부산권역 소계 …
 경남권역 소계 …
 본부계 …"></textarea><div class="hint" id="mg-cur-stat"></div></div>
-<div class="card"><h2>② 금주 엑셀취합 완료 데이터 <span class="hint" style="margin:0">위 5번에서 저장한 엑셀(전체 시트)에 금주 세부내역·수금금액을 채운 뒤 그 시트를 붙여넣기</span></h2>
+<div class="card"><h2>② 금주 본부 미수금 엑셀취합 완료 데이터 <span class="hint" style="margin:0">위 5번에서 저장한 엑셀(전체 시트)에 금주 세부내역·수금금액을 채운 뒤 그 시트를 붙여넣기</span></h2>
   <textarea id="mg-week" style="min-height:90px" placeholder="금주 세부내역을 업데이트한 취합 출력표를 머리글 포함 그대로 붙여넣기. 본부주간 보고 버튼을 누르면 이 자료를 바탕으로 작성하며, 세부 진행내역은 금주 세부내역(없으면 전주 세부내역)을 씁니다"></textarea><div class="hint" id="mg-week-stat"></div></div>
-<div class="card"><h2>③ 금주 주요미수채권현황 <span class="hint" style="margin:0">금주 KPP 미수채권현황 › 주요미수채권현황(미수채권금액 상위 업체). 붙이면 이 리스트 기준(구분·미수채권·연체개월·결제기일·보증·법조치)으로 만들고, 세부내역·수금은 ②(없으면 5번)에서 가져옴</span></h2>
+<div class="card"><h2>③ 금주 시운부 미수채권 자료 &gt; "주요미수채권현황" <span class="hint" style="margin:0">붙이면 이 리스트 기준(구분·미수채권·연체개월·결제기일·보증·법조치)으로 만들고, 세부내역·수금은 ②(없으면 5번)에서 가져옴</span></h2>
   <textarea id="mg-rprev" style="min-height:90px" placeholder="주요미수채권현황 표를 머리글(구분·관리부서명·…·법조치 현황) 포함 그대로 붙여넣기 (업체별 세부 시트도 인식)"></textarea><div class="hint" id="mg-rprev-stat"></div></div>
 </div>
   <div class="row" style="margin-top:8px">
