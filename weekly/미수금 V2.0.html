@@ -137,8 +137,8 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <div class="card"><h2>2-2. AMS 채권관리현황 › 담당자별(업체현황) <span class="hint" style="margin:0">(결제기일 미도래 채권제외 체크)</span></h2><textarea id="mg-emp" style="min-height:130px" placeholder="AMS 담당자별(업체현황) 표를 그대로 붙여넣기 (구분, 관리부서, 관리담당자, 청구담당자, 거래처, 신용등급, 결제조건, 결제기일, 청구년월, 금액, 연체개월 …)"></textarea><div class="hint" id="mg-emp-stat"></div></div>
 </div>
 <div class="grid" style="margin-top:14px">
-<div class="card"><h2>3. 수금 데이터 <span class="hint" style="margin:0">(AMS 수금내역 · 거래처별 결제금액 합산 → 수금금액)</span></h2><textarea id="mg-pay" style="min-height:130px" placeholder="AMS 수금내역을 그대로 붙여넣기 (청구부서, 청구담당자, 관리담당자, 거래처 코드·명, 조건, 기일, 세금계산서일자, 수금일자, 청구금액, 결제금액, …). 거래처 코드별로 결제금액을 합쳐 수금금액에 넣고, '거 래 처 계' 소계 행은 검증에만 씁니다. 수금일자가 금주 기간 안이면 금주수금 O, 최종수금일에도 반영됩니다"></textarea><div class="hint" id="mg-pay-stat"></div></div>
-<div class="card"><h2>4. 전주 내역 데이터 <span class="hint" style="margin:0">(지난주 출력표 → 전주 세부내역 자동 입력)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
+<div class="card"><h2>3. 전주 작성분 <span class="hint" style="margin:0">(지난주 보고 출력표 → 전주 세부내역 참고)</span></h2><textarea id="mg-last" style="min-height:130px" placeholder="지난주 미수채권 출력표(구분, 권역, 지점, 담당, 코드, 거래처, 미수채권, …, 법조치 현황, 세부 진행내역, 수금금액, 잔여 미수금)를 머리글 포함 붙여넣기. 같은 코드의 세부 진행내역이 '전주 세부내역' 칸에 들어갑니다"></textarea><div class="hint" id="mg-last-stat"></div></div>
+<div class="card"><h2>4. 수금 결제 <span class="hint" style="margin:0">(AMS 수금내역 · 최종수금일·금주수금 확인)</span></h2><textarea id="mg-pay" style="min-height:130px" placeholder="AMS 수금내역을 그대로 붙여넣기 (청구부서, 청구담당자, 관리담당자, 거래처 코드·명, 조건, 기일, 세금계산서일자, 수금일자, 청구금액, 결제금액, …). 거래처 코드별로 결제금액을 합쳐 수금금액에 넣고, '거 래 처 계' 소계 행은 검증에만 씁니다. 수금일자가 금주 기간 안이면 금주수금 O, 최종수금일에도 반영됩니다"></textarea><div class="hint" id="mg-pay-stat"></div></div>
 </div>
 <div class="card"><h2>5. 취합 결과 <span class="tag">영남 소속 · 기준금액 이상 · 법조치/회생채권/결제지연</span></h2>
   <div class="row" style="margin-bottom:8px">
@@ -152,7 +152,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
   <div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">권역 표시</span>
     <button class="sec mg-reg on" data-reg="">전체</button><button class="sec mg-reg" data-reg="경북">경북</button><button class="sec mg-reg" data-reg="부산">부산</button><button class="sec mg-reg" data-reg="경남">경남</button>
     <span class="hint" style="margin:0">선택한 권역만 표에 표시되고 복사 버튼도 그 권역만 복사합니다.</span></div>
-  <div class="hint">1번 시트가 기준입니다. 2-2 담당자별을 붙이면 1번 대신 기준 자료가 됩니다(금액 = 기준 청구년월까지 개별 행 합계, 연체개월 = 기준월 - 가장 오래된 미수 청구월 + 1(최대 6), 보증금액 = 보증보험 + 보증금, 등급 빈칸 = 평가없음 · 구분과 법조치 현황 글자는 1번 → 4번(지난주) 순으로 가져오고 둘 다 없을 때만 2-2 회생/법조치 열로 판정 · 제외 거래처 코드는 빠짐). 1번만 있으면 구분은 법조치현황으로 판정(회생채권 → 회생채권, 그 외 조치 → 법조치, 공란 → 결제지연). 2번 월별 자료에서 청구년월(26.04~26.07)과 수금일(최종입금전표일)을 가져오고(청구년월은 기준 청구년월까지만 사용, 기준월은 1번 시트 제목 "26년 7월분"에서 자동 인식하며 수정 가능), 1번에 있지만 2번에 없는 업체는 완납으로 보아 수금금액 = 미수채권, 금주수금 O. 2번에만 있는 업체는 추가하지 않습니다(4번을 붙이면 4번 업체 전부 + 1·2번에만 있는 기준금액 이상 업체를 [신규]로 추가). 최종입금전표일이 금주 기간 안이면 금주수금 O. 3번 수금 데이터에 같은 업체가 있으면 수금금액은 그 결제금액 합산(더 정확)으로 넣고 수금일자가 기간 안이면 금주수금 O·최종수금일에도 반영합니다. 청구년월·금주수금·최종수금일·완납의 기본 틀은 2번 월별 자료입니다. 잔여 미수금 = 미수채권 − 수금금액. 4번 지난주 출력표의 세부 진행내역은 '전주 세부내역'에 들어가고 금주 세부내역은 표에서 직접 입력합니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다. 미수금 탭은 별개로 동작합니다.</div>
+  <div class="hint">붙이는 순서: 1 → 2-1 → 2-2 → 3(전주 작성분) → 4(수금 결제). 리스트는 1번 업체 전부(1번은 100만원 이상)이고, 1번에 없고 2-2에만 있는 업체는 기준금액 이상이면 [신규]로 추가합니다. 미수채권·구분·법조치 현황은 1번, 연체개월·결제기일·신용등급·보증가입여부·보증금액(보증보험 + 보증금)·청구년월은 2-2에서 가져옵니다. 잔여 미수금은 2-1 잔액(2-2 미수 청구월 기준), 수금금액 = 미수채권 − 잔여 미수금이며, 2-1에 없거나 잔액이 0이면 결제 완료로 표시하고 리스트에서 빼지 않습니다. 최종수금일은 2-1 최종입금전표일과 4번 수금일 중 최근 날짜, 금주 기간 안이거나 결제 완료면 금주수금 O. 3번 전주 작성분의 세부 진행내역은 '전주 세부내역'으로 들어갑니다. 세부내역·수금금액은 표에서 직접 수정할 수 있습니다.</div>
   <div id="merge-out" class="prev" style="margin-top:8px"></div>
 </div>
 <div class="card" style="border:2px solid var(--navy)"><h2>주간회의자료 생성 <span class="hint" style="margin:0">②가 있으면 ② 기준(금주 세부내역, 없으면 전주), 없으면 5번 취합 결과 기준 · 보고 기준금액 이상 업체만</span></h2>
@@ -634,7 +634,7 @@ function mgParsePay(raw){const out={amt:{},dates:{},sub:{},rows:0,warn:[]};if(!r
 /* 전주 출력표: 코드 → 세부 진행내역 */
 function mgParseLast(raw){const out={};if(!raw.trim())return out;const rows=parseTSV(raw).map(r=>r.map(x=>String(x||'').trim()));const hi=rows.findIndex(r=>r.some(c=>/진행내역|세부내역/.test(c.replace(/\s+/g,''))));
   const H=hi>=0?rows[hi].map(x=>x.replace(/\s+/g,'')):[];/* 지난주 출력표의 '금주 세부내역'이 이번 주 '전주 세부내역'이 됨: 금주 열 우선, 비면 전주 열 */let mi=H.indexOf('금주세부내역');if(mi<0)mi=H.findIndex(h=>/진행내역|세부내역/.test(h)&&h!=='전주세부내역');if(mi<0)mi=H.findIndex(h=>/진행내역|세부내역/.test(h));const pi=H.indexOf('전주세부내역');let ci=H.findIndex(h=>h==='코드');
-  /* 4번 기준 출력용: 구분·지점·담당·거래처·미수채권·연체개월·결제기일·신용등급·보증금액·법조치도 같이 읽음(구분은 병합이라 위 행 값 이어받음) */
+  /* 3번(전주 작성분) 기준 출력용: 구분·지점·담당·거래처·미수채권·연체개월·결제기일·신용등급·보증금액·법조치도 같이 읽음(구분은 병합이라 위 행 값 이어받음) */
   const hx=(...k)=>H.findIndex(h=>k.includes(h));const C={grp:hx('구분'),br:hx('지점','관리부서명'),emp:hx('담당','관리담당자','관리담당자명'),name:hx('거래처','거래처명','업체명'),amt:hx('미수채권'),mon:hx('연체개월'),due:hx('결제기일'),grade:hx('신용등급'),gamt:H.findIndex(h=>/^보증금액/.test(h)),law:H.findIndex(h=>/법조치/.test(h))};
   let curG='';rows.forEach((c,i)=>{if(i===hi)return;const code=ci>=0&&isCode6(c[ci])?c[ci]:c.find(isCode6);if(!code)return;let memo=mi>=0?(c[mi]||(pi>=0&&pi!==mi?c[pi]||'':'')):'';if(mi<0){const k=c.indexOf(code);memo=c.slice(k+1).filter(x=>/[가-힣]/.test(x)&&x.length>8).sort((a,b)=>b.length-a.length)[0]||''}
     const g=k=>C[k]>=0?(c[C[k]]||''):'';const gv=g('grp');if(/법조치|회생|결제지연/.test(gv))curG=/회생/.test(gv)?'회생채권':/법조치/.test(gv)?'법조치':'결제지연';let br=g('br');if(br&&!/지점$|팀$/.test(br))br+='지점';
@@ -700,40 +700,42 @@ Object.keys(MG_LIVE).forEach(id=>{const ta=document.getElementById(id),st=docume
 let MG=null;
 function mgBuild(){const P=mgParsePrev(document.getElementById('mg-prev').value),M=mgParseMon(document.getElementById('mg-mon').value);
   const from=(document.getElementById('mg-from').value||'').trim(),to=(document.getElementById('mg-to').value||'').trim();const inRange=d=>!!d&&(!from||d>=from)&&(!to||d<=to);
-  const PAY=mgParsePay(document.getElementById('mg-pay').value);const LAST=mgParseLast(document.getElementById('mg-last').value);
-  /* 2-2 담당자별(업체현황)을 붙이면 1번 대신 기준 자료: 구분 = 법조치 열 값 있으면 법조치, 회생/파산 있으면 회생채권, 아니면 결제지연 / 법조치 글자는 1번에서 / 보증금액 = 보증보험 + 보증금 */
-  const E=mgParseEmp(document.getElementById('mg-emp').value);const hasE=Object.keys(E).length>0;
-  /* 기준 청구년월이 있으면 2-2 개별 행도 그 달까지만 더함(바꾸고 취합하면 다시 계산) */const cut0=mgYM();const eAmt=o=>cut0&&o.rows.length?o.rows.filter(r=>!r.ym||r.ym<=cut0).reduce((a,r)=>a+r.amt,0):o.amt;
-  /* 1번과 맞춘 규칙(26.07 실데이터 비교): 연체개월 = 기준월 - 가장 오래된 미수 청구월 + 1 (최대 6) / 등급 빈칸 = 평가없음
-     구분·법조치 글자 = 1번 → 4번(지난주) → 없으면 2-2(회생 → 회생채권, 법조치 금액 → 법조치, 그 외 결제지연) */
-  const eYms=Object.values(E).flatMap(o=>o.rows.map(r=>r.ym)).filter(Boolean).sort();const eCut=cut0||eYms[eYms.length-1]||'';
-  const eMon=o=>{const ys=o.rows.filter(r=>r.amt>0).map(r=>r.ym).filter(y=>y&&(!cut0||y<=cut0)).sort();if(!ys.length||!eCut)return o.months;const d=(+eCut.slice(0,4)-+ys[0].slice(0,4))*12+(+eCut.slice(4)-+ys[0].slice(4))+1;return Math.max(1,Math.min(6,d))};
-  const eGrp=o=>{const p=P[o.code],l=LAST[o.code];if(p&&p.grp)return p.grp;if(p)return /회생/.test(p.law)?'회생채권':p.law?'법조치':'결제지연';if(l&&l.grp)return l.grp;return o.rehab?'회생채권':o.law?'법조치':'결제지연'};
-  const B=hasE?Object.fromEntries(Object.values(E).filter(o=>eAmt(o)>0).map(o=>[o.code,{grp:eGrp(o),law:(P[o.code]||{}).law||(LAST[o.code]||{}).law||'',br:o.br,emp:o.emp,name:o.name,amt:eAmt(o),months:eMon(o),cond:o.due,grade:o.grade||(o.rows.length?'평가없음':''),gamt:o.insAmt+o.dep}])):P;
-  /* 4번(지난주 출력표)을 붙이면 4번 업체 전부를 기준으로 출력(기준금액 무관, 1번에 없는 업체는 1번 기준월에 미수 없음 = 완납으로 봄) */const byLast=Object.keys(LAST).length>0;
-  /* 4번 기준일 때도 1번·2번(채권관리)에 새로 생긴 업체는 기준금액 이상이면 추가(구분은 1번 따름, 없으면 결제지연) */const codes=byLast?[...new Set([...Object.keys(LAST),...Object.keys(B),...(hasE?[]:Object.keys(M))])]:Object.keys(B);if(!codes.length){alert('1번 KPP 업체별 세부 시트(또는 2-2 담당자별, 4번 지난주 출력표)를 붙여넣으세요');return}
-  const minV=+document.getElementById('mg-min').value||0;const min=byLast?0:minV;const cut=mgYM();const recs=[];let outYN=0,outMin=0,fromBase=0,added=0,paidN=0,fullN=0,notInP=0,newN=0;
-  const EX=new Set((document.getElementById('mg-ex').value||'').split(/[^\d]+/).filter(isCode6));let exN=0;
-  codes.forEach(code=>{if(EX.has(code)){exN++;return}const L=LAST[code]||{};const isNew=byLast&&!LAST[code];const prev=B[code]||(byLast?L:{}),m=M[code]||(hasE&&E[code]&&!Object.keys(M).length?{rows:E[code].rows.map(x=>({...x,pay:''}))}:{});const br=prev.br||m.br||'';const emp=prev.emp||m.emp||'';
-    if(!(YN_BR.has(br)||YN_EMP.has(emp))){outYN++;return}
-    const mRows=(m.rows||[]).filter(x=>!cut||!x.ym||x.ym<=cut);/* 기준 청구년월까지만 */const mAmt=mRows.reduce((s,x)=>s+x.amt,0);const amt=prev.amt||mAmt;if(amt<(isNew?minV:min)||(isNew&&!amt)){outMin++;return}if(isNew)newN++;
-    const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';
-    const payD=(PAY.dates[code]||[]).slice().sort();
-    /* 월별(2번)이 기본 틀: 청구년월·금주수금·최종수금일·완납 판정. 3번 수금 데이터는 같은 업체가 있을 때 수금금액(과 수금일)만 더 정확한 값으로 덮어씀 */
-    const fullM=(!!B[code]&&Object.keys(M).length>0&&!mRows.some(x=>x.amt>0))||(byLast&&!isNew&&!B[code]&&!mRows.some(x=>x.amt>0));if(byLast&&!isNew&&!B[code]&&fullM)notInP++;/* KPP에 있고 AMS 월별(기준월까지)에 없거나 미수금이 모두 0이면 완납 */
-    let paid=(code in PAY.amt)?Math.min(PAY.amt[code],amt):(fullM?amt:0);const full=fullM||(amt>0&&paid>=amt);
-    const wk=(full||inRange(lastPay)||payD.some(inRange))?'O':'';const lastPay2=[lastPay,payD[payD.length-1]||''].sort().pop();
-    if(wk)paidN++;if(full)fullN++;const pd=lastPay2?lastPay2.slice(2).replace(/-/g,'.'):'';
-    const months=prev.months||Math.min(6,mRows.length);if(B[code])fromBase++;else added++;
-    const yms=mRows.map(x=>x.ym).filter(Boolean).sort();const f2=y=>y.slice(2,4)+'.'+y.slice(4,6);const ym=yms.length?(yms[0]===yms[yms.length-1]?f2(yms[0]):f2(yms[0])+'~'+f2(yms[yms.length-1])):'';
-    recs.push({grp:prev.grp||'결제지연',br,emp,code,name:prev.name||m.name||'',amt,months,cond:prev.cond||m.cond||'',grade:prev.grade||m.grade||'',insYN:(prev.gamt||0)>0?'O':'X',gamt:prev.gamt||0,law:prev.law||(hasE&&prev.grp!=='결제지연'?(LAST[code]||{}).law||'':''),ym,wk,pd,memoPrev:(LAST[code]||{}).memo||(isNew?'[신규]'+(ym?' '+ym+' 청구':''):''),isNew,memo:(wk&&amt>0&&Math.min(paid,amt)>=amt)?mgDoneMemo((LAST[code]||{}).memo,pd,amt,ym):'',paid:Math.min(paid,amt)})});
+  const PAY=mgParsePay(document.getElementById('mg-pay').value);const LAST=mgParseLast(document.getElementById('mg-last').value);const E=mgParseEmp(document.getElementById('mg-emp').value);
+  const hasP=Object.keys(P).length>0,hasM=Object.keys(M).length>0,hasE=Object.keys(E).length>0;const cut=mgYM();const inCut=y=>!cut||!y||y<=cut;
+  /* 작성 기준
+     · 리스트 = 1번 업체 전부(1번은 100만원 이상만 나옴). 1번에 없고 2-2에만 있는 업체(2-2를 1번 기준월 이후까지 조회한 경우)는 기준금액 이상이면 [신규]로 추가
+     · 미수채권·구분·법조치 현황 = 1번 / 연체개월·결제기일·신용등급·보증가입여부·보증금액·청구년월 = 2-2(없으면 1번·2-1)
+     · 잔여 미수금 = 2-1 잔액(2-2 미수 청구월 기준), 수금금액 = 미수채권 - 잔여. 2-1에 없으면 결제 완료(리스트에서 빼지 않고 결제 완료 표시)
+     · 최종수금일 = 2-1 최종입금전표일·4번 수금일 중 최근, 금주수금 O = 그 날짜가 금주 기간 안이거나 결제 완료
+     · 3번(전주 작성분) = 전주 세부내역, 1번에 없는 업체의 구분 참고 */
+  const eAmt=o=>o.rows.length?o.rows.filter(r=>inCut(r.ym)).reduce((a,r)=>a+r.amt,0):o.amt;
+  const eYms=Object.values(E).flatMap(o=>o.rows.map(r=>r.ym)).filter(Boolean).sort();const eCut=cut||eYms[eYms.length-1]||'';
+  const eMon=o=>{const ys=o.rows.filter(r=>r.amt>0&&r.ym&&inCut(r.ym)).map(r=>r.ym).sort();if(!ys.length||!eCut)return o.months;const d=(+eCut.slice(0,4)-+ys[0].slice(0,4))*12+(+eCut.slice(4)-+ys[0].slice(4))+1;return Math.max(1,Math.min(6,d))};
+  const minV=+document.getElementById('mg-min').value||0;const EX=new Set((document.getElementById('mg-ex').value||'').split(/[^\d]+/).filter(isCode6));
+  const base=hasP?Object.keys(P):hasE?Object.keys(E):Object.keys(LAST);const extra=hasP&&hasE?Object.keys(E).filter(c=>!P[c]):[];const codes=[...base,...extra];
+  if(!codes.length){alert('1번 KPP 업체별 세부 시트를 붙여넣으세요 (없으면 2-2 담당자별 또는 3번 전주 작성분)');return}
+  const recs=[];let outYN=0,outMin=0,exN=0,paidN=0,fullN=0,newN=0,noM=0;
+  codes.forEach(code=>{if(EX.has(code)){exN++;return}const p=P[code],e=E[code],m=M[code]||{},L=LAST[code]||{};const isNew=hasP&&!p;
+    const br=(p&&p.br)||(e&&e.br)||m.br||L.br||'',emp=(p&&p.emp)||(e&&e.emp)||m.emp||L.emp||'';if(!(YN_BR.has(br)||YN_EMP.has(emp))){outYN++;return}
+    const mRows=(m.rows||[]).filter(x=>inCut(x.ym));const eRows=e?e.rows.filter(r=>inCut(r.ym)):[];
+    const amt=p?p.amt:e?eAmt(e):(L.amt||mRows.reduce((s,x)=>s+x.amt,0));if(!p&&(hasP||hasE)&&amt<minV){outMin++;return}if(!(amt>0)){outMin++;return}if(isNew)newN++;
+    /* 잔액: 2-1에서 2-2 미수 청구월(없으면 기준월까지)만 더함 */const eYs=new Set(eRows.filter(r=>r.amt>0).map(r=>r.ym));const balRows=eYs.size?mRows.filter(x=>eYs.has(x.ym)):mRows;
+    let paid=0;if(hasM){const bal=Math.max(0,balRows.reduce((s,x)=>s+x.amt,0));paid=Math.max(0,amt-bal);if(!m.rows)noM++}else if(code in PAY.amt)paid=Math.min(PAY.amt[code],amt);paid=Math.min(paid,amt);const full=amt>0&&paid>=amt;
+    const payDates=(m.rows||[]).map(x=>x.pay).filter(Boolean).sort();const lastPay=payDates.length?payDates[payDates.length-1]:'';const payD=(PAY.dates[code]||[]).slice().sort();
+    const lastPay2=[lastPay,payD[payD.length-1]||''].sort().pop();const wk=(full||inRange(lastPay2)||payD.some(inRange))?'O':'';if(wk)paidN++;if(full)fullN++;const pd=lastPay2?lastPay2.slice(2).replace(/-/g,'.'):'';
+    const yrs=(eRows.length?eRows.filter(r=>r.amt>0):mRows).map(x=>x.ym).filter(Boolean).sort();const f2=y=>y.slice(2,4)+'.'+y.slice(4,6);const ym=yrs.length?(yrs[0]===yrs[yrs.length-1]?f2(yrs[0]):f2(yrs[0])+'~'+f2(yrs[yrs.length-1])):'';
+    const grp=p?(p.grp||(/회생/.test(p.law)?'회생채권':p.law?'법조치':'결제지연')):L.grp?L.grp:e?(e.rehab?'회생채권':e.law?'법조치':'결제지연'):'결제지연';
+    const months=e?eMon(e):(p&&p.months)||L.months||Math.min(6,mRows.length);const gamt=e?e.insAmt+e.dep:((p&&p.gamt)||L.gamt||0);
+    const memoPrev=L.memo||(isNew?'[신규]'+(ym?' '+ym+' 청구':''):'');
+    recs.push({grp,br,emp,code,name:(p&&p.name)||(e&&e.name)||m.name||L.name||'',amt,months,cond:(e&&e.due)||(p&&p.cond)||m.cond||L.cond||'',grade:e?(e.grade||'평가없음'):((p&&p.grade)||m.grade||L.grade||''),insYN:gamt>0?'O':'X',gamt,law:(p&&p.law)||L.law||'',ym,wk,pd,memoPrev,isNew,memo:full?mgDoneMemo(L.memo,pd,amt,ym):'',paid})});
   const hdr=['구분','관리부서명','관리담당자명','거래처↓','거래처명','미수채권','연체개월','결제기일','신용등급','보증가입여부','보증금액','법조치 현황','청구년월','금주수금','최종수금일','수금금액','전주 세부내역'];
   const order={법조치:0,회생채권:1,결제지연:2};recs.sort((x,y)=>(order[x.grp]-order[y.grp])||(y.amt-x.amt));
   const tsv=[hdr,...recs.map(x=>[x.grp,x.br,x.emp,x.code,x.name,x.amt,x.months,x.cond,x.grade,x.insYN,x.gamt,x.law,x.ym,x.wk,x.pd,x.paid||'',x.memoPrev||''])].map(r=>r.map(tsvCell).join('\t')).join('\n');
-  MG={recs,tsv};document.getElementById('mg-prev-stat').textContent=Object.keys(P).length?'기준 시트 '+Object.keys(P).length+'업체 인식(영남 소속)':'';document.getElementById('mg-mon-stat').textContent=Object.keys(M).length?'월별 '+Object.keys(M).length+'업체 인식 · 완납(월별에 없음) '+fullN+'업체':'';document.getElementById('mg-pay-stat').textContent=Object.keys(PAY.amt).length?'수금 '+Object.keys(PAY.amt).length+'업체 '+PAY.rows+'건 인식 (결제금액 합산)'+(PAY.warn.length?' · 소계 불일치 '+PAY.warn.length+'건: '+PAY.warn.slice(0,3).join(', '):''):'';document.getElementById('mg-last-stat').textContent=Object.keys(LAST).length?'전주 '+Object.keys(LAST).length+'업체 인식 · 세부내역 이어받음 '+recs.filter(x=>x.memoPrev).length+'건':'';
+  MG={recs,tsv};document.getElementById('mg-prev-stat').textContent=hasP?'기준 리스트 '+Object.keys(P).length+'업체 인식(영남 소속)':'';document.getElementById('mg-mon-stat').textContent=hasM?'월별 '+Object.keys(M).length+'업체 인식 · 잔액 0(결제 완료) '+fullN+'업체':'';document.getElementById('mg-pay-stat').textContent=Object.keys(PAY.amt).length?'수금 '+Object.keys(PAY.amt).length+'업체 '+PAY.rows+'건 인식 (결제금액 합산)'+(PAY.warn.length?' · 소계 불일치 '+PAY.warn.length+'건: '+PAY.warn.slice(0,3).join(', '):''):'';document.getElementById('mg-last-stat').textContent=Object.keys(LAST).length?'전주 '+Object.keys(LAST).length+'업체 인식 · 세부내역 이어받음 '+recs.filter(x=>x.memoPrev&&!/^\[신규\]/.test(x.memoPrev)).length+'건':'';
   recs.forEach(x=>{const key=Object.keys(BR2REG).find(b=>x.br.startsWith(b));x.reg=key?REG_SHORT(BR2REG[key]):'';x.mon=x.months||'';x.due=x.cond||'';x.ins=x.insYN});
   MGR={list:recs,month:'',min:minV};mgRender();
-  const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 금주수금 O '+paidN+'업체(완납 '+fullN+', 결제 완료 세부내역 자동 '+recs.filter(x=>x.memo).length+'건'+(recs.filter(x=>x.memo&&!x.pd).length?' · 그중 최종입금일 없음 '+recs.filter(x=>x.memo&&!x.pd).length+'건(2번 월별에 해당 업체 행이 없거나 날짜를 못 읽음)':'')+')'+(hasE?' · 2-2 담당자별 '+Object.keys(E).length+'업체 기준 자료(1번 대신, 법조치 글자는 1번)':'')+(byLast?' · 4번(지난주 출력표) '+Object.keys(LAST).length+'업체 기준(기준금액 무관, '+(hasE?'2-2':'1번')+'에 없어 완납 처리 '+notInP+') + 신규 '+newN+'업체('+(hasE?'2-2':'1·2번')+'에만 있고 '+fmtWon(minV)+'원 이상)':'')+(exN?' · 제외 코드 '+exN+'건':'')+' · 영남 외 '+outYN+'건'+', 기준금액 미만 '+outMin+'건'+' 제외'}
+  const g=RECV_GROUPS.map(gp=>gp+' '+recs.filter(x=>x.grp===gp).length).join(', ');
+  document.getElementById('mg-stat').textContent='취합 완료: '+recs.length+'건 ('+g+')'+(hasP?' · 1번 기준 리스트 '+base.length+'업체':hasE?' · 1번 없음: 2-2 기준':' · 1번·2-2 없음: 3번(전주) 기준')+(newN?' + 2-2 신규 '+newN+'업체('+fmtWon(minV)+'원 이상)':'')+(cut?' · 청구년월 '+cut.slice(2,4)+'.'+cut.slice(4)+'까지':'')+' · 결제 완료 '+fullN+'업체 · 금주수금 O '+paidN+'업체'+(hasM?'':' · 2-1 없음: 잔액은 4번 수금으로만 계산')+(hasE?'':' · 2-2 없음: 연체개월·보증 등은 1번 값')+(exN?' · 제외 코드 '+exN+'건':'')+' · 영남 외 '+outYN+'건'+(outMin?', '+(hasP?'2-2에만 있고 ':'')+'기준금액 미만 '+outMin+'건':'')+' 제외'}
 (function(){const d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');/* 로컬(한국) 날짜 */const a=new Date(d);a.setDate(d.getDate()-6);document.getElementById('mg-to').value=f(d);document.getElementById('mg-from').value=f(a)})();
 document.getElementById('mg-run').onclick=mgBuild;document.getElementById('mg-xlsx').onclick=mgXlsx;
 document.querySelectorAll('.mg-reg').forEach(b=>b.onclick=()=>{MG_REG=b.dataset.reg;document.querySelectorAll('.mg-reg').forEach(x=>x.classList.toggle('on',x===b));if(MGR)mgRender()});
