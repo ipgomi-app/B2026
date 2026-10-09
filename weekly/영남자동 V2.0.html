@@ -1445,16 +1445,18 @@ addPasteGuides();document.querySelectorAll('.tabs button').forEach(b=>b.addEvent
 const TG_KEEP=/^(주|유|합|자|사|재|농|영|의|학|복|협|조|종)$/;
 function tgName(n){let t=String(n||'').replace(/（/g,'(').replace(/）/g,')').replace(/\[[^\]]*\]/g,'').replace(/\s*-\s*[^-()]*(공장|사업장|지점|센터|창고|물류|본사|지사|농장|매장)\s*$/,'');
   t=t.replace(/\s*\(([^()]*)\)/g,(m,x)=>TG_KEEP.test(x.trim())?m:'');return t.replace(/\s{2,}/g,' ').trim()||String(n||'').trim()}
-function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const hi=rows.findIndex(r=>r.some(c=>c==='구분')&&r.some(c=>c==='코드'));if(hi<0)return null;const g=rows[hi].indexOf('구분');
+function tgParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').trim()));const ns=c=>c.replace(/\s+/g,'');let hi=rows.findIndex(r=>r.some(c=>ns(c)==='구분')&&r.some(c=>ns(c)==='코드'));let g=hi>=0?rows[hi].findIndex(c=>ns(c)==='구분'):-1;let noHdr=false;
+  /* 머리글 없이 데이터만 붙인 경우: 6자리 코드 바로 왼쪽 칸(BIGS/타겟업체)을 구분 열로 봄 */
+  if(hi<0){const k=rows.findIndex(r=>r.some((c,i)=>isCode6(c)&&/^(BIGS|타겟업체|타겟)$/i.test(ns(r[i-1]||''))));if(k<0)return null;g=rows[k].findIndex((c,i)=>isCode6(rows[k][i+1]||'')&&/^(BIGS|타겟업체|타겟)$/i.test(ns(c)));hi=k-1;noHdr=true}
   const out=[];rows.slice(hi+1).forEach(r=>{const v=i=>r[g+i]||'';if(!isCode6(v(1)))return;const cont=v(16),quote=v(15),visit=v(14);
-    out.push({grp:v(0),code:v(1),name:tgName(v(2)),reg:v(3),br:v(4),emp:v(5),vals:[6,7,8,9,10,11,12,13].map(i=>i===8||i===11?v(i).replace(/\d{4,}/g,n=>Number(n).toLocaleString('en-US')):v(i)),/* 단가(25/2000/600)는 천단위 쉼표 → 25/2,000/600 */visit,quote,cont,stage:cont?'계약':quote?'견적':'방문',amt:num(v(17)),memo:v(18)})});return {rows:out}}
+    out.push({grp:v(0),code:v(1),name:tgName(v(2)),reg:v(3),br:v(4),emp:v(5),vals:[6,7,8,9,10,11,12,13].map(i=>i===8||i===11?v(i).replace(/\d{4,}/g,n=>Number(n).toLocaleString('en-US')):v(i)),/* 단가(25/2000/600)는 천단위 쉼표 → 25/2,000/600 */visit,quote,cont,stage:cont?'계약':quote?'견적':'방문',amt:num(v(17)),memo:v(18)})});return {rows:out,noHdr}}
 /* 표 종류: 공통 B~O(14칸) 뒤에 붙는 열. 세부사항은 남은 칸~Z 병합 */
 /* 원본 배치: 계약(110~) · 빈 1행 · 견적(120~) · 빈 2행 · 방문업체(131~, 단위 표기 없음) */
 const TG_KIND=[{k:'계약',t:'▣ 계약',ext:['최종 방문일','최종견적일'],grp:{t:'계약',sub:['계약년월','예상매출']},unit:1,gap:1},{k:'견적',t:'▣ 견적',ext:['최종 방문일','최종견적일','예상매출'],unit:1,gap:2},{k:'방문',t:'▣ 방문업체',ext:['최종 방문일'],gap:0}];
 const TG_REG={경북:0,부산:1,경남:2};let TG=null;
 function tgYM(d){const m=String(d||'').match(/(\d{2,4})\D+(\d{1,2})/);return m?String(m[1]).slice(-2)+'년 '+(+m[2])+'월':''}
 function tgBuild(){const src=document.getElementById('tg-src').value;const st=document.getElementById('tg-stat');if(!src.trim()){st.textContent='경쟁사 통합 리스트를 붙여넣으세요';return}
-  const P=tgParse(src);if(!P){st.textContent='인식 실패: 구분·코드 머리글 행이 필요합니다';return}let ALL=P.rows;
+  const P=tgParse(src);if(!P){st.textContent='인식 실패: 구분·코드 머리글 행이 없고, 구분(BIGS/타겟업체) 바로 오른쪽에 6자리 코드가 있는 행도 못 찾았습니다';return}let ALL=P.rows;
   /* 실적 선택일: 계약은 계약완료일(계약년월), 견적은 최종견적일, 방문은 최종방문일이 기간 안인 행만 */const fr=document.getElementById('tg-from').value.replace(/\D/g,''),to=document.getElementById('tg-to').value.replace(/\D/g,'');let outN=0;
   if(fr||to){const dOf=x=>String(x.stage==='계약'?x.cont:x.stage==='견적'?x.quote:x.visit).replace(/\D/g,'').slice(0,8);const n0=ALL.length;ALL=ALL.filter(x=>{const d=dOf(x);return d.length===8&&(!fr||d>=fr)&&(!to||d<=to)});outN=n0-ALL.length}
   TG={};const msg=[];
@@ -1511,7 +1513,7 @@ function tgXlsx(){const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=
 document.getElementById('tg-run').onclick=tgBuild;(function(){const d=new Date(),a=new Date(d);a.setDate(d.getDate()-6);const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');document.getElementById('tg-from').value=f(a);document.getElementById('tg-to').value=f(d)})();['tg-from','tg-to'].forEach(i=>document.getElementById(i).addEventListener('change',()=>{if(TG)tgBuild()}));document.getElementById('tg-dclr').onclick=()=>{document.getElementById('tg-from').value='';document.getElementById('tg-to').value='';if(TG)tgBuild()};
 document.getElementById('tg-save').onclick=()=>{if(!TG){alert('먼저 표 작성을 누르세요');return}tgSaveEdits(false)};
 document.getElementById('tg-xlsx').onclick=()=>{if(!TG)tgBuild();if(!TG)return;tgSaveEdits(true);document.getElementById('tg-stat').textContent='저장: '+tgXlsx()+(TG_DEL.size?' (삭제 체크 '+TG_DEL.size+'행 뺌)':'')};
-['input','change'].forEach(ev=>document.getElementById('tg-src').addEventListener(ev,()=>{TG_DEL.clear();TG_EDIT={};const v=document.getElementById('tg-src').value,s=document.getElementById('tg-src-stat');if(!v.trim()){s.textContent='';return}const P=tgParse(v);if(!P){s.textContent='인식 실패: 구분·코드 머리글이 필요합니다';return}const n=k=>P.rows.filter(x=>x.stage===k).length;s.textContent=P.rows.length+'행 인식 · 계약 '+n('계약')+' · 견적 '+n('견적')+' · 방문 '+n('방문')+' (기간 거르기 전)'}));
+['input','change'].forEach(ev=>document.getElementById('tg-src').addEventListener(ev,()=>{TG_DEL.clear();TG_EDIT={};const v=document.getElementById('tg-src').value,s=document.getElementById('tg-src-stat');if(!v.trim()){s.textContent='';return}const P=tgParse(v);if(!P){s.textContent='인식 실패: 구분·코드 머리글 행이 없고, 구분(BIGS/타겟업체) 바로 오른쪽에 6자리 코드가 있는 행도 못 찾았습니다. 머리글 2줄부터 끝까지 구분 열을 포함해 복사하세요';return}const n=k=>P.rows.filter(x=>x.stage===k).length;s.textContent=(P.noHdr?'머리글 없이 ':'')+P.rows.length+'행 인식 · 계약 '+n('계약')+' · 견적 '+n('견적')+' · 방문 '+n('방문')+' (기간 거르기 전)'}));
 document.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',e=>{if(e.isTrusted)delete t.dataset.fromData}));/* 직접 고친 칸은 데이터 탭 자료로 다시 덮지 않음 */
 </script>
 </body>
