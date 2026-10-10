@@ -26,7 +26,7 @@ const CONC = ARG.concurrency ? +ARG.concurrency : 6;
 const MODEL = typeof ARG.model === 'string' ? ARG.model : 'jev-latest';
 const KEY = process.env.TYPESAFE_API_KEY;
 const BASE = process.env.TYPESAFE_BASE_URL || 'https://api.typesafe.ai';
-const PROMPT_VER = 'kpp-v1';
+const PROMPT_VER = 'kpp-v2';
 
 // ───────── 분류 정의 (README "V2 분류 기준" 과 2026-10-09 결정 사항을 그대로 옮김) ─────────
 const CODES = ['1', '2', '3', 'M', '4', '5', '6', '7', '8', '9', 'X'];
@@ -44,8 +44,8 @@ const OPT = {
   '5': ['stock_count', 'STOCK COUNT / physical inventory at a customer (재고실사, 재고조사, 실사, 실재고, 실물확인, 유휴재고): counting pallets on site and comparing with records. Also when the activity name is 신규업체 재고실사. If the memo turns into an actual recovery request to a driver or a regular recovery agreement, pallet_recovery may apply instead; a plain stock check stays here.'],
   '6': ['records_and_system', 'In/out RECORDS and SYSTEM data work (수불, 전산): closing (마감), data correction (자료수정, 전산 수정, 데이터 입력, 오입력), DRS, actual destination (실착지), mapping/code merge (매핑, 코드, 중복코드, 병합), offset (상계), billing (청구, 거래명세서), re-receipt processing (재입고 처리/협의/청구), outbound omission tidy-up (출고누락, 출고정리), hand-written slips (수기전표), transfer of accounts (이관), deletion requests (삭제요청). Choose this when the main action is fixing or entering records, including 재고증가 memos whose action is 자료수정/데이터 입력.'],
   '7': ['claim', 'CUSTOMER CLAIM / complaint handling (클레임): quality defect (품질 불량), breakage compensation (파손, 변상), dispatch mistake or problem (배차 실수, 배차문제), late delivery (납품 지연), wrong delivery (오입고), problem-solving visit (문제해결). If present, this wins over operational categories.'],
-  '8': ['receivables_risk', 'RECEIVABLES and RISK management (채권): unpaid amounts (미수, 미수금), payment collection (입금, 독촉, 결제조건, 변제), guarantee insurance renewal/expiry without re-contract (보증보험 갱신·재가입·만기), collateral (담보), deposit (보증금), legal action on money (법적대응, 내용증명, 가처분, 지급명령, 회생, 연체), lost-pallet compensation (분실, 변상). If present with money words, this wins over operational categories.'],
-  '9': ['other_internal', 'OTHER / internal work: meetings (회의), training (교육), inspection (검수), reports and document hand-over (보고자료, 자료전달), handover of accounts between staff (담당 이관), checking a closed/ghost/vanished business (폐업, 사장업체, 무적) with no other action. Use when none of the specific categories applies.'],
+  '8': ['receivables_risk', 'RECEIVABLES and RISK management (채권): unpaid amounts (미수, 미수금), payment collection (입금, 독촉, 결제조건, 변제), guarantee insurance renewal/expiry without re-contract (보증보험 갱신·재가입·만기), collateral (담보), deposit (보증금), legal action on money (법적대응, 내용증명, 가처분, 지급명령, 회생, 연체). If present with money words, this wins over operational categories. Lost-pallet compensation alone (분실변상, 분실배상) is other_internal.'],
+  '9': ['other_internal', 'OTHER / internal work: meetings (회의), training (교육), inspection (검수), reports and document hand-over (보고자료, 자료전달), handover of accounts between staff (담당 이관), checking a closed/ghost/vanished business (폐업, 사장업체, 무적) with no other action, lost-pallet compensation talks (분실변상, 분실배상) unless the memo also has recovery, stock-count, receivables/legal or sales actions, internal training or site tours (교육 참석, 견학, 세미나). Use when none of the specific categories applies.'],
   'X': ['excluded_not_activity', 'NOT a work activity: vacation (휴가, 연차, 반차), a bare commute memo with no content (출근, 퇴근, 직출, 직퇴, 내근, 사무실, 복귀 only), an auto-generated quotation form (일자 : … 업체코드 : … 제목 : [..] 견적서), an attachment row, or empty text. If the memo has real work content after 직출/직퇴, classify that content instead.'],
 };
 const KEY2CODE = Object.fromEntries(Object.entries(OPT).map(([c, [k]]) => [k, c]));
