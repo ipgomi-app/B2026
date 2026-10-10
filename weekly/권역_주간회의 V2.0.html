@@ -135,7 +135,7 @@ table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb 
     <div>③ 성과 연결: 2번 칸의 계약·견적 자료(결재완료만, 결재중·대기·반려·상태 없음은 제외)를 <b>같은 담당자</b> + 업체코드(또는 괄호·주식회사 등을 뺀 업체명이 완전히 같은 업체)로 연결합니다. 영업→견적·계약 = 영업활동 업체 중 어느 활동이든 30일 안(계약은 7일 전부터)에 견적·계약이 있는 업체, 견적→계약 = 견적 업체 중 이후 신규계약이 있는 업체, 계약 근거일지 = 신규계약 중 계약 전 30일 안에 같은 업체 일지가 있는 건. 단가인상은 같은 담당자·같은 날·같은 내용의 일괄 품의를 묶어 "(n건 일괄)"로 표시합니다. 연결은 붙여넣은 자료 전체에서 찾고, 표에는 선택한 기간의 활동·계약·견적만 셉니다. 금액은 천원입니다.</div>
     <div>기록 품질: 반복문구 = 같은 담당자가 같은 문장을 3회 이상 쓴 활동 비율, 수량기재 = 매·대·박스·롤 수량이 있는 비율, 결과기재 = 결과 태그가 있는 비율.</div>
     <div>신호(사실만 표시, 판단은 권역장): 쏠림(한 분류 60% 이상, 지시 활동 주 제외, 8건 이상), 영업 연결률 30% 미만(영업 업체 10곳 이상, 30일 기준), 견적→계약 10% 이하(견적 업체 10곳 이상), 기록 누락(신규계약은 있는데 30일 안 일지 없음), 반복 업체(같은 업체·같은 분류 3주 이상, 결과 없음), 형식문구 반복 50% 이상(20건 이상), 견적 중복(같은 업체·사업 2회 이상). 쏠림·연결률·반복은 4주 누적·월간·전체에서만 계산하고 주간은 추이만 봅니다. 건수는 업무량이 아닙니다(짧은 확인 방문 1건과 협상 1건은 같은 1건).</div>
-    <div>지시 활동 주: 한 주에 담당자 40% 이상(4명 이상)이 같은 분류에 60% 넘게 몰리면 '지시 활동 주(추정)'로 표시하고 개인 쏠림에서 뺍니다. 주차별 표의 '지시' 체크로 직접 켜고 끌 수 있습니다(이 브라우저에 기억).</div>
+    <div>지시 활동 주: 한 주에 담당자 40% 이상(4명 이상)이 같은 분류에 60% 넘게 몰리면 '지시 활동 주(추정)'로 표시하고 개인 쏠림에서 뺍니다.</div>
     <div>키워드: 검색칸에 넣으면 표②(키워드 건수·업체 열 추가, 분류 건수도 키워드에 맞는 활동만), 관련 업체 목록, 상세가 그 키워드로 좁혀집니다. 업체명·코드·활동명·태그·분류명·내용에서 찾고, 띄어쓰기는 모두 포함(AND), 쉼표는 하나라도(OR)입니다. 표①③과 카드는 바뀌지 않습니다.</div>
     <div>권역: 기본은 부산권역 소속(지점 명단 기준, 명단에 없으면 주소로 판정)만 보입니다. '전체'로 바꾸면 영남 3개 권역이 모두 나오고 본부 합계 행이 붙습니다. 선택은 이 브라우저에 기억됩니다.</div>
     <div>기간: 주간은 선택한 주(금~목), 4주 누적은 선택한 주를 포함한 직전 4주, 월간은 선택한 주의 금요일이 속한 달, 전체는 붙여넣은 전부. '기간 무시'를 켜면 주간 대신 전체를 봅니다. 표①은 V1과 같이 선택한 주(또는 기간 무시)를 따릅니다.</div>
@@ -1130,12 +1130,6 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     if(M.noDiary.length)s.push('기록 누락: 신규계약 '+M.N.length+'건 중 '+M.noDiary.length+'건은 30일 안 업무일지 없음 ('+M.noDiary.slice(0,3).map(c=>c.name).join(', ')+(M.noDiary.length>3?' 외':'')+')');
     if(s.length)sig.push('<tr><td class="c" style="font-weight:700">'+esc(e)+'</td><td class="txt">'+s.map(x=>'<div>· '+esc(x)+'</div>').join('')+'</td></tr>')});
   const secSig='<details open><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:10px 0 4px">신호 '+sig.length+'명 <span class="hint" style="margin:0">(사실 표시만, 판단은 권역장 · 쏠림·연결률·반복은 4주 누적/월간/전체에서만 계산)</span></summary>'+(sig.length?'<table class="xl" style="width:900px"><colgroup><col style="width:80px"><col></colgroup><tr><td class="hg">담당자</td><td class="hg">신호</td></tr>'+sig.join('')+'</table>':'<div class="hint">표시할 신호가 없습니다</div>')+'</details>';
-  /* 주차별 추이 + 지시 주 토글 */
-  let weeks=[...new Set(V2U.map(u=>u.wk))].sort();if(P.p!=='all'){const wk=curWeek();if(wk){const end=wk.from;weeks=weeks.filter(w=>w<=end).slice(-8)}}
-  const CWK=curWeek();const trH='<tr><td class="hg">담당자</td>'+weeks.map(w=>'<td class="hg">'+(CWK&&w===CWK.from&&CWK.days!==7?CWK.text:fmtMD(v2Date(w))+'주')+'<br><label style="font-weight:400"><input type="checkbox" class="v2camp" data-wk="'+w+'"'+(camp.set[w]?' checked':'')+'> 지시</label></td>').join('')+'</tr>';
-  const trR=emps.map(e=>'<tr><td class="c" style="font-weight:700">'+esc(e)+'</td>'+weeks.map(w=>{const L=V2U.filter(u=>u.emp===e&&u.wk===w&&u.cat!=='X'&&u.cat!=='?');if(!L.length)return '<td></td>';const c={};L.forEach(u=>c[u.cat]=(c[u.cat]||0)+1);const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];const sh=Math.round(100*top[1]/L.length);
-    return '<td class="c" style="'+(sh>=60&&!camp.set[w]?'background:#fde2e2;':camp.set[w]?'background:#eee;':'')+'" title="'+esc(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>V2N[k]+' '+v).join(', '))+'">'+esc(V2N[top[0]])+'<br>'+sh+'% / '+L.length+'건</td>'}).join('')+'</tr>').join('');
-  const secTr='<details><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:10px 0 4px">주차별 최다 분류 <span class="hint" style="margin:0">(담당자가 그 주에 가장 많이 한 활동과 그 비율/활동수 · 60% 이상은 분홍, 지시 활동 주는 회색 · 칸에 마우스를 올리면 분류별 건수)</span></summary><table class="xl sumt" style="width:'+(80+weeks.length*96)+'px"><colgroup><col style="width:80px">'+weeks.map(()=>'<col style="width:96px">').join('')+'</colgroup>'+trH+trR+'</table></details>';
   /* 상세 */
   const D=units.filter(u=>f?true:u.cat!=='X').sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.emp},{reg:b.reg,br:b.br,emp:b.emp})||empIdx(a.emp)-empIdx(b.emp)||a.key.localeCompare(b.key));const CAP=1500;
   let det='<h3 class="det-h">활동 상세 · '+esc(P.label)+ft+(KW?' <span class="tag" style="background:#fff2cc">키워드: '+esc(kwTxt)+'</span>':'')+' <span class="hint" style="margin:0">'+D.length+'건'+(D.length>CAP?' 중 '+CAP+'건 표시 (카드나 기간으로 좁히세요)':'')+'</span></h3>';
@@ -1150,7 +1144,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
         const sep=pe!==null&&pe!==u.emp?' class="empb"':'';pe=u.emp;const a2=actShort(act);
         return '<tr'+sep+'><td class="c">'+u.date.m+'/'+u.date.d+'</td><td class="c" style="font-weight:700">'+esc(u.emp)+'</td><td class="c"><span class="tag" style="white-space:nowrap" title="'+esc(u.dcode+' '+u.typ+' · 근거: '+u.src)+'">'+esc(V2N[u.cat])+'</span></td><td class="c">'+tags.map(t=>'<span class="tag" style="margin:1px;background:#f3f4f6">'+esc(t)+'</span>').join('')+'</td><td class="c">'+esc(u.code)+'</td><td class="txt" title="'+esc(u.name)+'">'+esc(nmShort(u.name))+'</td><td class="txt" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(act)+'">'+esc(a2)+'</td><td class="txt" title="'+esc(u.text)+'">'+esc(body.length>220?body.slice(0,220)+'…':body)+'</td></tr>'}).join('')+'</table></div></details>'})}
   /* 신호·주차별 표는 기간이 '전체'일 때만 표시 */
-  return {sum:(P.p==='all'?[sec2,secKw,sec3,secSig,secTr]:[sec2,secKw,sec3]).filter(Boolean).join('<div style="height:12px"></div>'),detail:det}}
+  return {sum:(P.p==='all'?[sec2,secKw,sec3,secSig]:[sec2,secKw,sec3]).filter(Boolean).join('<div style="height:12px"></div>'),detail:det}}
 /* 목표 진척도(3번)에서 새 분류명을 쓰면 V2 활동으로 센다 */
 function v2GoalKey(t){const M=[['입고미회수','M'],['신규업체확인','3'],['신규·전환영업','1'],['신규전환영업','1'],['기존확대','2'],['수불·전산','6'],['수불전산','6'],['채권','8'],['기타업무','9'],['영업활동','영업'],['운영활동','운영'],['관리활동','관리'],['클레임','7']];for(const [n,k] of M)if(t.includes(n))return {k:'v2:'+k,lbl:'V2 '+(V2N[k]||k)};return null}
 function v2GoalCount(sel,f){const wk=curWeek();const isG=f==='영업'||f==='운영'||f==='관리';const emp=sel.emp?String(sel.emp).replace(/\d+$/,''):'';
@@ -1220,7 +1214,6 @@ function render(){if(!OUT)return;const rows=visible();
   const sec1='<div style="font-weight:700;color:var(--navy);margin:4px 0">① 사업별 계약·견적 (금액: 천원)'+ft+'</div><table class="xl sumt"'+tw1+'>'+cg1+head1+body(S1.T,S1.flags,CB)+'</table>',
     V2R=v2Render(selCat,emp,keyH,body,hg,ft);
   $('sum').innerHTML=only<0?'':only===1?sec1:only===2?V2R.sum:[sec1,V2R.sum].join('<div style="height:12px"></div>');
-  $('sum').querySelectorAll('input.v2camp').forEach(el=>el.onchange=()=>{v2CampSave(el.dataset.wk,el.checked);render()});
   /* 상세: 영업관리·계약견적 → 날짜·담당자·분류·활동·코드·업체·예상매출·내용, 운영관리 → 예상매출 없이 같은 표 */
   const secQ=!!selCat&&!/^V2:/.test(selCat);/* 표① 항목·계약구분 선택 시 계약·견적 상세만 */
   const brGroups=list=>{const g={};list.forEach(x=>{const k=x.r.reg+'|'+x.r.br;(g[k]=g[k]||[]).push(x)});return Object.keys(g).sort((a,b)=>{const [ar,ab]=a.split('|'),[br_,bb]=b.split('|');return sortKey({reg:ar,br:ab},{reg:br_,br:bb})}).map(k=>({reg:k.split('|')[0],br:k.split('|')[1],list:g[k]}))};
