@@ -128,7 +128,7 @@ table.xl.dett tr.empb td{border-top:2px solid #5b6b80}table.xl.dett.one tr.grpb 
   <details id="review" class="hint" style="display:none;margin:0 0 12px"></details>
   <details class="hint" style="margin:0 0 12px"><summary style="cursor:pointer">분류·집계 기준 보기 (V2.0)</summary>
     <div>① 사업별 계약·견적은 붙여넣은 계약·견적 자료(결재완료)만 집계합니다. 결재완료 행만 쓰며(결재중·대기·임시저장·반려·상태 없음은 제외하고 건수를 표시), 구분·날짜·담당·코드·업체·사업·금액·내용이 모두 같은 행은 어느 칸에 붙였든 한 번만 셉니다.</div>
-    <div>②③·상세는 업무일지를 <b>활동 1건 = 주 분류 1개</b>로 다시 분류합니다. 활동 1건은 업무일지 상세 1행입니다. 견적 연동 자동일지("일자 : … 업체코드 : … 제목 : [..] 견적서"), 휴가, 내용이 짧은 직출·직퇴 메모(직출·직퇴 표식을 뗀 내용이 20자 미만; 내용이 있으면 그 내용으로 분류), 상세 없는 DRS일괄작성, 첨부파일 행, 담당자 이민승은 제외합니다(휴가·직출은 '제외' 칸에 셉니다).</div>
+    <div>②③·상세는 업무일지를 <b>활동 1건 = 주 분류 1개</b>로 다시 분류합니다. 활동 1건은 업무일지 상세 1행입니다. 견적 연동 자동일지("일자 : … 업체코드 : … 제목 : [..] 견적서"), 휴가, 상세 없는 DRS일괄작성, 첨부파일 행, 담당자 이민승은 제외합니다(휴가는 '제외' 칸에 셉니다). 업무 내용 없이 직출·직퇴 표식(시각·지점명·출근 등)만 있는 기록은 기타의 '직출·직퇴' 칸에 따로 세고 활동명에 일지 시각을 붙입니다(예: 직퇴 18:04). 직출·직퇴 뒤에 업무 내용이 있으면 그 내용으로 분류합니다. 직출·직퇴도 활동수에는 넣지 않습니다.</div>
     <div>주 분류 10개 — 영업: 신규·전환영업 / 기존확대·손익 · 운영: 신규업체확인 / 입고미회수 / 회수 / 재고실사 / 수불·전산 / 클레임 · 관리: 채권·리스크 / 기타업무. 판정 순서는 ⑴ 엔지니어링 방문양식 → 신규·전환영업, ⑵ 담당자가 쓴 활동명("1. 활동명 2. …", "* 활동명", 시간기록 뒤 문구)의 키워드, ⑶ 상세구분 코드 기본값(입고미회수·미입고확인 → 입고미회수, 공파렛트확인 → 회수, 수불관리·실착지오류·사장업체 → 수불·전산, 신규업체 → 신규업체확인, 재고실사 → 재고실사, 미수금/보증·법적대응 → 채권·리스크, 산업자재유통·SCM·물류장비·RRPP·엔지니어링·경쟁사·신규계약 → 신규·전환영업, 재계약협의·단가협의 → 기존확대·손익), ⑷ 본문의 강한 신호(미수금·지급명령 / 견적 제출·제안·영업·계약 협의 / 단가인상·재계약)로 기본값 변경, ⑸ 나머지 본문 키워드, ⑹ 판정 불가 → 확인필요. "영업지원 입고미회수"의 영업지원은 영업이 아닙니다.</div>
     <div>태그: 사업(PPS/산업자재/SCM/지게차/RRPP/엔지니어링), 대상(신규업체/계약처/실수요처/경쟁사/건설현장), 결과(회수완료·회수예정·회수불가·견적·계약·자료수정·입금·약정), 복합(영업·운영·관리 신호가 2개 이상), 비대면(유선·카톡·문자·메일). 태그는 건수에 중복으로 세지 않습니다. 경쟁사·엔지니어링·산업자재는 활동분류가 아니라 태그입니다.</div>
     <div>중복 제거: 같은 일지번호의 같은 문장은 1건. 같은 날·같은 담당자·같은 업체·같은 주 분류의 상세 여러 행은 1건으로 세되 내용과 결과 태그는 합쳐 보존합니다(상세에 "‖"로 이어 표시). 엑셀 셀 안의 줄바꿈은 앞 줄에 이어 붙이고, 부모 일지가 없는 상세 행은 제외합니다. 본문 중간의 "연차·휴가" 언급(상대방 부재)은 제외하지 않습니다.</div>
@@ -869,10 +869,10 @@ const catMatch=(r,f)=>!f||/^V2:/.test(f)||(GRP[f]?r.cats.some(c=>GRP[f].includes
 function visible(){const f=$('catf').value;return OUT.filter(r=>catMatch(r,f))}
 function uniqueFirmCount(list){return new Set(list.filter(r=>!r.q).map(r=>String(r.d.code||'').trim()||String(r.d.name||'').replace(/\s+/g,'').trim()||r.d.num)).size}
 /* ===== V2 활동분류 엔진: 업무일지 상세 1행 = 활동 1건 = 주 분류 1개 + 태그(사업·대상·결과) ===== */
-const V2N={'1':'신규·전환영업','2':'기존확대·손익','3':'신규업체확인','M':'입고미회수','4':'회수','5':'재고실사','6':'수불·전산','7':'클레임','8':'채권·리스크','9':'기타업무','X':'제외','?':'확인필요'};
+const V2N={'1':'신규·전환영업','2':'기존확대·손익','3':'신규업체확인','M':'입고미회수','4':'회수','5':'재고실사','6':'수불·전산','7':'클레임','8':'채권·리스크','9':'기타업무','O':'직출·직퇴','X':'제외','?':'확인필요'};
 const V2G={'1':'영업','2':'영업','3':'운영','M':'운영','4':'운영','5':'운영','6':'운영','7':'운영','8':'관리','9':'관리'};
 const V2K=['1','2','3','M','4','5','6','7','8','9'];
-const V2_FILTERS=[['V2:영업','영업 전체'],['V2:운영','운영 전체'],['V2:관리','관리 전체'],...V2K.map(k=>['V2:'+k,V2N[k]]),['V2:X','제외'],['V2:?','확인필요']];
+const V2_FILTERS=[['V2:영업','영업 전체'],['V2:운영','운영 전체'],['V2:관리','관리 전체'],...V2K.map(k=>['V2:'+k,V2N[k]]),['V2:O','직출·직퇴'],['V2:X','제외'],['V2:?','확인필요']];
 const V2_ENG=/프로젝트\s*구분\s*:\s*엔지니어링/;
 /* ───────── 주 분류 엔진 (4단계) ─────────
    ① 양식: 경쟁사 등록·LPS 견적/계약·엔지니어링 자동일지는 양식만으로 정한다
@@ -891,8 +891,8 @@ const V2_SW='(?<!영업지원)(?<!영업지원 )영업(?!\\s*지원)';
 const V2_RULES=[['X',/휴가|연차|반차|직출|직퇴|병가|경조/],
  ['8',/미수|입금|채권|보증(?!\s*보험)|법적|내용증명|지급명령|담보|법무|가처분|강제\s*집행|변제|파산|압류|결제\s*(기일|조건)/],
  ['7',/클레임|파손\s*(클레임|변상|보상|다수)|품질|불량|배차\s*(간\s*)?(문제|실수|오류)|투입\s*(지연|문제|불가)|결차\s*(발생|문제)|오염|납품\s*지연|오입고|오배송/],
- ['2',/재계약|단가\s*(인상|협의|인하|조정)|연장|증차|추가\s*(계약|투입|발주|사용|품목)|계약\s*(종료|승계)|해지/],
- ['1',new RegExp(V2_SW+'|견적|제안|신규\\s*계약|경쟁사|전환|타겟|니즈|계약\\s*(협의|진행|체결)|계약서|동향\\s*파악|샘플|SSS|엔지니어링|자동화|지게차|산업자재|SCM|RRPP|운송|카달로그|소개|재영업|이탈|점유율|BIGs|빅스|정보\\s*조사|홍보')],
+ ['2',/재계약|단가\s*(인상|협의|인하|조정)|연장|증차|추가\s*(계약|투입|발주|사용|품목)|계약\s*(종료|승계)|해지(?!점)/],
+ ['1',new RegExp(V2_SW+'|견적|제안|신규\\s*계약(?!\\s*처)|경쟁사|전환|타겟|니즈|계약\\s*(협의|진행|체결)|계약서|동향\\s*파악|샘플|SSS|엔지니어링|자동화|지게차|산업자재|SCM|RRPP|운송|카달로그|소개|재영업|이탈|점유율|BIGs|빅스|정보\\s*조사|홍보')],
  ['6',/수불|마감|출고\s*(정리|내역|누락|자료|통보)|자료\s*(수정|수령|정리)|DRS|실착|매핑|전표|청구|코드|중복|상계|전산|WPPS|등록|거래명세서|데이터/],
  ['5',/재고\s*(실사|조사)|실사|유휴\s*재고|실물\s*재고|실재고/],
  ['3',/신규\s*(업체|현장|공사|건설|코드)/],
@@ -915,12 +915,12 @@ const V2_LEGAL=/법무\s*(팀|파트)|법\s*조치|법적\s*(조치|대응)|내�
 const V2_ACTS=[
  ['4',/(기사|회수프로|자산관리\S{0,4}|회수직)(님)?(에게|께)?\s*(내용\s*)?(회수\s*|방문\s*)?(요청|전달|지시|진행|공유)|프로(님)?(에게|께)\s*(회수|방문)\s*(요청|전달)|(?<!지속)(?<!계속\s)회수\s*(요청|가능|예정|조치|진행|약정|협의|협조|완료|지시|위임|방문|대응|부진|비협조|진행함|해\s*주)|전량\s*회수|회수\s*율|재고\s*증가\s*업체|회수\s*(관리\s*)?위임|약정\s*(체결|날인)|반납\s*(조치|요청|예정)|회수\s*(요청\s*)?등록/],
  ['6',/자료\s*수정(\s*(작성|지시|완료|요청|이관))?|상계\s*(처리|정리|완료|누락)|DRS|전산\s*(수정|등록|입력)|(데이터|DATA|Data)\s*(입력|수정)|재입고(?!\s*(없이|수량\s*없음|이력\s*없))(\s*(협의|요청|처리|청구|완료))?|삭제\s*요청|중복\s*코드\s*(정리|병합|변경|신청)|오입력|거래\s*명세서(\s*(작성|전달|송부))?|마감\s*자료|수정\s*처리\s*요청|출고\s*(누락|정리)|입력\s*(요청|재요청)|재입고\s*(처리|청구)|이관\s*(작성|처리|진행|협의|요청)|코드\s*(정리|병합|생성)|수기\s*전표|전표\s*전달|실착지?\s*(수정|변경|정리)|자료\s*정리/],
- ['1',/견적(\s*(제출|진행|제안|전달|발송|요청|검토|안내))?|제안|전환\s*(검토|협의|여부|요청)|계약\s*(진행|체결)(\s*협의)?|신규\s*계약|경쟁사\s*(현황|전환|사용\s*확인|정보)|정보\s*조사|물동량\s*[:]?\s*\d|예상\s*매출|재영업|PPS\s*(도입|제안|전환)|홍보|카달로그|샘플\s*(수령|전달|제공)/],
+ ['1',/견적(\s*(제출|진행|제안|전달|발송|요청|검토|안내))?|제안|전환\s*(검토|협의|여부|요청)|계약\s*(진행|체결)(\s*협의)?|신규\s*계약(?!\s*처)|경쟁사\s*(현황|전환|사용\s*확인|정보)|정보\s*조사|물동량\s*[:]?\s*\d|예상\s*매출|재영업|PPS\s*(도입|제안|전환)|홍보|카달로그|샘플\s*(수령|전달|제공)/],
  ['2',/단가\s*(인상|인하|조정|협의)|재계약|계약\s*(기간\s*)?갱신|계약\s*(종료|승계|해지)|추가\s*(사용|발주|품목|투입|아이템|계약|전환)|증차|(?<!신규\s?)발주\s*(협의|요청|진행|확인)|발주량\s*증가|MOQ|납기|임대\s*(유형|문의)|청구\s*금액\s*(감소|증가)|손익|점유율\s*확대|병행\s*사용|영업\s*확대|규격\s*추가|재출고\s*(개선|협의)/],
- ['8',/보증\s*보험.{0,15}(갱신|가입|만기|해지|재가입|갱싱)|회생|연체|소\s*제기|채권|내용\s*증명|법\s*조치|법무\s*(팀|파트)\s*(에|과|와|측)?\s*.{0,10}(검토|공유|조치|협의|요청)|결제\s*(기일|조건)|보증금\s*(반환|입금)|미수금|입금\s*(요청|독촉|확인)|변제|지급\s*명령|가처분|압류|분실\s*변상/],
+ ['8',/보증\s*보험.{0,15}(갱신|가입|만기|해지|재가입|갱싱)|회생|연체|소\s*제기|채권|내용\s*증명|법\s*조치|법무\s*(팀|파트)\s*(에|과|와|측)?\s*.{0,10}(검토|공유|조치|협의|요청)|결제\s*(기일|조건)|보증금\s*(반환|입금)|미수금|입금\s*(요청|독촉|확인)|CMS\s*(계좌|출금|이체)?\s*(변경|등록|신청|해지)|자동\s*이체|(결제|출금)\s*계좌|변제|지급\s*명령|가처분|압류|분실\s*변상/],
  ['7',/배차\s*(간\s*)?(실수|오류|문제)|납품\s*지연|오입고|오배송|\d+\s*매\s*누락\s*발생|클레임|파손\s*(클레임|변상|보상)|품질\s*(문제|불량)/],
  ['5',/재고\s*(실사|조사)(\s*(실시|진행|방문|결과|일정))?|실사\s*재고|유휴\s*재고\s*(확인|조사)/],
- ['3',/신규\s*(업체|코드|현장)\s*(확인|점검|생성|등록)/],
+ ['3',/신규\s*(업체|코드|현장)\s*(확인|점검|생성|등록)|신규\s*(건자재|건설)\s*(현장\s*)?(재고\s*)?(확인|점검|방문)/],
  ['M',/입고\s*미회수|입고미\s*점검/],
  ['9',/보고\s*자료|실적\s*(분석|목표)|프로토콜|이슈\s*정리|담당자?\s*이관\s*처리|사장\s*업체|폐업\s*(확인|업체)|무적|대상\s*제외\s*요청/]];
 /* 행동 우선: 회수·수불처럼 결과가 갈리는 분류끼리는 '뒤에 나온 것', 영업·채권 같은 성격 분류는 '있으면' 이긴다 */
@@ -931,18 +931,18 @@ const V2_LABRULES=[['X',/휴가|연차|반차|병가|경조/],
  ['5',/재고\s*(실사|조사)|^실사|실사\s*(방문|대상|진행)/],
  ['M',/입고\s*미회수|입고미\s*점검|미회수\s*(업체|확인)/],
  ['3',/^(신규\s*(업체|코드|현장|건자재\s*현장|건설\s*현장|공사))|신규\s*(업체|코드|현장)\s*(확인|점검|회수\s*협의)/],
- ['8',/미수금|미수\s*채권|채권|보증금|보증\s*보험|변제|압류|지급\s*명령|가처분|결제/],
+ ['8',/미수금|미수\s*채권|채권|보증금|보증\s*보험|변제|압류|지급\s*명령|가처분|결제|CMS|자동\s*이체/],
  ['7',/클레임|파손\s*(클레임|변상)|배차\s*(문제|실수|오류)|납품\s*지연|오입고|오배송|누락\s*발생/],
  ['2',/재계약|단가\s*(인상|인하|조정|협의)|계약\s*(종료|승계|해지)|추가\s*(사용|발주|품목|투입|계약)|증차|결제\s*(기일|조건)/],
- ['1',new RegExp('견적|제안|'+V2_SW+'|경쟁사|전환|신규\\s*계약|계약\\s*(협의|진행|체결)|계약서|샘플|엔지니어링|자동화|지게차|산업자재|SCM|RRPP|운송|점유율|재영업|BIGs|빅스|정보\\s*조사|니즈|타겟|홍보|소개|카달로그|납품|입찰|도급')],
+ ['1',new RegExp('견적|제안|'+V2_SW+'|경쟁사|전환|신규\\s*계약(?!\\s*처)|계약\\s*(협의|진행|체결)|계약서|샘플|엔지니어링|자동화|지게차|산업자재|SCM|RRPP|운송|점유율|재영업|BIGs|빅스|정보\\s*조사|니즈|타겟|홍보|소개|카달로그|납품|입찰|도급')],
  ['6',/실착|자료\s*수정|DRS|중복\s*코드|상계|출고\s*(정리|누락)|마감|전표|청구|등록|오입력|이관|거래명세서|코드\s*(및|정리|확인)|주소지/],
  ['9',/사장\s*업체|폐업|무적|회의|교육|미팅|보고|자료\s*(작성|전달)|검수|프로토콜|이슈|업무\s*정리|담당\s*이관|내근|출근/]];
 /* 두루뭉술한 활동명: 본문 행동으로 정한다 (기본값은 활동명에 따라 회수/수불/재고실사) */
-const V2_LABGEN=/^(수불|실물|현장|방문|업체|담당자|재고\s*(증가|증감)|누계|\d+매|거래처|공\s*파렛트|회수|유휴|타용도|런업체|대형|문제|운용|운영|정보|기타)/;
-function v2Main(code,typ,t){if(V2_OUT.test(t)&&!/휴가|연차|반차/.test(t)){const c=v2Clean(t);if(c.replace(/\s/g,'').length<4)return ['X','out'];const r=v2MainCore(code,typ,c,true);return r[0]==='?'?['9','out']:r}return v2MainCore(code,typ,t,false)}
+const V2_LABGEN=/^(영업\s*(방문|활동)\s*$|수불|실물|현장|방문|업체|담당자|재고\s*(증가|증감)|누계|\d+매|거래처|공\s*파렛트|회수|유휴|타용도|런업체|대형|문제|운용|운영|정보|기타)/;
+function v2Main(code,typ,t){if(V2_OUT.test(t)&&!/휴가|연차|반차/.test(t)){const c=v2Clean(t),c0=c.replace(/\d{1,2}:\d{2}(:\d{2})?/g,'').trim();if(c0.replace(/\s/g,'').length<4||/^[가-힣\s]{0,10}(지점|사무실|본사|본부|센터|자택)\s*(출근|도착|복귀)?$/.test(c0))return ['O','out'];const r=v2MainCore(code,typ,c,true);return r[0]==='?'||r[0]==='X'?['O','out']:r}return v2MainCore(code,typ,t,false)}
 function v2MainCore(code,typ,t,skipX){t=String(t||'');const body=t.replace(/^\s*\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.?/,'').trim();
   if(!body.replace(/[\s.\-]/g,''))return ['X','empty'];
-  {const b1=v2Clean(body).replace(/\s+/g,' ');if(/^(출근|퇴근|내근\s*업무?|사무실(\s*근무)?|복귀|이동|업무|수불관리|업무일지)$/.test(b1)||(b1.length<=14&&/출근|퇴근|사무실|복귀|현황\s*확인\s*후?$/.test(b1)&&!/회수|수불|재고|입고|견적|계약|미수|실물|현장|공파|마감|자료|파렛트|업체|납품|회의|교육|미팅/.test(b1)))return ['X','trivial']}
+  {const b1=v2Clean(body).replace(/\s+/g,' ');if(/^(출근|퇴근|내근\s*업무?|사무실(\s*근무)?|복귀|이동|업무|수불관리|업무일지|[가-힣]{2,6}(지점|사무실|본사|센터))$/.test(b1)||(b1.length<=14&&/출근|퇴근|사무실|복귀|현황\s*확인\s*후?$/.test(b1)&&!/회수|수불|재고|입고|견적|계약|미수|실물|현장|공파|마감|자료|파렛트|업체|납품|회의|교육|미팅/.test(b1)))return ['X','trivial']}
   /* ① 양식 */
   if(V2_ENG.test(t))return ['1','eng'];
   if(/경쟁사\s*구분\s*:/.test(t)){if(/\((폐업|휴업|이전)\)|비고\s*:\s*폐업(?!\s*미확인)/.test(t))return ['9','form'];const b=t.replace(/제목\s*:[^\n]*?(?=경쟁사\s*구분)/,'');return [/단가\s*(인상|조정)|재계약/.test(b)?'2':'1','form']}
@@ -950,10 +950,12 @@ function v2MainCore(code,typ,t,skipX){t=String(t||'');const body=t.replace(/^\s*
   if(/BIGs|BIGS|Bigs|빅스/.test(body))return ['1','bigs'];/* BIGs 대상업체 조사는 영업 프로그램 */
   if(/보증\s*보험.{0,15}(갱신|재가입|갱싱|만기)/.test(body)&&!/계약\s*진행|신규\s*계약|재계약|단가/.test(body))return ['8','text'];
   if(/계약\s*승계/.test(body)&&!/미수|채권/.test(body))return ['2','text'];
+  if(/회생\s*(업체|절차|신청|개시|채권|중)|파산/.test(body)&&!/견적|계약\s*(체결|진행)|제안/.test(body))return ['8','text'];/* 회생·파산 업체는 채권 */
+  if(/교육\s*(참석|이수|수강)|견학|세미나|워크숍|설명회|사업\s*교육|(엔지니어링|MHE|mhe|자동화)[^.,\n]{0,12}교육/.test(body)&&!/견적\s*(제출|전달|발송|요청|진행)|제안|계약\s*(체결|진행|협의)|샘플/.test(body))return ['9','edu'];/* 사내 교육·견학 참석은 기타업무 */
   const base=V2_TYPE[code]||(V2_SALES.has(code)?'1':'');const ops=/^[3456M9]$/.test(base),sales=V2_SALES.has(code);
   const A=v2Acts(body),has=k=>A[k]!==undefined;
   const g2=V2_G2.test(body)||/추가\s*(사용|발주|품목|아이템|계약|전환)|계약\s*(종료|승계)|발주량|손익|청구\s*금액|점유율\s*확대|영업\s*확대|임대\s*(유형|문의)|규격\s*추가|재출고\s*(협의|개선)|저단가|기존\s*(발주|거래|계약|사용)/.test(body);
-  const conv=/(KPP|당사)\s*(로\s*)?전환(?!\s*의사)|전환\s*(검토|협의|요청|영업|예정|할테니)|경쟁사\s*전환(?!\s*이후)|타겟|정보\s*조사|신규\s*계약|이탈|재영업|계약\s*(진행\s*)?협의|영업\s*대상|매출\s*발생\s*예상|소개/.test(body);/* 경쟁사 전환·신규 영업 신호: 기존확대보다 우선 */
+  const conv=/(KPP|당사)\s*(로\s*)?전환(?!\s*의사)|전환\s*(검토|협의|요청|영업|예정|할테니)|경쟁사\s*전환(?!\s*이후)|타겟|정보\s*조사|신규\s*계약(?!\s*처)|이탈|재영업|계약\s*(진행\s*)?협의|영업\s*대상|매출\s*발생\s*예상|소개/.test(body);/* 경쟁사 전환·신규 영업 신호: 기존확대보다 우선 */
   const strongSales=V2_G1.test(body)&&/견적|계약\s*(체결|진행)|제안/.test(body)&&!/견적\s*(없|불가)/.test(body);
   const done4=/(기사|회수프로|회수직|자산관리\S{0,4})[^,.\n]{0,8}(방문\s*)?(회수\s*)?(요청|전달)\s*(완료|함|전달|안내)?(?!\s*예정)|프로(님)?(에게|께)\s*(회수|방문)\s*(요청|전달)|회수\s*(요청|지시|전달|안내)\s*(완료|함|전달|안내)|회수\s*진행\s*중|회수\s*진행하기로|정기\s*회수|정기적으로\s*회수/.test(body);
   /* ② 활동명 */
@@ -973,10 +975,10 @@ function v2MainCore(code,typ,t,skipX){t=String(t||'');const body=t.replace(/^\s*
   if(a&&/재고\s*(증가|증감)|누계\s*증감/.test(a)&&!/수불/.test(a)){if(/실사|조사/.test(a))return ['5','label'];return [V2_A6S.test(body)||/(데이터|DATA)\s*입력|출고\s*누락|중복\s*입력|오입력|수불\s*확인|재입고/.test(body)?'6':'4','label']}
   if(a&&/미방문|IO?T|공\s*파렛트|^회수|파렛트\s*회수|타용도|런업체|결차/.test(a)&&!/수불|실사|조사/.test(a))return [V2_A6S.test(body)?'6':'4','label'];
   /* ③ 행동. 클레임·채권·영업은 있으면 이기고, 운영(회수·수불·실사…)은 먼저 적힌 행동이 이긴다 */
-  const prog=/입고\s*미회수/.test(body)||(!a&&base==='M')?'M':(/신규\s*(업체|코드|현장)/.test(body)||(!a&&base==='3'))?'3':'';
+  const prog=/입고\s*미회수/.test(body)||(!a&&base==='M')?'M':(/신규\s*(업체|코드|현장|건자재|건설\s*현장)/.test(body)||(!a&&base==='3'))?'3':'';
   const anyOps=['4','5','6','3','M','9'].some(has);if(base==='7'&&!strongSales&&(has('7')||!anyOps))return ['7','type'];
   if(has('7')&&!(sales&&(has('1')||has('2'))))return ['7','act'];
-  const weak8=(base&&base!=='8'&&!V2_G8.test(body)&&!/결제|보증금|보증\s*보험|회생|연체/.test(body))||(/재계약|계약\s*(기간\s*)?갱신|단가\s*인상/.test(body)&&!/미수|채권|연체|회생|내용\s*증명|법/.test(body));
+  const weak8=(base&&base!=='8'&&!V2_G8.test(body)&&!/결제|보증금|보증\s*보험|회생|연체|CMS|자동\s*이체/.test(body))||(/재계약|계약\s*(기간\s*)?갱신|단가\s*인상/.test(body)&&!/미수|채권|연체|회생|내용\s*증명|법/.test(body));
   if(has('8')&&!weak8&&!(sales&&(has('1')||has('2')))){if(V2_LEGAL.test(body)&&!/미수금|미수\s*채권|보증금|결제|계약서/.test(body)){if(/입고\s*미회수/.test(body))return ['M','legal'];if(/재고\s*증가|\d+\s*매\s*(이상\s*)?증가|무적|타용도|회수/.test(body))return ['4','legal']}return ['8','act']}
   if(has('1')||has('2')){const weak=ops&&!(strongSales&&/견적|계약\s*(체결|진행)/.test(body))&&!V2_G1X.test(body)&&!g2;
     if(!weak){if(has('2')&&g2&&!conv)return ['2','act'];if(has('2')&&!has('1'))return ['2','act'];if(has('1')||!ops)return ['1','act'];return ['2','act']}}
@@ -1015,13 +1017,17 @@ const v2Days=(k1,k2)=>Math.round((v2Date(k2)-v2Date(k1))/86400000);
 const v2Dk=x=>x.date&&x.date.key?x.date.key:'';
 let V2U=[],V2TC={},V2SRC={contracts:[],quotes:[]};
 /* 업무일지 → 활동 목록 (권역장·견적 연동 자동일지·첨부파일 행 제외, 중복 제거) */
+/* 분석에서 빼는 분류: 제외 · 직출·직퇴(출퇴근 표식만 있는 기록) */
+function v2Off(c){return c==='X'||c==='O'}
+/* 직출·직퇴 활동명: 구분 + 일지 시각 (예: 직퇴 18:04) */
+function v2OutLab(t){t=String(t||'');const m=t.match(/\d{4}-\d\d-\d\d (\d\d:\d\d)/)||t.match(/(\d{1,2}:\d{2})/);return (/직퇴/.test(t)&&!/직출/.test(t)?'직퇴':'직출')+(m?' '+m[1]:'')}
 function v2Units(diaries){const U=[],CW=curWeek();diaries.forEach(d=>{if(!d.date||EXCLUDE_EMP.includes(String(d.emp).replace(/\d+$/,'')))return;const e=EMP2[d.emp]||EMP2[String(d.emp).replace(/\d+$/,'')]||guessBr(d.addr);
     /* 내용 없이 상세구분만 체크된 행은, 같은 일지에 내용이 있는 상세가 있으면 활동으로 세지 않는다(그 내용 행이 실제 활동) */
     const hasText=d.dtl.some(x=>/^\d{2}$/.test(x.code)&&String(x.text||'').trim()&&!AUTO_QUOTE_RE.test(x.text));
     d.dtl.forEach(x=>{if(!/^\d{2}$/.test(x.code))return;const t=x.text;if(AUTO_QUOTE_RE.test(t))return;if(!String(t||'').trim()&&hasText)return;const [cat,src]=v2Main(x.code,x.typ,t);const tc=V2_OUT.test(t)?v2Clean(t):t;const tg=v2Tags(x.typ,tc);
       const groups=new Set(Object.keys(V2_STRONG).filter(c=>V2_STRONG[c].test(t)).concat([cat]).map(c=>V2G[c]||'').filter(Boolean));
-      U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:v2WkOf(d.date.key,CW),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:v2LabOk(v2Label(tc),d.name),legal:V2_LEGAL.test(tc),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
-  const seen=new Map(),out=U.filter(u=>{const k1='n|'+u.num+'|'+v2Norm(u.text),k2='e|'+u.emp+'|'+u.key+'|'+u.code+'|'+u.cat;if(seen.has(k1))return false;const first=seen.get(k2);if(first){/* 같은 날·담당·업체·분류: 건수는 1, 내용과 결과는 합쳐 보존 */first.text+=' ‖ '+u.text;first.res=first.res||u.res;first.remote=first.remote||u.remote;first.merged=(first.merged||1)+1;seen.set(k1,first);return false}seen.set(k1,u);seen.set(k2,u);return true});
+      U.push({emp:d.emp,br:e.br||'미지정',reg:e.reg||'기타',date:d.date,key:d.date.key,m:d.date.key.slice(0,6),wk:v2WkOf(d.date.key,CW),num:d.num,code:d.code,name:d.name,dcode:x.code,typ:x.typ,text:t,cat,src,lab:cat==='O'?v2OutLab(t):v2LabOk(v2Label(tc),d.name),legal:V2_LEGAL.test(tc),biz:tg.biz,tgt:tg.tgt,res:tg.res,remote:tg.remote,multi:groups.size>1,d})})});
+  const seen=new Map(),out=U.filter(u=>{const k1='n|'+u.num+'|'+v2Norm(u.text),k2='e|'+u.emp+'|'+u.key+'|'+u.code+'|'+u.cat+(u.cat==='O'?'|'+u.lab:'');/* 직출·직퇴는 시각별로 따로 */if(seen.has(k1))return false;const first=seen.get(k2);if(first){/* 같은 날·담당·업체·분류: 건수는 1, 내용과 결과는 합쳐 보존 */first.text+=' ‖ '+u.text;first.res=first.res||u.res;first.remote=first.remote||u.remote;first.merged=(first.merged||1)+1;seen.set(k1,first);return false}seen.set(k1,u);seen.set(k2,u);return true});
   V2TC={};out.forEach(u=>{const k=u.emp+'|'+v2Norm(u.text);V2TC[k]=(V2TC[k]||0)+1});return out}
 /* 활동명 세분화: 담당자가 쓴 활동명이 없으면 내용 키워드로 분류별 세부 활동명을 붙인다 */
 const V2_ACT={'M':[['입고미회수 출고정리',/출고\s*정리/],['입고미회수 회수 완료',/회수\s*완료/],['입고미회수 회수 요청',/회수\s*(요청|지시|예정|가능)/],['입고미회수 확인',/./]],'4':[['타용도 확인',/타용도/],['건설현장 회수',/현장.*(회수|공파렛트)|(회수|공파렛트).*현장/],['회수 완료',/회수\s*(완료|진행함)|전량\s*회수/],['재입고 협의',/재입고/],['공파렛트 회수',/공\s*파렛트/],['회수 요청·지시',/회수\s*(요청|지시|배차)|기사/],['회수 협의',/회수\s*(협의|협조|가능|예정)/],['재고증가 확인',/재고\s*증가|재고\s*확인|적재/],['입고미회수 확인',/입고\s*미회수|입고\s*확인|입고분/],['회수',/./]],
@@ -1050,7 +1056,7 @@ function v2Find(I,x){const s=[];v2Keys(x).forEach(k=>(I[k]||[]).forEach(y=>{if(!
 /* 담당자 집합 E와 활동 목록 L(기간 내)에 대한 성과·기록 품질 지표 */
 const v2SameEmp=(a,b)=>String(a||'').replace(/\d+$/,'')===String(b||'').replace(/\d+$/,'');/* 성과 연결은 같은 담당자끼리만 */
 function v2Metrics(L,E,P,IX){const has=e=>E.has(e)||E.has(String(e||'').replace(/\d+$/,''));const inP=x=>{const k=v2Dk(x);return k>=P.from&&k<=P.to};
-  const A=L.filter(u=>u.cat!=='X'),S=A.filter(u=>u.cat==='1'||u.cat==='2');
+  const A=L.filter(u=>!v2Off(u.cat)),S=A.filter(u=>u.cat==='1'||u.cat==='2');
   const firms=Object.create(null);S.forEach(u=>{const c=u.code||u.name;(firms[c]=firms[c]||[]).push(u)});/* 업체별 영업활동 목록 */
   const hit=u=>v2Find(IX.Q,u).some(q=>v2SameEmp(q.emp,u.emp)&&(d=>d>=0&&d<=30)(v2Days(u.key,v2Dk(q))))||v2Find(IX.K,u).some(c=>v2SameEmp(c.emp,u.emp)&&(d=>d>=-7&&d<=30)(v2Days(u.key,v2Dk(c))));
   const linked=Object.values(firms).filter(L=>L.some(hit)).length;/* 어느 활동이든 30일 안에 견적·계약이 있으면 연결 */
@@ -1069,7 +1075,7 @@ function v2Metrics(L,E,P,IX){const has=e=>E.has(e)||E.has(String(e||'').replace(
 /* 지시 활동 주: 담당자 40% 이상(4명 이상)이 같은 분류에 60% 넘게 몰린 주 (+ 수동 지정) */
 const v2CampLoad=()=>{try{return JSON.parse(localStorage.getItem('v2_camp')||'{}')}catch(e){return {}}};
 const v2CampSave=(wk,on)=>{const m=v2CampLoad();m[wk]=!!on;try{localStorage.setItem('v2_camp',JSON.stringify(m))}catch(e){}};
-function v2Campaign(){const W={};V2U.forEach(u=>{if(u.cat==='X'||u.cat==='?')return;const k=u.wk+'|'+u.emp;const o=W[k]=W[k]||{n:0,c:{}};o.n++;o.c[u.cat]=(o.c[u.cat]||0)+1});
+function v2Campaign(){const W={};V2U.forEach(u=>{if(v2Off(u.cat)||u.cat==='?')return;const k=u.wk+'|'+u.emp;const o=W[k]=W[k]||{n:0,c:{}};o.n++;o.c[u.cat]=(o.c[u.cat]||0)+1});
   const byWk={};Object.keys(W).forEach(k=>{const [wk]=k.split('|'),o=W[k];if(o.n<8)return;const top=Object.entries(o.c).sort((a,b)=>b[1]-a[1])[0];(byWk[wk]=byWk[wk]||[]).push(top[1]/o.n>=0.6?top[0]:null)});
   const auto={};Object.keys(byWk).forEach(wk=>{const L=byWk[wk],cc={};L.forEach(t=>{if(t)cc[t]=(cc[t]||0)+1});const top=Object.entries(cc).sort((a,b)=>b[1]-a[1])[0];if(top&&top[1]>=4&&top[1]>=0.4*L.length)auto[wk]={cat:top[0],n:top[1],of:L.length}});
   const man=v2CampLoad(),set={};Object.keys(auto).forEach(w=>set[w]=true);Object.keys(man).forEach(w=>{if(man[w])set[w]=true;else delete set[w]});return {auto,man,set}}
@@ -1077,7 +1083,7 @@ function v2Campaign(){const W={};V2U.forEach(u=>{if(u.cat==='X'||u.cat==='?')ret
 function v2Cards(selCat){const P=v2Period();const L=V2U.filter(u=>u.key>=P.from&&u.key<=P.to);const isG=f=>f==='영업'||f==='운영'||f==='관리';const cnt=f=>L.filter(u=>isG(f)?V2G[u.cat]===f:u.cat===f).length;
   const card=(k,label,cls)=>{const c='V2:'+k;return '<button type="button" class="metric-card'+(cls?' '+cls:'')+(c===selCat?' active':'')+'" data-cat="'+c+'" aria-pressed="'+(c===selCat)+'"><span>'+esc(label)+'</span><strong>'+cnt(k)+'</strong></button>'};
   const grp=(g,keys)=>'<section class="biz-group"><h4>'+g+'</h4><div class="metric-cards">'+card(g,'전체','all')+keys.map(k=>card(k,V2N[k])).join('')+'</div></section>';
-  return '<section class="card-group"><h3>활동분류 <small>활동 1건 = 주 분류 1개 · '+esc(P.label)+' · 분석 '+L.filter(u=>u.cat!=='X').length+'건</small></h3><div class="biz-groups">'+grp('영업',['1','2'])+grp('운영',['3','M','4','5','6','7'])+grp('관리',['8','9'])+'<section class="biz-group"><h4>기타</h4><div class="metric-cards">'+card('X','제외','sm')+card('?','확인필요','sm')+'</div></section></div></section>'}
+  return '<section class="card-group"><h3>활동분류 <small>활동 1건 = 주 분류 1개 · '+esc(P.label)+' · 분석 '+L.filter(u=>!v2Off(u.cat)).length+'건</small></h3><div class="biz-groups">'+grp('영업',['1','2'])+grp('운영',['3','M','4','5','6','7'])+grp('관리',['8','9'])+'<section class="biz-group"><h4>기타</h4><div class="metric-cards">'+card('O','직출·직퇴','sm')+card('X','제외','sm')+card('?','확인필요','sm')+'</div></section></div></section>'}
 /* 표②③ · 신호 · 주차별 추이 · 상세 */
 function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign();const inP=u=>u.key>=P.from&&u.key<=P.to;const all=V2U.filter(inP);
   const f=/^V2:/.test(selCat||'')?selCat.slice(3):'';const isG=x=>x==='영업'||x==='운영'||x==='관리';const KW=v2KwTerms(),kwTxt=$('v2kw')?$('v2kw').value.trim():'';const fm=u=>(!f||(isG(f)?V2G[u.cat]===f:u.cat===f))&&v2KwHit(u,KW);const units=all.filter(fm);
@@ -1093,23 +1099,23 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     if(activeRegs.length>1){T.push(['영남영업본부','',...(emp?['']:[]),...stats(units,all,[])]);flags.push('tot')}return {T,flags}};
   const pct=(a,b)=>b?Math.round(100*a/b)+'%':'',rt=(a,b)=>b?a+'/'+b+' ('+Math.round(100*a/b)+'%)':'';
   /* 표② 활동분류 건수 */
-  const showPct=true,selK=f&&!isG(f)?f:'';/* 비중은 항상 담당자 전체 활동 기준, 세부 분류를 고르면 그 분류의 비중 열을 덧붙인다 */
+  const showPct=true,selK=f&&!isG(f)&&V2K.includes(f)?f:'';/* 비중은 항상 담당자 전체 활동 기준, 세부 분류를 고르면 그 분류의 비중 열을 덧붙인다 */
   /* 비중은 카드 필터와 무관하게 그 담당자의 기간 전체 활동 기준 */
-  const st2=(L,gAll)=>{const c={};V2K.concat(['X','?']).forEach(k=>c[k]=0);L.forEach(u=>c[u.cat]++);const n=L.length-c['X'];
+  const st2=(L,gAll)=>{const c={};V2K.concat(['O','X','?']).forEach(k=>c[k]=0);L.forEach(u=>c[u.cat]++);const n=L.length-c['X']-c['O'];
     const a={};V2K.forEach(k=>a[k]=0);(gAll||L).forEach(u=>{if(a[u.cat]!==undefined)a[u.cat]++});const na=Object.values(a).reduce((x,y)=>x+y,0),s=a['1']+a['2'],o=a['3']+a['M']+a['4']+a['5']+a['6']+a['7'],m=a['8']+a['9'];
-    return [n,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size,...(KW?[L.filter(u=>u.cat!=='X').length,new Set(L.filter(u=>u.cat!=='X').map(u=>u.code||u.name)).size]:[]),...V2K.map(k=>c[k]),c['X'],c['?'],...(showPct?[pct(s,na),pct(o,na),pct(m,na)]:[]),...(selK?[pct(a[selK]||0,na)]:[])]};
+    return [n,new Set(L.filter(u=>!v2Off(u.cat)).map(u=>u.code||u.name)).size,...(KW?[L.filter(u=>!v2Off(u.cat)).length,new Set(L.filter(u=>!v2Off(u.cat)).map(u=>u.code||u.name)).size]:[]),...V2K.map(k=>c[k]),c['O'],c['X'],c['?'],...(showPct?[pct(s,na),pct(o,na),pct(m,na)]:[]),...(selK?[pct(a[selK]||0,na)]:[])]};
   const S2=rowsOf(st2);const nk=keyH.length;
   const cgw=ws=>'<colgroup>'+ws.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup>',tws=ws=>' style="width:'+ws.reduce((a,b)=>a+b,0)+'px"';
-  const W2=[...keyH.map(()=>72),56,56,...(KW?[64,64]:[]),...V2K.map(()=>68),48,56,...(showPct?[52,52,52]:[]),...(selK?[72]:[])];
-  const head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('활동수',1,2)+hg('업체수',1,2)+(KW?hg('키워드 "'+kwTxt+'"',2,1,';background:#fff2cc'):'')+hg('영업',2,1,';background:#dbe8fb')+hg('운영',6,1,';background:#e2f0d9')+hg('관리',2,1,';background:#fdebd0')+hg('제외',1,2)+hg('확인필요',1,2)+(showPct?hg('비중',3,1):'')+(selK?hg(V2N[selK]+' 비중',1,2,';background:#fff2cc'):'')+'</tr><tr>'+(KW?hg('건수',1,1,';background:#fff2cc')+hg('업체',1,1,';background:#fff2cc'):'')+V2K.map(k=>hg(V2N[k])).join('')+(showPct?hg('영업')+hg('운영')+hg('관리'):'')+'</tr>';
+  const W2=[...keyH.map(()=>72),56,56,...(KW?[64,64]:[]),...V2K.map(()=>68),64,48,56,...(showPct?[52,52,52]:[]),...(selK?[72]:[])];
+  const head2='<tr>'+keyH.map(h=>hg(h,1,2)).join('')+hg('활동수',1,2)+hg('업체수',1,2)+(KW?hg('키워드 "'+kwTxt+'"',2,1,';background:#fff2cc'):'')+hg('영업',2,1,';background:#dbe8fb')+hg('운영',6,1,';background:#e2f0d9')+hg('관리',2,1,';background:#fdebd0')+hg('직출·직퇴',1,2)+hg('제외',1,2)+hg('확인필요',1,2)+(showPct?hg('비중',3,1):'')+(selK?hg(V2N[selK]+' 비중',1,2,';background:#fff2cc'):'')+'</tr><tr>'+(KW?hg('건수',1,1,';background:#fff2cc')+hg('업체',1,1,';background:#fff2cc'):'')+V2K.map(k=>hg(V2N[k])).join('')+(showPct?hg('영업')+hg('운영')+hg('관리'):'')+'</tr>';
   const campNote=Object.keys(camp.set).filter(w=>{const k=v2Date(w);const s=ymd(k),e=ymd(new Date(k.getFullYear(),k.getMonth(),k.getDate()+6));return e>=P.from&&s<=P.to}).sort();
-  const sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 활동분류 건수 · '+esc(P.label)+ft+(KW?' <span class="tag" style="background:#fff2cc">키워드: '+esc(kwTxt)+'</span>':'')+' <span class="hint" style="margin:0">(활동 1건 = 주 분류 1개, 활동수는 제외를 뺀 분석 대상'+(KW?' · 키워드가 있으면 분류 건수도 키워드에 맞는 활동만':'')+')</span></div>'+
+  const sec2='<div style="font-weight:700;color:var(--navy);margin:4px 0">② 활동분류 건수 · '+esc(P.label)+ft+(KW?' <span class="tag" style="background:#fff2cc">키워드: '+esc(kwTxt)+'</span>':'')+' <span class="hint" style="margin:0">(활동 1건 = 주 분류 1개, 활동수는 제외·직출·직퇴를 뺀 분석 대상'+(KW?' · 키워드가 있으면 분류 건수도 키워드에 맞는 활동만':'')+')</span></div>'+
     (campNote.length?'<div class="hint" style="margin:0 0 4px">지시 활동 주: '+campNote.map(w=>fmtMD(v2Date(w))+'주'+(camp.auto[w]?'('+V2N[camp.auto[w].cat]+' '+camp.auto[w].n+'/'+camp.auto[w].of+'명)':'(수동)')).join(', ')+' — 개인 쏠림 신호에서 제외</div>':'')+
     '<table class="xl sumt"'+tws(W2)+'>'+cgw(W2)+head2+body(S2.T,S2.flags)+'</table>';
   /* 키워드 관련 업체 목록 */
-  let secKw='';if(KW){const F=Object.create(null);units.filter(u=>u.cat!=='X').forEach(u=>{const k=u.code||u.name;const o=F[k]=F[k]||{code:u.code,name:u.name,emps:new Set(),n:0,last:'',cats:{},lastTxt:''};o.n++;o.emps.add(u.emp);o.cats[u.cat]=(o.cats[u.cat]||0)+1;if(u.key>=o.last){o.last=u.key;o.lastTxt=lineSummary(parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),'')||u.text}});
+  let secKw='';if(KW){const F=Object.create(null);units.filter(u=>!v2Off(u.cat)).forEach(u=>{const k=u.code||u.name;const o=F[k]=F[k]||{code:u.code,name:u.name,emps:new Set(),n:0,last:'',cats:{},lastTxt:''};o.n++;o.emps.add(u.emp);o.cats[u.cat]=(o.cats[u.cat]||0)+1;if(u.key>=o.last){o.last=u.key;o.lastTxt=lineSummary(parseForm(V2_OUT.test(u.text)?v2Clean(u.text):u.text),'')||u.text}});
     const L=Object.values(F).sort((a,b)=>b.n-a.n||b.last.localeCompare(a.last));
-    secKw='<div style="font-weight:700;color:var(--navy);margin:10px 0 4px">키워드 "'+esc(kwTxt)+'" 관련 업체 <span class="hint" style="margin:0">'+L.length+'곳 · '+units.filter(u=>u.cat!=='X').length+'건 · '+esc(P.label)+'</span></div>'+
+    secKw='<div style="font-weight:700;color:var(--navy);margin:10px 0 4px">키워드 "'+esc(kwTxt)+'" 관련 업체 <span class="hint" style="margin:0">'+L.length+'곳 · '+units.filter(u=>!v2Off(u.cat)).length+'건 · '+esc(P.label)+'</span></div>'+
       (L.length?'<div class="prev" style="padding:6px"><table class="xl dett" style="min-width:900px"><colgroup><col style="width:64px"><col style="width:200px"><col style="width:90px"><col style="width:44px"><col style="width:60px"><col style="width:150px"><col></colgroup><tr>'+['코드','업체','담당자','건수','최근','분류','최근 내용'].map(h=>'<td class="hg">'+h+'</td>').join('')+'</tr>'+
         L.slice(0,300).map(o=>'<tr><td class="c">'+esc(o.code)+'</td><td class="txt" title="'+esc(o.name)+'">'+esc(nmShort(o.name))+'</td><td class="c">'+esc([...o.emps].join(','))+'</td><td class="n">'+o.n+'</td><td class="c">'+o.last.slice(4,6).replace(/^0/,'')+'/'+o.last.slice(6).replace(/^0/,'')+'</td><td class="c">'+Object.entries(o.cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<span class="tag" style="margin:1px">'+esc(V2N[k])+' '+v+'</span>').join('')+'</td><td class="txt" title="'+esc(o.lastTxt)+'">'+esc(o.lastTxt.length>120?o.lastTxt.slice(0,120)+'…':o.lastTxt)+'</td></tr>').join('')+'</table></div>'+(L.length>300?'<div class="hint">상위 300곳만 표시</div>':''):'<div class="hint">해당 업체가 없습니다</div>')}
   /* 표③ 성과 연결 · 기록 품질 */
@@ -1121,7 +1127,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
   /* 신호: 사실만 표시 */
   const sig=[];const inPq=x=>{const k=v2Dk(x);return k>=P.from&&k<=P.to};const emps=[...new Set([...all.map(u=>u.emp),...IX.contracts.filter(inPq).map(c=>c.emp),...IX.quotes.filter(inPq).map(q=>q.emp)].filter(e=>e&&!EXCLUDE_EMP.includes(String(e).replace(/\d+$/,''))))].sort((a,b)=>empIdx(a)-empIdx(b)||String(a).localeCompare(String(b)));
   emps.forEach(e=>{const L=all.filter(u=>u.emp===e);const M=v2Metrics(L,new Set([e]),P,IX);const s=[];
-    if(P.p!=='week'){const B=L.filter(u=>u.cat!=='X'&&u.cat!=='?'&&!camp.set[u.wk]);if(B.length>=8){const c={};B.forEach(u=>c[u.cat]=(c[u.cat]||0)+1);const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];if(top[1]/B.length>=0.6)s.push('쏠림: '+V2N[top[0]]+' '+top[1]+'/'+B.length+'건 ('+Math.round(100*top[1]/B.length)+'%)')}
+    if(P.p!=='week'){const B=L.filter(u=>!v2Off(u.cat)&&u.cat!=='?'&&!camp.set[u.wk]);if(B.length>=8){const c={};B.forEach(u=>c[u.cat]=(c[u.cat]||0)+1);const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];if(top[1]/B.length>=0.6)s.push('쏠림: '+V2N[top[0]]+' '+top[1]+'/'+B.length+'건 ('+Math.round(100*top[1]/B.length)+'%)')}
       if(M.firms>=10&&M.linked/M.firms<0.3)s.push('영업 연결률 낮음: 영업활동 업체 '+M.firms+'곳 중 30일 내 견적·계약 '+M.linked+'곳');
       if(M.qf>=10&&M.q2c/M.qf<=0.1)s.push('견적→계약 전환 낮음: 견적 업체 '+M.qf+'곳 중 계약 '+M.q2c+'곳');
       if(M.n>=20&&M.boiler/M.n>=0.5)s.push('형식문구 반복: 같은 문장 3회 이상이 '+Math.round(100*M.boiler/M.n)+'%');
@@ -1131,7 +1137,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
     if(s.length)sig.push('<tr><td class="c" style="font-weight:700">'+esc(e)+'</td><td class="txt">'+s.map(x=>'<div>· '+esc(x)+'</div>').join('')+'</td></tr>')});
   const secSig='<details open><summary style="cursor:pointer;font-weight:700;color:var(--navy);margin:10px 0 4px">신호 '+sig.length+'명 <span class="hint" style="margin:0">(사실 표시만, 판단은 권역장 · 쏠림·연결률·반복은 4주 누적/월간/전체에서만 계산)</span></summary>'+(sig.length?'<table class="xl" style="width:900px"><colgroup><col style="width:80px"><col></colgroup><tr><td class="hg">담당자</td><td class="hg">신호</td></tr>'+sig.join('')+'</table>':'<div class="hint">표시할 신호가 없습니다</div>')+'</details>';
   /* 상세 */
-  const D=units.filter(u=>f?true:u.cat!=='X').sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.emp},{reg:b.reg,br:b.br,emp:b.emp})||empIdx(a.emp)-empIdx(b.emp)||a.key.localeCompare(b.key));const CAP=1500;
+  const D=units.filter(u=>f?true:!v2Off(u.cat)).sort((a,b)=>sortKey({reg:a.reg,br:a.br,emp:a.emp},{reg:b.reg,br:b.br,emp:b.emp})||empIdx(a.emp)-empIdx(b.emp)||a.key.localeCompare(b.key));const CAP=1500;
   let det='<h3 class="det-h">활동 상세 · '+esc(P.label)+ft+(KW?' <span class="tag" style="background:#fff2cc">키워드: '+esc(kwTxt)+'</span>':'')+' <span class="hint" style="margin:0">'+D.length+'건'+(D.length>CAP?' 중 '+CAP+'건 표시 (카드나 기간으로 좁히세요)':'')+'</span></h3>';
   if(!D.length)det+='<div class="hint">표시할 활동이 없습니다</div>';
   else{const bg={};D.slice(0,CAP).forEach(u=>{const k=u.reg+'|'+u.br;(bg[k]=bg[k]||[]).push(u)});const W=[52,60,108,150,64,170,150,0],HD=['날짜','담당자','분류','태그','코드','업체','활동명','내용'];
@@ -1148,7 +1154,7 @@ function v2Render(selCat,emp,keyH,body,hg,ft){const P=v2Period(),camp=v2Campaign
 /* 목표 진척도(3번)에서 새 분류명을 쓰면 V2 활동으로 센다 */
 function v2GoalKey(t){const M=[['입고미회수','M'],['신규업체확인','3'],['신규·전환영업','1'],['신규전환영업','1'],['기존확대','2'],['수불·전산','6'],['수불전산','6'],['채권','8'],['기타업무','9'],['영업활동','영업'],['운영활동','운영'],['관리활동','관리'],['클레임','7']];for(const [n,k] of M)if(t.includes(n))return {k:'v2:'+k,lbl:'V2 '+(V2N[k]||k)};return null}
 function v2GoalCount(sel,f){const wk=curWeek();const isG=f==='영업'||f==='운영'||f==='관리';const emp=sel.emp?String(sel.emp).replace(/\d+$/,''):'';
-  return V2U.filter(u=>($('allweeks').checked||!wk||(u.key>=wk.from&&u.key<=wk.to))&&u.cat!=='X'&&(isG?V2G[u.cat]===f:u.cat===f)&&(emp?String(u.emp).replace(/\d+$/,'')===emp:sel.br?u.br===sel.br:sel.reg?(u.reg===sel.reg||u.reg===String(sel.reg).replace(/권역$/,'')+'권역'):false)).length}
+  return V2U.filter(u=>($('allweeks').checked||!wk||(u.key>=wk.from&&u.key<=wk.to))&&!v2Off(u.cat)&&(isG?V2G[u.cat]===f:u.cat===f)&&(emp?String(u.emp).replace(/\d+$/,'')===emp:sel.br?u.br===sel.br:sel.reg?(u.reg===sel.reg||u.reg===String(sel.reg).replace(/권역$/,'')+'권역'):false)).length}
 function render(){if(!OUT)return;const rows=visible();
   const cnt={};[...CATS,...GCATS,...Object.keys(ALL_Q),...Object.keys(GRP)].forEach(c=>cnt[c]=OUT.filter(r=>catMatch(r,c)).length);
   const selCat=$('catf').value;
