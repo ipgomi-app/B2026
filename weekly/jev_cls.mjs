@@ -99,6 +99,7 @@ async function callJev(body) {
 async function classify(u, order) {
   const k = ckey(u, order);
   if (cache[k]) return cache[k];
+  if (!KEY) { console.error('캐시에 없는 건이 있는데 TYPESAFE_API_KEY 환경변수가 없습니다. (PowerShell: $env:TYPESAFE_API_KEY="키" 후 실행)'); process.exit(2); }
   const body = { model: MODEL, state: buildState(u), questions: { category: buildQuestion(order) } };
   const r = await callJev(body);
   const a = r.answers.category;
@@ -124,8 +125,7 @@ if (DRY) {
   console.log(`\nunits=${units.length}  state chars=${chars}  question chars=${qchars}  대략 토큰(한글 1.7자/토큰, 영문 4자/토큰) ≈ ${Math.round(chars / 1.7 + units.length * qchars / 4)}  ≈ $${(((chars / 1.7 + units.length * qchars / 4)) / 1e6 * 0.042).toFixed(3)}`);
   process.exit(0);
 }
-if (!KEY) { console.error('TYPESAFE_API_KEY 환경변수가 없습니다. (환경 설정의 Network secrets / 환경변수에 넣고 새 세션에서 실행)'); process.exit(2); }
-
+// 키가 없어도 캐시(jev_cache.json)에 전부 있으면 비교까지 돈다. 캐시에 없는 건이 나올 때만 키가 필요하다.
 const results = new Array(units.length);
 let done = 0, fail = 0;
 const t0 = Date.now();
